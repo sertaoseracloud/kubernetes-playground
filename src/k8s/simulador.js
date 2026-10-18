@@ -117,6 +117,48 @@ function validarCamposObrigatorios(recurso) {
   return erros;
 }
 
+// ---------- Geração determinística de atributos calculados ----------
+
+/** Hash simples (djb2) para gerar valores estáveis a partir do nome do recurso. */
+function hashNome(nome) {
+  let h = 5381;
+  for (let i = 0; i < nome.length; i++) {
+    h = ((h << 5) + h + nome.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+/** Gera um ClusterIP simulado determinístico no range 10.96.0.0/12. */
+function gerarClusterIP(nome) {
+  const h = hashNome(nome);
+  const b2 = (h >> 8) & 0xff;
+  const b3 = (h >> 16) & 0xff;
+  const b4 = (h & 0xfe) | 2; // evita .0 e .1
+  return `10.96.${b2}.${b4}`;
+}
+
+/** Gera uma NodePort simulada determinística no range 30000-32767. */
+function gerarNodePort(nome) {
+  const h = hashNome(nome);
+  return 30000 + (h % 2768);
+}
+
+/** Gera IPs de pod simulados para endpoints de um Service, baseados nos pods que matcham o selector. */
+function gerarEndpoints(selector) {
+  if (!selector || Object.keys(selector).length === 0) return [];
+  return estado.pods
+    .filter((pod) => {
+      for (const [k, v] of Object.entries(selector)) {
+        if (pod.labels?.[k] !== v) return false;
+      }
+      return true;
+    })
+    .map((pod) => {
+      const h = hashNome(pod.nome);
+      return `10.244.0.${(h % 253) + 2}`;
+    });
+}
+
 /** Estado global do cluster simulado. Persistido por exercício via progresso.js. */
 let estado = { pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [] };
 
@@ -207,6 +249,191 @@ export function buscarRecurso(kind, nome) {
 }
 
 /**
+ * Simula a aplicação de um manifesto YAML sem modificar o estado global.
+ * Compara o estado atual com o estado projetado e retorna as diferenças.
+ * @param {string} yamlTexto - YAML a ser simulado.
+ * @returns {{ok: boolean, recursos: object[], diff: {criar: object[], atualizar: object[], destruir: object[]}, mensagem: string}}
+ */
+export function simularApply(yamlTexto) {
+  try {
+    const documentos = yaml.loadAll(yamlTexto).filter(Boolean);
+    if (documentos.length === 0) {
+      return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: 'Nenhum documento YAML encontrado.' };
+    }
+
+    // Valida todos os documentos primeiro
+    for (const doc of documentos) {
+      if (!doc?.kind || !doc?.metadata?.name) {
+        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.' };
+      }
+      const erros = validarCamposObrigatorios(doc);
+      if (erros.length > 0) {
+        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: erros.join('\n') };
+      }
+    }
+
+    // Clona o estado atual para projeção
+    const estadoAtual = structuredClone(estado);
+    const estadoProjetado = structuredClone(estado);
+
+    // Aplica cada recurso no estado projetado (sem tocar no global)
+    const recursosProjetados = [];
+    for (const doc of documentos) {
+      const resultado = aplicarRecursoEmEstado(doc, estadoProjetado);
+      if (!resultado.ok) {
+        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: resultado.mensagem };
+      }
+      recursosProjetados.push(...resultado.recursos);
+    }
+
+    // Compara estados usando compararEstados
+    const comparacao = compararEstados(estadoAtual, estadoProjetado);
+
+    // Converte para formato de diff estilo Terraform
+    const diff = {
+      criar: comparacao.adicionados.map((item) => ({
+        acao: 'criar',
+        kind: item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, ''),
+        nome: item.nome,
+        detalhes: formatarDetalhesRecurso(item.recurso),
+      })),
+      atualizar: comparacao.alterados.map((item) => ({
+        acao: 'atualizar',
+        kind: item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, ''),
+        nome: item.nome,
+        detalhes: calcularCamposAlterados(item.anterior, item.atual),
+      })),
+      destruir: comparacao.removidos.map((item) => ({
+        acao: 'destruir',
+        kind: item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, ''),
+        nome: item.nome,
+        detalhes: formatarDetalhesRecurso(item.recurso),
+      })),
+    };
+
+    return { ok: true, recursos: recursosProjetados, diff, mensagem: 'Simulação concluída.' };
+  } catch (erro) {
+    return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: `Erro ao simular: ${erro.message}` };
+  }
+}
+
+/**
+ * Aplica um recurso em um estado específico (não no global).
+ * Usado internamente por simularApply para projetar mudanças.
+ */
+function aplicarRecursoEmEstado(recurso, estadoAlvo) {
+  if (!recurso?.kind || !recurso?.metadata?.name) {
+    return { ok: false, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.', recursos: [] };
+  }
+  const nome = recurso.metadata.name;
+  const kind = recurso.kind;
+
+  switch (kind) {
+    case 'Pod': {
+      const container = recurso.spec?.containers?.[0] ?? {};
+      const porta = container.ports?.[0]?.containerPort ?? null;
+      const pod = {
+        nome, imagem: container.image ?? '', porta: porta !== null ? Number(porta) : null,
+        status: 'Running', no: 'node-1', labels: recurso.metadata.labels ?? {},
+        containers: (recurso.spec?.containers ?? []).map((c) => ({
+          nome: c.name, imagem: c.image, portas: (c.ports ?? []).map((p) => p.containerPort),
+          resources: c.resources ?? null, livenessProbe: c.livenessProbe ?? null, readinessProbe: c.readinessProbe ?? null,
+        })),
+        volumes: recurso.spec?.volumes ?? [], volumeMounts: container.volumeMounts ?? [],
+      };
+      estadoAlvo.pods = estadoAlvo.pods.filter((p) => p.nome !== nome);
+      estadoAlvo.pods.push(pod);
+      return { ok: true, mensagem: `pod/${nome}`, recursos: [pod] };
+    }
+    case 'Service': {
+      const svc = {
+        nome, alvo: recurso.spec?.selector ?? {}, tipo: recurso.spec?.type ?? 'ClusterIP',
+        portas: (recurso.spec?.ports ?? []).map((p) => ({ porta: p.port, targetPort: p.targetPort, protocolo: p.protocol ?? 'TCP' })),
+      };
+      estadoAlvo.services = estadoAlvo.services.filter((s) => s.nome !== nome);
+      estadoAlvo.services.push(svc);
+      return { ok: true, mensagem: `service/${nome}`, recursos: [svc] };
+    }
+    case 'Deployment': {
+      const dep = {
+        nome, replicas: Number(recurso.spec?.replicas ?? 1),
+        imagem: recurso.spec?.template?.spec?.containers?.[0]?.image ?? '',
+        labels: recurso.spec?.template?.metadata?.labels ?? {},
+        selector: recurso.spec?.selector?.matchLabels ?? {},
+        strategy: recurso.spec?.strategy ?? null,
+        containers: (recurso.spec?.template?.spec?.containers ?? []).map((c) => ({
+          nome: c.name, imagem: c.image, resources: c.resources ?? null,
+        })),
+      };
+      estadoAlvo.deployments = estadoAlvo.deployments.filter((d) => d.nome !== nome);
+      estadoAlvo.deployments.push(dep);
+      return { ok: true, mensagem: `deployment/${nome}`, recursos: [dep] };
+    }
+    case 'ConfigMap': {
+      const cm = { nome, data: recurso.data ?? {} };
+      estadoAlvo.configmaps = estadoAlvo.configmaps.filter((c) => c.nome !== nome);
+      estadoAlvo.configmaps.push(cm);
+      return { ok: true, mensagem: `configmap/${nome}`, recursos: [cm] };
+    }
+    case 'Secret': {
+      const sec = { nome, tipo: recurso.type ?? 'Opaque', data: recurso.data ?? {}, stringData: recurso.stringData ?? {} };
+      estadoAlvo.secrets = estadoAlvo.secrets.filter((s) => s.nome !== nome);
+      estadoAlvo.secrets.push(sec);
+      return { ok: true, mensagem: `secret/${nome}`, recursos: [sec] };
+    }
+    default:
+      // Para outros tipos, usa a mesma lógica simplificada
+      return { ok: true, mensagem: `${kind.toLowerCase()}/${nome}`, recursos: [{ nome, kind }] };
+  }
+}
+
+/** Formata detalhes de um recurso para exibição no diff. */
+function formatarDetalhesRecurso(recurso) {
+  const campos = [];
+  if (recurso.imagem) campos.push(`image: ${recurso.imagem}`);
+  if (recurso.replicas != null) campos.push(`replicas: ${recurso.replicas}`);
+  if (recurso.tipo) campos.push(`type: ${recurso.tipo}`);
+  if (recurso.porta != null) campos.push(`port: ${recurso.porta}`);
+  if (recurso.data && Object.keys(recurso.data).length > 0) {
+    campos.push(`data keys: ${Object.keys(recurso.data).join(', ')}`);
+  }
+  return campos.length > 0 ? campos.join(', ') : '(sem detalhes adicionais)';
+}
+
+/** Calcula quais campos foram alterados entre dois estados de um recurso. */
+function calcularCamposAlterados(anterior, atual) {
+  const alterados = [];
+  const todasChaves = new Set([...Object.keys(anterior), ...Object.keys(atual)]);
+  for (const chave of todasChaves) {
+    if (chave === 'nome') continue;
+    const valAnterior = JSON.stringify(anterior[chave]);
+    const valAtual = JSON.stringify(atual[chave]);
+    if (valAnterior !== valAtual) {
+      if (anterior[chave] == null) {
+        alterados.push(`+ ${chave}: ${formatarValorDiff(atual[chave])}`);
+      } else if (atual[chave] == null) {
+        alterados.push(`- ${chave}: ${formatarValorDiff(anterior[chave])}`);
+      } else {
+        alterados.push(`~ ${chave}: ${formatarValorDiff(anterior[chave])} → ${formatarValorDiff(atual[chave])}`);
+      }
+    }
+  }
+  return alterados.length > 0 ? alterados.join('; ') : '(campos internos alterados)';
+}
+
+/** Formata um valor para exibição compacta no diff. */
+function formatarValorDiff(valor) {
+  if (valor == null) return '(null)';
+  if (typeof valor === 'string') return valor.length > 40 ? `"${valor.slice(0, 37)}..."` : `"${valor}"`;
+  if (Array.isArray(valor)) return `[${valor.length} itens]`;
+  if (typeof valor === 'object') {
+    const str = JSON.stringify(valor);
+    return str.length > 50 ? `{...${Object.keys(valor).length} chaves}` : str;
+  }
+  return String(valor);
+}
+
+/**
  * Aplica um manifesto YAML (string) no cluster simulado.
  * Suporta múltiplos documentos separados por ---.
  * Devolve { ok, mensagem, recursos }.
@@ -265,24 +492,33 @@ function aplicarRecurso(recurso) {
       return { ok: true, mensagem: `pod/${nome} created`, recursos: [pod] };
     }
     case 'Service': {
+      const tipo = recurso.spec?.type ?? 'ClusterIP';
+      const selector = recurso.spec?.selector ?? {};
+      const clusterIP = recurso.spec?.clusterIP === 'None' ? 'None' : gerarClusterIP(nome);
+      const nodePort = tipo === 'NodePort' ? gerarNodePort(nome) : null;
+      const endpoints = tipo !== 'ExternalName' ? gerarEndpoints(selector) : [];
       const svc = {
-        nome, alvo: recurso.spec?.selector ?? {}, tipo: recurso.spec?.type ?? 'ClusterIP',
+        nome, alvo: selector, tipo,
         portas: (recurso.spec?.ports ?? []).map((p) => ({ porta: p.port, targetPort: p.targetPort, protocolo: p.protocol ?? 'TCP' })),
+        clusterIP, nodePort, endpoints,
       };
       estado.services = estado.services.filter((s) => s.nome !== nome);
       estado.services.push(svc);
       return { ok: true, mensagem: `service/${nome} created`, recursos: [svc] };
     }
     case 'Deployment': {
+      const replicas = Number(recurso.spec?.replicas ?? 1);
       const dep = {
-        nome, replicas: Number(recurso.spec?.replicas ?? 1),
+        nome, replicas,
         imagem: recurso.spec?.template?.spec?.containers?.[0]?.image ?? '',
         labels: recurso.spec?.template?.metadata?.labels ?? {},
         selector: recurso.spec?.selector?.matchLabels ?? {},
         strategy: recurso.spec?.strategy ?? null,
         containers: (recurso.spec?.template?.spec?.containers ?? []).map((c) => ({
           nome: c.name, imagem: c.image, resources: c.resources ?? null,
+          env: c.env ?? [],
         })),
+        status: { availableReplicas: replicas, readyReplicas: replicas },
       };
       estado.deployments = estado.deployments.filter((d) => d.nome !== nome);
       estado.deployments.push(dep);
@@ -379,6 +615,25 @@ export function verificarRegra(regra) {
       if (!recurso) return { ok: false, detalhe: `${regra.kind} "${regra.nome}" não encontrado.`, mensagem: `Recurso ${regra.kind} "${regra.nome}" existe`, categoria: 'Estrutura', obtido: '(nenhum)' };
       if (regra.status && recurso.status !== regra.status) return { ok: false, detalhe: `Status esperado "${regra.status}", obtido "${recurso.status}".`, mensagem: `Recurso ${regra.kind} "${regra.nome}" está ${regra.status}`, categoria: 'Estrutura', obtido: recurso.status };
       return { ok: true, detalhe: `${regra.kind} "${regra.nome}" está ${recurso.status ?? 'presente'}.`, mensagem: `Recurso ${regra.kind} "${regra.nome}" existe`, categoria: 'Estrutura', obtido: `${regra.kind}/${regra.nome}` };
+    }
+    case 'deployment-env': {
+      const dep = estado.deployments.find((d) => d.nome === regra.deployment);
+      if (!dep) return { ok: false, detalhe: `Deployment "${regra.deployment}" não encontrado.`, mensagem: `Deployment "${regra.deployment}" tem env ${regra.chave}`, categoria: 'Configuração', obtido: '(nenhum)' };
+      const container = dep.containers?.find((c) => c.nome === regra.container);
+      if (!container) return { ok: false, detalhe: `Container "${regra.container}" não encontrado no Deployment.`, mensagem: `Container "${regra.container}" tem env ${regra.chave}`, categoria: 'Configuração', obtido: '(nenhum)' };
+      const envVar = container.env?.find((e) => e.name === regra.chave);
+      if (!envVar) return { ok: false, detalhe: `Variável "${regra.chave}" não encontrada no container "${regra.container}".`, mensagem: `Env ${regra.chave} existe`, categoria: 'Configuração', obtido: container.env?.map((e) => e.name).join(', ') || '(nenhuma)' };
+      return { ok: true, detalhe: `Variável "${regra.chave}" presente com valor "${envVar.value}".`, mensagem: `Env ${regra.chave} existe`, categoria: 'Configuração', obtido: envVar.value };
+    }
+    case 'deployment-env-contem': {
+      const dep2 = estado.deployments.find((d) => d.nome === regra.deployment);
+      if (!dep2) return { ok: false, detalhe: `Deployment "${regra.deployment}" não encontrado.`, mensagem: `Env ${regra.chave} contém "${regra.valor}"`, categoria: 'Configuração', obtido: '(nenhum)' };
+      const container2 = dep2.containers?.find((c) => c.nome === regra.container);
+      if (!container2) return { ok: false, detalhe: `Container "${regra.container}" não encontrado no Deployment.`, mensagem: `Env ${regra.chave} contém "${regra.valor}"`, categoria: 'Configuração', obtido: '(nenhum)' };
+      const envVar2 = container2.env?.find((e) => e.name === regra.chave);
+      if (!envVar2) return { ok: false, detalhe: `Variável "${regra.chave}" não encontrada no container "${regra.container}".`, mensagem: `Env ${regra.chave} contém "${regra.valor}"`, categoria: 'Configuração', obtido: '(nenhuma)' };
+      if (!envVar2.value?.includes(regra.valor)) return { ok: false, detalhe: `Valor "${envVar2.value}" não contém "${regra.valor}".`, mensagem: `Env ${regra.chave} contém "${regra.valor}"`, categoria: 'Configuração', obtido: envVar2.value };
+      return { ok: true, detalhe: `Valor "${envVar2.value}" contém "${regra.valor}".`, mensagem: `Env ${regra.chave} contém "${regra.valor}"`, categoria: 'Configuração', obtido: envVar2.value };
     }
     case 'container-imagem': {
       const pod = estado.pods.find((p) => p.nome === regra.pod);
@@ -540,10 +795,133 @@ export function verificarRegra(regra) {
   }
 }
 
+/**
+ * Detecta drift entre o YAML fornecido e o estado atual do cluster simulado.
+ * @param {string} yamlTexto - YAML com o estado desejado.
+ * @returns {{drifts: Array<{tipo: string, kind: string, nome: string, detalhes: string}>, temDrift: boolean}}
+ */
+export function detectarDrift(yamlTexto) {
+  const drifts = [];
+  let documentos = [];
+  try {
+    documentos = yaml.loadAll(yamlTexto).filter(Boolean);
+  } catch {
+    return { drifts: [], temDrift: false };
+  }
+
+  // Mapeia recursos do YAML por tipo/nome
+  const mapaYaml = new Map();
+  for (const doc of documentos) {
+    if (!doc?.kind || !doc?.metadata?.name) continue;
+    const chave = `${doc.kind}/${doc.metadata.name}`;
+    mapaYaml.set(chave, doc);
+  }
+
+  // Mapeia recursos do estado atual por tipo/nome
+  const estadoAtual = obterEstado();
+  const mapaEstado = new Map();
+  const tipos = ['pods', 'services', 'deployments', 'configmaps', 'secrets', 'ingresses', 'hpas', 'networkpolicies', 'pvcs', 'serviceaccounts', 'cronjobs', 'jobs'];
+  const kindPorTipo = {
+    pods: 'Pod', services: 'Service', deployments: 'Deployment', configmaps: 'ConfigMap',
+    secrets: 'Secret', ingresses: 'Ingress', hpas: 'HorizontalPodAutoscaler',
+    networkpolicies: 'NetworkPolicy', pvcs: 'PersistentVolumeClaim', serviceaccounts: 'ServiceAccount',
+    cronjobs: 'CronJob', jobs: 'Job',
+  };
+  for (const tipo of tipos) {
+    const lista = estadoAtual[tipo] ?? [];
+    for (const recurso of lista) {
+      const kind = kindPorTipo[tipo];
+      if (kind && recurso.nome) {
+        mapaEstado.set(`${kind}/${recurso.nome}`, { tipo, recurso });
+      }
+    }
+  }
+
+  // Adicionado: no YAML mas não no estado
+  for (const [chave, doc] of mapaYaml) {
+    if (!mapaEstado.has(chave)) {
+      drifts.push({
+        tipo: 'adicionado',
+        kind: doc.kind,
+        nome: doc.metadata.name,
+        detalhes: `Será criado ao aplicar`,
+      });
+    }
+  }
+
+  // Removido: no estado mas não no YAML
+  for (const [chave, { tipo, recurso }] of mapaEstado) {
+    if (!mapaYaml.has(chave)) {
+      drifts.push({
+        tipo: 'removido',
+        kind: kindPorTipo[tipo],
+        nome: recurso.nome,
+        detalhes: `Será destruído se aplicar este YAML`,
+      });
+    }
+  }
+
+  // Modificado: existe em ambos mas campos diferem
+  for (const [chave, doc] of mapaYaml) {
+    const estadoEntry = mapaEstado.get(chave);
+    if (!estadoEntry) continue;
+    const { recurso } = estadoEntry;
+    const diffs = compararCamposRecurso(doc, recurso);
+    if (diffs.length > 0) {
+      drifts.push({
+        tipo: 'modificado',
+        kind: doc.kind,
+        nome: doc.metadata.name,
+        detalhes: diffs.join('; '),
+      });
+    }
+  }
+
+  return { drifts, temDrift: drifts.length > 0 };
+}
+
+/** Compara campos-chave de um documento YAML com o recurso no estado. Retorna array de diferenças. */
+function compararCamposRecurso(doc, recurso) {
+  const diffs = [];
+  switch (doc.kind) {
+    case 'Pod': {
+      const imgYaml = doc.spec?.containers?.[0]?.image;
+      if (imgYaml && imgYaml !== recurso.imagem) diffs.push(`imagem: ${recurso.imagem} → ${imgYaml}`);
+      break;
+    }
+    case 'Deployment': {
+      const replicasYaml = doc.spec?.replicas;
+      if (replicasYaml != null && Number(replicasYaml) !== recurso.replicas) diffs.push(`replicas: ${recurso.replicas} → ${replicasYaml}`);
+      const imgYaml = doc.spec?.template?.spec?.containers?.[0]?.image;
+      if (imgYaml && imgYaml !== recurso.imagem) diffs.push(`imagem: ${recurso.imagem} → ${imgYaml}`);
+      break;
+    }
+    case 'Service': {
+      const tipoYaml = doc.spec?.type;
+      if (tipoYaml && tipoYaml !== recurso.tipo) diffs.push(`tipo: ${recurso.tipo} → ${tipoYaml}`);
+      break;
+    }
+    case 'ConfigMap': {
+      const dataYaml = doc.data ?? {};
+      const dataEstado = recurso.data ?? {};
+      for (const k of Object.keys(dataYaml)) {
+        if (dataYaml[k] !== dataEstado[k]) diffs.push(`data.${k} alterado`);
+      }
+      break;
+    }
+    default:
+      if (JSON.stringify(doc) !== JSON.stringify(recurso)) diffs.push('campos modificados');
+      break;
+  }
+  return diffs;
+}
+
 /** Descreve uma regra em texto legível para o enunciado do exercício. */
 export function descreverRegra(regra) {
   switch (regra.tipo) {
     case 'recurso-existe': return `O recurso ${regra.kind} "${regra.nome}" existe${regra.status ? ` e está ${regra.status}` : ''}`;
+    case 'deployment-env': return `O container "${regra.container}" no Deployment "${regra.deployment}" tem a variável ${regra.chave}`;
+    case 'deployment-env-contem': return `A variável ${regra.chave} no container "${regra.container}" contém "${regra.valor}"`;
     case 'container-imagem': return `O container "${regra.container}" usa a imagem ${regra.imagem}`;
     case 'container-porta': return `A porta ${regra.porta} está exposta no container "${regra.container}"`;
     case 'deployment-replicas': return `O Deployment "${regra.deployment}" tem ${regra.valor} réplicas`;

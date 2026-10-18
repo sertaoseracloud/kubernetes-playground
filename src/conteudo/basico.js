@@ -427,6 +427,37 @@ spec:
       ],
     },
     {
+      id: 'basico-drift-detection',
+      tipo: 'exercicio',
+      titulo: 'Encontre o Drift',
+      dificuldade: 'medio',
+      xp: 15,
+      resumo: `<p>O cluster já tem um Pod chamado <code>web-app</code> rodando a imagem <code>nginx:1.25</code>. Porém, o YAML que você recebeu está desatualizado e usa a imagem <code>nginx:1.24</code>.</p>
+        <p>Sua tarefa é usar o botão <b>🔎 Drift</b> para detectar a divergência entre o YAML e o estado atual do cluster.</p>
+        <p>No mundo real, isso é equivalente ao <code>terraform plan</code>: antes de aplicar mudanças, você verifica o que será criado, modificado ou destruído. O Kubernetes faz essa reconciliação continuamente, mas ferramentas como ArgoCD e Flux expõem o drift de forma explícita para operadores.</p>
+        <p><b>Dica:</b> aplique primeiro o YAML desatualizado para criar o recurso no cluster, depois edite-o para simular o drift e clique em "Drift".</p>`,
+      solucao: `apiVersion: v1
+kind: Pod
+metadata:
+  name: web-app
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25
+      ports:
+        - containerPort: 80`,
+      testes: [
+        {
+          descricao: 'O Pod web-app existe no cluster',
+          regras: [{ tipo: 'recurso-existe', kind: 'Pod', nome: 'web-app' }],
+        },
+        {
+          descricao: 'A imagem foi corrigida para nginx:1.25',
+          regras: [{ tipo: 'container-imagem', pod: 'web-app', container: 'nginx', imagem: 'nginx:1.25' }],
+        },
+      ],
+    },
+    {
       id: 'basico-init-container',
       tipo: 'exercicio',
       titulo: 'Pod com Init Container',

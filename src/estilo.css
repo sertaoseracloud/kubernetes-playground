@@ -992,3 +992,54 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
    linhas quando a coluna é estreita, em vez de esconder abas numa rolagem lateral. */
 #painel-descricao .abas { flex-wrap: wrap; overflow-x: visible; }
 #painel-descricao .aba { padding: 7px 10px; }
+
+/* =========================================================
+   Relatório de Drift: divergências entre YAML e estado do cluster
+   ========================================================= */
+.drift-container {
+  padding: 16px;
+  border: 1px solid var(--linha);
+  border-radius: 8px;
+  background: var(--fundo-escuro);
+}
+.drift-titulo {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: var(--texto);
+}
+.drift-resumo {
+  margin: 0 0 12px;
+  font-weight: 600;
+  color: var(--laranja);
+}
+.drift-ok {
+  color: var(--verde);
+}
+.drift-lista {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drift-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--fundo-mais-escuro);
+  border-left: 3px solid var(--linha);
+}
+.drift-modificado { border-left-color: var(--amarelo); }
+.drift-adicionado { border-left-color: var(--verde); }
+.drift-removido { border-left-color: var(--vermelho); }
+.drift-icone { font-size: 1.1rem; flex-shrink: 0; }
+.drift-conteudo { flex: 1; min-width: 0; }
+.drift-conteudo strong { color: var(--ciano); }
+.drift-detalhes { color: var(--suave); font-size: 0.9em; }
+.drift-corrigir {
+  width: 100%;
+  justify-content: center;
+}

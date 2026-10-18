@@ -14,8 +14,9 @@ import { CERTIFICADOS } from '../certificados.js';
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
 import { anunciar } from './anuncios.js';
-import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado, compararEstados } from '../k8s/simulador.js';
+import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado, compararEstados, detectarDrift } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';
+import { renderDrift } from './drift.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -409,6 +410,29 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       estado.ocupado = false;
       el.enviar.disabled = false;
     }
+  }
+
+  // ---------- drift ----------
+  const btnDrift = $('btn-drift');
+  if (btnDrift) {
+    btnDrift.onclick = () => {
+      const codigo = obterCodigo();
+      if (!codigo.trim()) {
+        terminal.escrever('drift: nenhum manifesto YAML no editor', 'erro');
+        return;
+      }
+      const relatorio = detectarDrift(codigo);
+      mostrarSaida('estado');
+      el.saidaEstado.innerHTML = renderDrift(relatorio);
+      const btnCorrigir = $('btn-drift-corrigir');
+      if (btnCorrigir) {
+        btnCorrigir.onclick = () => {
+          executarApply();
+          atualizarPainelEstado();
+        };
+      }
+      terminal.escrever(`drift: ${relatorio.temDrift ? relatorio.drifts.length + ' divergência(s)' : 'sincronizado'}`, relatorio.temDrift ? 'aviso' : 'sucesso');
+    };
   }
 
   // ---------- eventos ----------

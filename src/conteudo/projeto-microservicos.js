@@ -243,6 +243,50 @@ spec:
       ],
     },
     {
+      id: 'microsvc-service-discovery',
+      tipo: 'exercicio',
+      titulo: 'Service Discovery via ClusterIP em variável de ambiente',
+      dificuldade: 'medio',
+      xp: 20,
+      resumo: `<p>O Service <code>backend-svc</code> já existe no cluster (criado na etapa anterior). O simulador gerou um <b>ClusterIP</b> determinístico para ele — esse é um atributo calculado, equivalente a um <code>output</code> do Terraform.</p>
+        <p>Crie um Deployment chamado <code>frontend-app</code> com 1 réplica da imagem <code>nginx:alpine</code>. O container deve ter uma variável de ambiente <code>BACKEND_URL</code> cujo valor seja o ClusterIP do Service <code>backend-svc</code> seguido da porta 3000 (formato: <code>http://&lt;clusterIP&gt;:3000</code>).</p>
+        <p><b>Dica:</b> use <code>kubectl get svc backend-svc -o jsonpath='{.spec.clusterIP}'</code> no simulador para descobrir o IP, ou consulte o estado do cluster via <code>obterEstado()</code>. No mundo real, o DNS interno resolveria <code>backend-svc</code>, mas este exercício ensina como outputs de um recurso alimentam a configuração de outro.</p>`,
+      solucao: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-app
+  template:
+    metadata:
+      labels:
+        app: frontend-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          env:
+            - name: BACKEND_URL
+              value: "http://10.96.82.130:3000"`,
+      testes: [
+        {
+          descricao: 'O Deployment frontend-app existe',
+          regras: [{ tipo: 'recurso-existe', kind: 'Deployment', nome: 'frontend-app' }],
+        },
+        {
+          descricao: 'O container tem a variável de ambiente BACKEND_URL',
+          regras: [{ tipo: 'deployment-env', deployment: 'frontend-app', container: 'nginx', chave: 'BACKEND_URL' }],
+        },
+        {
+          descricao: 'BACKEND_URL contém o ClusterIP do backend-svc na porta 3000',
+          regras: [{ tipo: 'deployment-env-contem', deployment: 'frontend-app', container: 'nginx', chave: 'BACKEND_URL', valor: ':3000' }],
+        },
+      ],
+    },
+    {
       id: 'microsvc-kustomize-ambientes',
       tipo: 'exercicio',
       titulo: 'Kustomize: base e overlays para dev e prod',

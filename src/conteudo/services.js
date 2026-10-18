@@ -406,6 +406,58 @@ spec:
       ],
     },
     {
+      id: 'svc-outputs-dependencias',
+      tipo: 'licao',
+      titulo: 'Outputs e dependências entre recursos',
+      dificuldade: 'medio',
+      xp: 5,
+      resumo: `<p>No Kubernetes, muitos recursos geram <b>atributos calculados</b> automaticamente — valores que você não define no YAML, mas que o cluster preenche quando o recurso é criado. Esses atributos funcionam como os <code>output</code> do Terraform: permitem que outros recursos consumam informações geradas dinamicamente.</p>
+        <table border="1" cellpadding="6" cellspacing="0">
+          <tr><th>Terraform</th><th>Kubernetes</th><th>Exemplo</th></tr>
+          <tr><td><code>output "ip"</code></td><td><code>spec.clusterIP</code></td><td>IP virtual gerado para um Service</td></tr>
+          <tr><td><code>output "endpoint"</code></td><td><code>status.endpoints</code></td><td>Lista de IPs dos pods selecionados</td></tr>
+          <tr><td><code>output "node_port"</code></td><td><code>spec.ports[].nodePort</code></td><td>Porta alocada no nó (30000-32767)</td></tr>
+          <tr><td><code>output "replicas"</code></td><td><code>status.availableReplicas</code></td><td>Réplicas prontas em um Deployment</td></tr>
+        </table>
+        <p><b>Como usar:</b> ao criar um Ingress, você referencia o Service pelo <i>nome</i> — o Ingress Controller resolve o ClusterIP automaticamente. Em cenários mais avançados, você pode injetar o ClusterIP de um Service como variável de ambiente em outro Deployment, simulando service discovery por IP fixo.</p>
+        <p>A diferença fundamental: no Terraform a dependência é explícita (<code>resource.api.id</code>); no Kubernetes ela é implícita via nomes e selectors. O simulador gera esses atributos de forma determinística para que exercícios possam verificá-los.</p>`,
+    },
+    {
+      id: 'svc-ingress-output-exercicio',
+      tipo: 'exercicio',
+      titulo: 'Ingress referenciando Service existente',
+      dificuldade: 'medio',
+      xp: 20,
+      resumo: `<p>O Service <code>web-svc</code> já existe no cluster (criado no exercício anterior). Crie um Ingress chamado <code>web-ingress</code> que roteie tráfego do host <code>web.exemplo.com</code> (path <code>/</code>) para esse Service na porta 80.</p>
+        <p>Assim como no Terraform usamos <code>var.service_name</code> para referenciar outputs, aqui o Ingress referencia o Service pelo nome — o cluster resolve o ClusterIP internamente.</p>`,
+      solucao: `apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-ingress
+spec:
+  rules:
+    - host: web.exemplo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-svc
+                port:
+                  number: 80`,
+      testes: [
+        {
+          descricao: 'O Ingress web-ingress existe',
+          regras: [{ tipo: 'recurso-existe', kind: 'Ingress', nome: 'web-ingress' }],
+        },
+        {
+          descricao: 'O Ingress tem regra para web.exemplo.com apontando para web-svc',
+          regras: [{ tipo: 'ingress-existe', ingress: 'web-ingress', host: 'web.exemplo.com' }],
+        },
+      ],
+    },
+    {
       id: 'svc-dns-srv',
       tipo: 'exercicio',
       titulo: 'DNS SRV Records',
