@@ -209,10 +209,17 @@ function navegar() {
 
 // Atalhos fora do editor (dentro dele, o próprio editor trata).
 document.addEventListener('keydown', (e) => {
-  if (telaItem.hidden || !(e.ctrlKey || e.metaKey) || e.key !== 'Enter' || e.defaultPrevented) return;
+  if (telaItem.hidden || !(e.ctrlKey || e.metaKey) || e.defaultPrevented) return;
   if (document.querySelector('dialog[open]')) return;
-  e.preventDefault();
-  $(e.shiftKey ? 'btn-enviar' : 'btn-executar').click();
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $(e.shiftKey ? 'btn-enviar' : 'btn-executar').click();
+  } else if (e.key === 'd' || e.key === 'D') {
+    // Ctrl+Shift+D = Diff (plan)
+    if (!e.shiftKey) return;
+    e.preventDefault();
+    $('btn-diff')?.click();
+  }
 });
 
 /**

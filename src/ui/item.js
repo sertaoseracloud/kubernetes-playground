@@ -14,9 +14,10 @@ import { CERTIFICADOS } from '../certificados.js';
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
 import { anunciar } from './anuncios.js';
-import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado, compararEstados, detectarDrift } from '../k8s/simulador.js';
+import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
+import { renderDiff } from './diff.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -30,6 +31,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     dificuldade: $('item-dificuldade'),
     status: $('item-status'),
     executar: $('btn-executar'),
+    diff: $('btn-diff'),
     enviar: $('btn-enviar'),
     restaurar: $('btn-restaurar'),
     compartilhar: $('btn-compartilhar'),
@@ -231,6 +233,10 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     mostrarSaida('terminal');
     terminal.limpar();
     terminal.escrever(`kubectl configured — namespace: default`, 'info');
+
+    // Reseta flag de diff para o novo exercício
+    diffUsadoNesteExercicio = false;
+    definirDiffUsado(false);
 
     // Lição marca como lida ao abrir
     if (item.tipo === 'licao' && !statusDe(item.id)) {
@@ -435,7 +441,42 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     };
   }
 
+  // ---------- diff (plan) ----------
+  let diffUsadoNesteExercicio = false;
+
+  function executarDiff() {
+    const yamlTexto = obterCodigo();
+    if (!yamlTexto.trim()) {
+      terminal.escrever('diff: editor vazio — escreva um manifesto YAML primeiro.', 'aviso');
+      return;
+    }
+    const resultado = simularApply(yamlTexto);
+    mostrarSaida('estado');
+    el.saidaEstado.innerHTML = renderDiff(resultado);
+    // Resumo no terminal estilo Terraform
+    if (resultado.ok) {
+      const { criar, atualizar, destruir } = resultado.diff;
+      const total = criar.length + atualizar.length + destruir.length;
+      if (total === 0) {
+        terminal.escrever('Plan: No changes. Infrastructure is up-to-date.', 'sucesso');
+      } else {
+        terminal.escrever(`Plan: ${criar.length} to create, ${atualizar.length} to update, ${destruir.length} to destroy.`, 'comando');
+        for (const item of criar) terminal.escrever(`  + create ${item.kind}/${item.nome}`, 'sucesso');
+        for (const item of atualizar) terminal.escrever(`  ~ update ${item.kind}/${item.nome}`, 'aviso');
+        for (const item of destruir) terminal.escrever(`  - destroy ${item.kind}/${item.nome}`, 'erro');
+      }
+    } else {
+      terminal.escrever(`diff: ${resultado.mensagem}`, 'erro');
+    }
+    diffUsadoNesteExercicio = true;
+    definirDiffUsado(true);
+  }
+
+  // Expõe para testes de exercício verificarem se diff foi usado
+  function diffFoiUsado() { return diffUsadoNesteExercicio; }
+
   // ---------- eventos ----------
+  el.diff.onclick = () => executarDiff();
   el.executar.onclick = () => executarApply();
   el.enviar.onclick = () => enviar();
   el.restaurar.onclick = () => {
@@ -462,5 +503,6 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     redesenharDescricao: () => estado.item && renderDescricao(),
     sair: () => terminal.pular(),
     terminal,
+    diffFoiUsado,
   };
 }

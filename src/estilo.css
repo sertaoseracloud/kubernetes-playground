@@ -1043,3 +1043,68 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
   width: 100%;
   justify-content: center;
 }
+
+/* =========================================================
+   Painel de Diff (Plan): previsão de mudanças estilo Terraform
+   ========================================================= */
+.diff-container {
+  padding: 16px;
+  border: 1px solid var(--linha);
+  border-radius: 8px;
+  background: var(--fundo-escuro);
+}
+.diff-vazio, .diff-erro {
+  padding: 16px;
+  text-align: center;
+  color: var(--suave);
+}
+.diff-mensagem-erro { color: var(--vermelho); font-weight: 600; }
+.diff-resumo {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.diff-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-family: var(--fonte-codigo);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.diff-criar { background: color-mix(in srgb, var(--verde) 20%, transparent); color: var(--verde); border-left: 3px solid var(--verde); }
+.diff-atualizar { background: color-mix(in srgb, var(--amarelo) 20%, transparent); color: var(--amarelo); border-left: 3px solid var(--amarelo); }
+.diff-destruir { background: color-mix(in srgb, var(--vermelho) 20%, transparent); color: var(--vermelho); border-left: 3px solid var(--vermelho); }
+.diff-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diff-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: var(--fundo-mais-escuro);
+  font-family: var(--fonte-codigo);
+  font-size: 0.88rem;
+}
+.diff-item.diff-criar { border-left: 3px solid var(--verde); }
+.diff-item.diff-atualizar { border-left: 3px solid var(--amarelo); }
+.diff-item.diff-destruir { border-left: 3px solid var(--vermelho); }
+.diff-marca {
+  flex-shrink: 0;
+  font-weight: 700;
+  width: 1em;
+  text-align: center;
+}
+.diff-item.diff-criar .diff-marca { color: var(--verde); }
+.diff-item.diff-atualizar .diff-marca { color: var(--amarelo); }
+.diff-item.diff-destruir .diff-marca { color: var(--vermelho); }
+.diff-recurso { color: var(--ciano); white-space: nowrap; }
+.diff-detalhes { color: var(--suave); font-size: 0.85em; word-break: break-word; }

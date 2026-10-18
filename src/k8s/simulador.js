@@ -159,6 +159,12 @@ function gerarEndpoints(selector) {
     });
 }
 
+/** Flag de diff-usado: definida pela UI quando o aluno clica em Diff antes de Apply. */
+let _diffUsadoFlag = false;
+
+/** Define a flag de diff-usado (chamada pela UI ao abrir exercício ou executar diff). */
+export function definirDiffUsado(valor) { _diffUsadoFlag = !!valor; }
+
 /** Estado global do cluster simulado. Persistido por exercício via progresso.js. */
 let estado = { pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [] };
 
@@ -609,6 +615,10 @@ function aplicarRecurso(recurso) {
  */
 export function verificarRegra(regra) {
   switch (regra.tipo) {
+    case 'diff-usado': {
+      if (!_diffUsadoFlag) return { ok: false, detalhe: 'O botão 🔍 Diff não foi usado antes de aplicar.', mensagem: 'Você usou 🔍 Diff antes de aplicar', categoria: 'Workflow', obtido: '(não usado)' };
+      return { ok: true, detalhe: 'Diff foi executado antes do Apply.', mensagem: 'Você usou 🔍 Diff antes de aplicar', categoria: 'Workflow', obtido: 'diff executado' };
+    }
     case 'recurso-existe': {
       const lista = { Pod: estado.pods, Service: estado.services, Deployment: estado.deployments, ConfigMap: estado.configmaps, Secret: estado.secrets, Ingress: estado.ingresses, HorizontalPodAutoscaler: estado.hpas, NetworkPolicy: estado.networkpolicies, PersistentVolumeClaim: estado.pvcs, ServiceAccount: estado.serviceaccounts, CronJob: estado.cronjobs, Job: estado.jobs }[regra.kind] ?? [];
       const recurso = lista.find((r) => r.nome === regra.nome);
@@ -944,6 +954,7 @@ export function descreverRegra(regra) {
     case 'agic-anotacao': return `Ingress "${regra.nome}" tem anotação AGIC "${regra.anotacao}"`;
     case 'azure-identity': return `Deployment "${regra.deployment}" com identidade Azure`;
     case 'storageclass-azure': return `StorageClass Azure "${regra.nome}" existe`;
+    case 'diff-usado': return `Você usou 🔍 Diff antes de aplicar`;
     default: return regra.mensagem || `Verificação: ${regra.tipo}`;
   }
 }

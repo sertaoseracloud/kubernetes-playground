@@ -507,5 +507,55 @@ spec:
         },
       ],
     },
+    {
+      id: 'basico-diff-plan',
+      tipo: 'exercicio',
+      titulo: 'Preveja as mudanças',
+      dificuldade: 'medio',
+      xp: 15,
+      resumo: `<p>Antes de aplicar um manifesto, é boa prática <b>prever</b> o que vai mudar — igual ao <code>terraform plan</code>. Neste exercício, você vai usar o botão <b>🔍 Diff</b> para ver quais recursos serão criados, atualizados ou destruídos.</p>
+        <p>O cluster já tem um Pod chamado <code>nginx-demo</code> rodando. O YAML abaixo muda a imagem desse Pod e adiciona um novo Service.</p>
+        <p><b>Sua tarefa:</b> clique em 🔍 Diff antes de ▶ Apply. Observe o plano de mudanças no painel de Estado e confirme que ele mostra:</p>
+        <ul>
+          <li>Uma <b>atualização</b> no Pod nginx-demo (imagem mudou).</li>
+          <li>Uma <b>criação</b> do Service nginx-svc.</li>
+        </ul>
+        <p>Depois de revisar o diff, aplique o manifesto.</p>`,
+      solucao: `apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-demo
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.27
+      ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc
+spec:
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80`,
+      testes: [
+        {
+          descricao: 'Você usou 🔍 Diff antes de aplicar',
+          regras: [{ tipo: 'diff-usado' }],
+        },
+        {
+          descricao: 'O Pod nginx-demo foi atualizado com imagem nginx:1.27',
+          regras: [{ tipo: 'container-imagem', pod: 'nginx-demo', container: 'nginx', imagem: 'nginx:1.27' }],
+        },
+        {
+          descricao: 'O Service nginx-svc foi criado',
+          regras: [{ tipo: 'recurso-existe', kind: 'Service', nome: 'nginx-svc' }],
+        },
+      ],
+    },
   ],
 };
