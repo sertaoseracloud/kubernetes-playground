@@ -14,7 +14,8 @@ import { CERTIFICADOS } from '../certificados.js';
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
 import { anunciar } from './anuncios.js';
-import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado } from '../k8s/simulador.js';
+import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado, compararEstados } from '../k8s/simulador.js';
+import { renderEstado } from './estado.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -267,7 +268,34 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     if (chaveExercicio) resetarEstado(chaveExercicio);
     const applyResult = aplicarYaml(codigo, chaveExercicio);
     if (!applyResult.ok) {
-      return { aprovado: false, relatorio: [{ ok: false, erroExecucao: applyResult.mensagem, resultados: [] }] };
+      // Formata erros de validação com destaque para campo faltante e sugestão
+      const linhas = (applyResult.mensagem || '').split('\n').filter(Boolean);
+      const formatado = linhas.map((linha) => {
+        const matchCampo = linha.match(/Missing required argument "([^"]+)"/);
+        const matchSugestao = linha.match(/Did you mean "([^"]+)"\?/);
+        const matchUnknown = linha.match(/Unknown field "([^"]+)"/);
+        let html = esc(linha);
+        if (matchCampo) {
+          html = html.replace(
+            `&quot;${esc(matchCampo[1])}&quot;`,
+            `<code class="campo-faltante">${esc(matchCampo[1])}</code>`
+          );
+        }
+        if (matchUnknown) {
+          html = html.replace(
+            `&quot;${esc(matchUnknown[1])}&quot;`,
+            `<code class="campo-desconhecido">${esc(matchUnknown[1])}</code>`
+          );
+        }
+        if (matchSugestao) {
+          html = html.replace(
+            `&quot;${esc(matchSugestao[1])}&quot;?`,
+            `<code class="sugestao-campo">${esc(matchSugestao[1])}</code>?`
+          );
+        }
+        return html;
+      }).join('<br>');
+      return { aprovado: false, relatorio: [{ ok: false, erroExecucao: formatado, resultados: [] }] };
     }
     const resultados = [];
     for (const teste of testes) {

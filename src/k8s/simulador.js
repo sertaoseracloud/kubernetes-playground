@@ -240,6 +240,12 @@ function aplicarRecurso(recurso) {
   const nome = recurso.metadata.name;
   const kind = recurso.kind;
 
+  // Validação de campos obrigatórios antes de processar
+  const errosValidacao = validarCamposObrigatorios(recurso);
+  if (errosValidacao.length > 0) {
+    return { ok: false, mensagem: errosValidacao.join('\n'), recursos: [] };
+  }
+
   switch (kind) {
     case 'Pod': {
       const container = recurso.spec?.containers?.[0] ?? {};
