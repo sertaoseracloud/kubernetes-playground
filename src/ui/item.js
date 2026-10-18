@@ -9,15 +9,15 @@ import { criarEditor } from './editor.js';
 import { iniciarLeitura } from './acessibilidade.js';
 import { aplicarChecklist } from './neuro.js';
 import { criarTerminal } from './terminal.js';
-import { jornadaAtual, certificadosDaJornada } from './inicio.js';
-import { CERTIFICADOS } from '../certificados.js';
+import { jornadaAtual } from './inicio.js';
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
-import { $, esc } from './util.js';
-import { anunciar } from './anuncios.js';
-import { aplicarYaml, verificarRegra, descreverRegra, carregarEstado, resetarEstado, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
+import { esc } from './util.js';
+import yaml from 'js-yaml';
+import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
+import { renderArquitetura } from './arquitetura.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -49,6 +49,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     pular: $('btn-pular'),
     saidaCluster: $('saida-cluster'),
     saidaEstado: $('saida-estado'),
+    saidaArquitetura: $('saida-arquitetura'),
   };
 
   const estado = { item: null, ocupado: false };
@@ -105,7 +106,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   document.querySelectorAll('[data-desc]').forEach((b) => { b.onclick = () => mostrarDesc(b.dataset.desc); });
 
   // ---------- abas saída ----------
-  const saidas = { terminal: el.janelaTerminal, estado: el.saidaEstado };
+  const saidas = { terminal: el.janelaTerminal, estado: el.saidaEstado, arquitetura: el.saidaArquitetura };
   let estadoAnterior = null;
   function mostrarSaida(nome) {
     for (const [chave, painel] of Object.entries(saidas)) painel.hidden = chave !== nome;
@@ -114,6 +115,9 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       b.setAttribute('aria-selected', String(b.dataset.saida === nome));
     });
     if (nome === 'estado') atualizarPainelEstado();
+    if (nome === 'arquitetura') {
+      renderArquitetura().then((html) => { el.saidaArquitetura.innerHTML = html; });
+    }
   }
   document.querySelectorAll('[data-saida]').forEach((b) => { b.onclick = () => mostrarSaida(b.dataset.saida); });
 
@@ -378,9 +382,9 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
 
     // Simula saída do kubectl
     try {
-      const yaml = parseYAMLSimples(codigo);
-      const kind = yaml._kind || 'Resource';
-      const name = yaml._name || 'unnamed';
+      const doc = yaml.load(codigo);
+      const kind = doc?.kind || 'Resource';
+      const name = doc?.metadata?.name || 'unnamed';
       terminal.escrever(`${kind.toLowerCase()}/${name} created`, 'sucesso');
       definirStatus(`${kind}/${name} aplicado com sucesso`);
       atualizarPainelEstado();
