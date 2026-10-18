@@ -397,11 +397,11 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'backend-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', nome: 'backend-svc', tipo: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=backend',
-          regras: [{ tipo: 'service-selector', service: 'backend-svc', selector: { app: 'backend' } }],
+          regras: [{ tipo: 'service-selector', nome: 'backend-svc', chave: 'app', valor: 'backend' }],
         },
       ],
     },

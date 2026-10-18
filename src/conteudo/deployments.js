@@ -648,11 +648,11 @@ spec:
         },
         {
           descricao: 'O Deployment tem 2 réplicas',
-          regras: [{ tipo: 'deployment-replicas', deployment: 'app-deploy', replicas: 2 }],
+          regras: [{ tipo: 'deployment-replicas', deployment: 'app-deploy', valor: 2 }],
         },
         {
-          descricao: 'O volume config-volume está montado no container nginx',
-          regras: [{ tipo: 'volume-montado', pod: 'app-deploy', container: 'nginx', volume: 'config-volume' }],
+          descricao: 'O ConfigMap app-settings existe no cluster (data source)',
+          regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'app-settings' }],
         },
       ],
     },
