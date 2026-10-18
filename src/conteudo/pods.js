@@ -455,6 +455,36 @@ spec:
       ],
     },
     {
+      id: 'pods-campos-obrigatorios',
+      tipo: 'exercicio',
+      titulo: 'Corrigindo Campos Obrigatórios',
+      dificuldade: 'facil',
+      xp: 10,
+      resumo: `<p>O YAML abaixo tem erros de campos obrigatórios. O simulador vai mostrar mensagens como <code>Missing required argument "image"</code> indicando o que falta.</p>
+        <p><b>Sua tarefa:</b> leia as mensagens de erro, identifique os campos faltantes e corrija o YAML até que o Pod seja criado com sucesso.</p>
+        <p>Dica: todo container precisa de <code>name</code> e <code>image</code>. Se o simulador sugerir um campo parecido (ex: "Did you mean ...?"), é porque há um erro de digitação.</p>`,
+      solucao: `apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-corrigido
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25
+      ports:
+        - containerPort: 80`,
+      testes: [
+        {
+          descricao: 'O Pod pod-corrigido existe',
+          regras: [{ tipo: 'recurso-existe', kind: 'Pod', nome: 'pod-corrigido' }],
+        },
+        {
+          descricao: 'O container tem name definido',
+          regras: [{ tipo: 'container-imagem', pod: 'pod-corrigido', container: 'nginx', imagem: 'nginx:1.25' }],
+        },
+      ],
+    },
+    {
       id: 'pods-ephemeral-container',
       tipo: 'exercicio',
       titulo: 'Ephemeral Container para Debug',

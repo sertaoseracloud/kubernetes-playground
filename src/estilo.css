@@ -745,6 +745,10 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 .erro-execucao { margin: 8px 0 0; padding: 6px 10px; border-radius: 6px; border-left: 3px solid var(--vermelho); background: color-mix(in srgb, var(--vermelho) 8%, var(--fundo)); font-size: 0.82rem; }
 .erro-execucao.esperado { border-left-color: var(--ciano); background: color-mix(in srgb, var(--ciano) 7%, var(--fundo)); }
 .erro-execucao code, .caso .obtido code { font-family: var(--fonte-codigo); overflow-wrap: anywhere; }
+/* Estilos para mensagens de validação de campos obrigatórios */
+.campo-faltante { color: var(--vermelho); font-weight: 600; }
+.campo-desconhecido { color: var(--laranja); font-weight: 600; }
+.sugestao-campo { color: var(--verde); font-style: italic; }
 .caso ul.verificacoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .caso { min-width: 0; }
 .caso summary, .verificacao > div { min-width: 0; overflow-wrap: anywhere; }
