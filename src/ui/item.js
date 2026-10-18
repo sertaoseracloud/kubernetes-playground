@@ -45,6 +45,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     tituloTerminal: $('titulo-terminal'),
     pular: $('btn-pular'),
     saidaCluster: $('saida-cluster'),
+    saidaEstado: $('saida-estado'),
   };
 
   const estado = { item: null, ocupado: false };
@@ -101,15 +102,25 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   document.querySelectorAll('[data-desc]').forEach((b) => { b.onclick = () => mostrarDesc(b.dataset.desc); });
 
   // ---------- abas saída ----------
-  const saidas = { terminal: el.janelaTerminal, cluster: el.saidaCluster };
+  const saidas = { terminal: el.janelaTerminal, estado: el.saidaEstado };
+  let estadoAnterior = null;
   function mostrarSaida(nome) {
     for (const [chave, painel] of Object.entries(saidas)) painel.hidden = chave !== nome;
     document.querySelectorAll('[data-saida]').forEach((b) => {
       b.classList.toggle('ativa', b.dataset.saida === nome);
       b.setAttribute('aria-selected', String(b.dataset.saida === nome));
     });
+    if (nome === 'estado') atualizarPainelEstado();
   }
   document.querySelectorAll('[data-saida]').forEach((b) => { b.onclick = () => mostrarSaida(b.dataset.saida); });
+
+  function atualizarPainelEstado() {
+    if (!el.saidaEstado) return;
+    const atual = obterEstado();
+    const diff = estadoAnterior ? compararEstados(estadoAnterior, atual) : null;
+    el.saidaEstado.innerHTML = renderEstado(atual, diff);
+    estadoAnterior = structuredClone(atual);
+  }
 
   // ---------- descrição ----------
   function renderDescricao() {
@@ -365,6 +376,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       const name = yaml._name || 'unnamed';
       terminal.escrever(`${kind.toLowerCase()}/${name} created`, 'sucesso');
       definirStatus(`${kind}/${name} aplicado com sucesso`);
+      atualizarPainelEstado();
     } catch (erro) {
       terminal.escrever(`error: ${erro.message}`, 'erro');
       definirStatus('Erro ao aplicar YAML');
