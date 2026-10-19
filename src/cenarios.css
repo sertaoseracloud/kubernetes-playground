@@ -63,3 +63,14 @@
 [data-tema="suave"] .cenario { filter: saturate(.5) brightness(.9); }
 [data-tema="alto-contraste"] .cenario-mapa { opacity: 1; }
 [data-tema="alto-contraste"] .personagem { transition: none; }
+/* Kubernetes: o cenário é o cluster (nós, pods e services) que cresce com os exercícios, desenhado
+   em HTML no canto de baixo do módulo, atrás do caminho e sem cobrir o cabeçalho. */
+.cenario-k8s .cenario-palco { display: flex; align-items: flex-end; justify-content: flex-end; padding: 12px; }
+.cenario-k8s .cenario-elementos { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: min(45%, 360px); }
+.cenario-k8s .cenario-elemento {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--linha); background: var(--fundo-escuro); font-size: .75rem; color: var(--suave);
+}
+.cenario-k8s .cenario-vazio { margin: 0; font-size: .75rem; color: var(--suave); }
+/* É texto: mesmo decorativo, mantém o contraste (sem a transparência do mapa dos outros playgrounds). */
+.bloqueada .cenario-k8s { opacity: 1; }

@@ -150,7 +150,7 @@ function unidade(m, anterior, atual, cert) {
       </div>
       <div class="unidade-progresso" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${m.pct}" aria-label="Progresso em ${esc(m.titulo)}">
         <span class="anel" style="--pct:${m.pct}"><b>${m.pct}%</b></span>
-        <span class="unidade-contagem">${m.resolvidos}/${m.total} ${m.grupos ? 'etapas' : 'exercícios'}</span>
+        <span class="unidade-contagem">${m.resolvidos}/${m.total} exercícios</span>
         ${(() => {
           const licoes = m.itens.filter((i) => i.tipo === 'licao');
           const lidas = licoes.filter((i) => i.estado === 'concluido').length;
@@ -167,7 +167,7 @@ function unidade(m, anterior, atual, cert) {
       const prontas = doGrupo.filter((x) => x.tipo === 'exercicio' && x.estado === 'concluido').length;
       const etapas = doGrupo.filter((x) => x.tipo === 'exercicio').length;
       return `
-        <li class="subunidade"><span>${g.icone ?? '☸️'} ${esc(g.titulo)}</span> <small>${prontas}/${etapas} etapas</small></li>
+        <li class="subunidade"><span>${g.icone ?? '☸️'} ${esc(g.titulo)}</span> <small>${prontas}/${etapas} exercícios</small></li>
         ${doGrupo.map(no).join('')}`;
     }).join('');
   } else {
