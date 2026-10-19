@@ -1,12 +1,15 @@
+// O caminho principal no navegador de verdade: landing → trilha, e um exercício que passa.
 import { test, expect } from '@playwright/test';
+import { abrir, PRIMEIRO } from './apoio.js';
 
-test('página inicial carrega com título correto', async ({ page }) => {
-  await page.goto('/');
-  await expect(page).toHaveTitle(/Kubernetes/i);
+test('a landing abre e leva à trilha', async ({ page }) => {
+  await abrir(page, '#/');
+  await page.getByRole('link', { name: /Começar|Iniciar|Trilha/i }).first().click();
+  await expect(page).toHaveURL(/#\/trilha$/);
 });
 
-test('editor YAML está visível na página inicial', async ({ page }) => {
-  await page.goto('/');
-  const editor = page.locator('textarea, [role="textbox"], .editor, #yaml-editor').first();
-  await expect(editor).toBeVisible({ timeout: 10_000 });
+test('um exercício roda a solução de referência e passa', async ({ page }) => {
+  await abrir(page, `#/p/${PRIMEIRO.id}`, { extras: { [`rascunho:${PRIMEIRO.id}`]: PRIMEIRO.solucao } });
+  await page.locator('#btn-executar, #btn-aplicar, button:has-text("Aplicar")').first().click();
+  await expect(page.getByText(/passaram|sucesso|✅|aprovado/i).first()).toBeVisible({ timeout: 15_000 });
 });
