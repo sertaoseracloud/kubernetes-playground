@@ -1136,3 +1136,8 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
   border-left: 4px solid var(--vermelho); background: var(--fundo-escuro); padding: 8px 12px;
   margin: 8px 0; font-family: var(--fonte-codigo); overflow-wrap: anywhere;
 }
+
+/* Aba 📘 Docs: os tipos de recurso do exercício. */
+.docs-kinds dt { margin-top: 10px; }
+.docs-kinds dd { margin: 4px 0 0; }
+.docs-kinds dd a { display: inline-block; margin-top: 4px; }
