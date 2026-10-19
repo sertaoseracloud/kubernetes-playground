@@ -629,7 +629,9 @@ function aplicarRecursoEm(recurso, alvo) {
         kind, nome, metadataLabels, spec: recurso.spec ?? {},
         containers: mapearContainers(recurso.spec?.template?.spec?.containers),
       };
-      return guardar('outros', obj, kind.toLowerCase());
+      // Como no kubectl: "statefulset.apps/db created", "nodepool.karpenter.sh/padrao created".
+      const grupo = String(recurso.apiVersion).includes('/') ? `.${String(recurso.apiVersion).split('/')[0]}` : '';
+      return guardar('outros', obj, `${kind.toLowerCase()}${grupo}`);
     }
   }
 }

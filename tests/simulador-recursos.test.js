@@ -301,3 +301,10 @@ describe('kubectl com os novos tipos', () => {
     }
   });
 });
+
+describe('mensagem do apply', () => {
+  it('usa kind.grupo como o kubectl', () => {
+    expect(aplicarYaml('apiVersion: karpenter.sh/v1\nkind: NodePool\nmetadata:\n  name: padrao\nspec: {}').mensagem).toBe('nodepool.karpenter.sh/padrao created');
+    expect(aplicarYaml('apiVersion: v1\nkind: Namespace\nmetadata:\n  name: loja').mensagem).toBe('namespace/loja created');
+  });
+});
