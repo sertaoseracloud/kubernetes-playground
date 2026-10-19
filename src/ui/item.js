@@ -2,7 +2,7 @@
 // Adaptado do terraform-playground: usa editor CodeMirror (YAML) e terminal simulado.
 // O simulador de kubectl é mínimo por enquanto; os testes validam o YAML diretamente.
 import { minutosDoItem } from '../cargaHoraria.js';
-import { buscarItem, modulos, vizinhos, DIFICULDADES } from '../conteudo/trilha.js';
+import { buscarItem, itens, modulos, vizinhos, DIFICULDADES } from '../conteudo/trilha.js';
 import { linkItem, linkCompartilhado } from '../compartilhar.js';
 import { statusDe, marcar, lerRascunho, gravarRascunho, apagarRascunho, lerHistorico, gravarHistorico } from '../progresso.js';
 import { criarEditor } from './editor.js';
@@ -21,6 +21,7 @@ import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
 import { renderArquitetura } from './arquitetura.js';
+import { termosDoTexto, termosVistosAntes } from '../conteudo/glossario.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -30,6 +31,19 @@ const semHtml = ({ aprovado, relatorio }) => ({
   aprovado,
   relatorio: relatorio.map((r) => (r.erroExecucao ? { ...r, erroExecucao: r.erroExecucao.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"') } : r)),
 });
+
+// Os termos que o aluno já viu antes de cada item (calculado uma vez, na primeira tela).
+let vistosAntes = null;
+const termosVistos = (id) => (vistosAntes ??= termosVistosAntes(itens)).get(id);
+
+/** A dica do exercício como lista (aceita um texto ou uma lista de dicas progressivas). */
+export const listaDeDicas = (item) => [].concat(item?.dica ?? []).filter(Boolean);
+
+/** Põe a dica de "como corrigir" do caso na primeira verificação que falhou. */
+export function comoCorrigir(verificacoes, dica) {
+  const i = dica ? verificacoes.findIndex((v) => !v.ok) : -1;
+  return i < 0 ? verificacoes : verificacoes.map((v, j) => (j === i ? { ...v, dica } : v));
+}
 
 /** O exercício começa com um esqueleto, nunca com a resposta; o livre começa com um exemplo. */
 export const ESQUELETO = '# Escreva aqui o manifesto YAML e clique em ▶ Apply.\napiVersion: \nkind: \nmetadata:\n  name: \n';
@@ -244,8 +258,13 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       <div class="etapa-info">🔒 Este módulo ainda está bloqueado no caminho: resolva ${LIMITE_DESBLOQUEIO}% do módulo anterior.
         Você pode praticar aqui, mas siga a trilha na ordem para aproveitar melhor.</div>` : '';
 
-    if (item.tipo === 'licao' || item.tipo === 'livre') {
-      el.enunciado.innerHTML = avisoBloqueio + (item.resumo || '') ;
+    if (item.tipo === 'livre') {
+      el.enunciado.innerHTML = avisoBloqueio + (item.resumo || '');
+      aplicarChecklist(el.enunciado, item.id);
+      return;
+    }
+    if (item.tipo === 'licao') {
+      el.enunciado.innerHTML = avisoBloqueio + (item.resumo || '') + exemploDaLicao(item) + glossario(item, item.titulo, item.resumo, item.inicial ?? "");
       aplicarChecklist(el.enunciado, item.id);
       return;
     }
@@ -258,9 +277,58 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       </ol>
       ${avisoDaSolucao(item)}
       <section class="secao secao-fazer"><h2>🎯 O que fazer</h2>${item.resumo || ''}</section>
+      ${glossario(item, item.titulo, item.resumo, ...listaDeDicas(item))}
       ${comoConferir(item.testes)}
-      <details><summary>💡 Dica</summary><p>${esc(item.dica || 'Revise a documentação dos recursos usados.')}</p></details>`;
+      ${dicas(item)}`;
     aplicarChecklist(el.enunciado, item.id);
+  }
+
+  /** O exemplo comentado da lição: aparece no texto (para ler e ouvir) e já está no editor. */
+  function exemploDaLicao(item) {
+    if (!item.inicial) return '';
+    return `
+      <section class="secao exemplo-licao" aria-labelledby="titulo-exemplo-licao">
+        <h2 id="titulo-exemplo-licao">📄 Exemplo comentado</h2>
+        <p>Este exemplo também está no editor. Leia os comentários (as linhas com <code>#</code>), clique em
+        <b>▶ Apply</b> e veja na aba <b>📦 Estado</b> o que foi criado no cluster. Pode mudar à vontade: aqui nada é corrigido.</p>
+        <pre class="trecho" tabindex="0" aria-label="Exemplo de YAML comentado"><code>${esc(item.inicial)}</code></pre>
+      </section>`;
+  }
+
+  /** Palavras técnicas do texto, cada uma com explicação, analogia e exemplo (veja conteudo/glossario.js). */
+  function glossario(item, ...textos) {
+    const div = document.createElement('div');
+    div.innerHTML = textos.join(' ');
+    const termos = termosDoTexto(div.textContent, { modulo: item.modulo, vistos: termosVistos(item.id) });
+    if (!termos.length) return '';
+    return `
+      <section class="secao glossario" aria-labelledby="titulo-glossario">
+        <h2 id="titulo-glossario">📚 Palavras técnicas</h2>
+        <p class="glossario-ajuda">Toque numa palavra para ver o que ela significa, com uma comparação do dia a dia.</p>
+        ${termos.map((t) => `
+          <details class="termo">
+            <summary><b>${esc(t.termo)}</b><span>${esc(t.definicao)}</span></summary>
+            <p class="analogia"><span aria-hidden="true">🧠</span> <b>Pense assim:</b> ${esc(t.analogia)}</p>
+            ${t.exemplo ? `<pre class="trecho exemplo-termo"><code>${esc(t.exemplo)}</code></pre>` : ''}
+          </details>`).join('')}
+      </section>`;
+  }
+
+  /**
+   * Dicas progressivas: a primeira só aponta o caminho e a última quase dá a resposta.
+   * Cada uma fica fechada num <details> (o aluno abre só quando precisa).
+   */
+  function dicas(item) {
+    const lista = listaDeDicas(item);
+    if (!lista.length) return '<details class="dica-exercicio"><summary>💡 Dica</summary><p>Revise a lição antes deste exercício e a aba 📘 Docs.</p></details>';
+    if (lista.length === 1) return `<details class="dica-exercicio"><summary>💡 Dica</summary><p>${esc(lista[0])}</p></details>`;
+    const rotulo = (i) => (i === 0 ? 'um empurrãozinho' : i === lista.length - 1 ? 'quase a resposta' : 'mais detalhes');
+    return `
+      <section class="secao dicas" aria-labelledby="titulo-dicas">
+        <h2 id="titulo-dicas">💡 Dicas</h2>
+        <p class="glossario-ajuda">Abra uma de cada vez, só se travar.</p>
+        ${lista.map((d, i) => `<details class="dica-exercicio"><summary>Dica ${i + 1} de ${lista.length}: ${rotulo(i)}</summary><p>${esc(d)}</p></details>`).join('')}
+      </section>`;
   }
 
   function comoConferir(testes) {
@@ -452,7 +520,8 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     }
     const resultados = [];
     for (const teste of testes) {
-      const verificacoes = (teste.regras || []).map((regra) => verificarRegra(regra));
+      // A `dica` do caso diz ao aluno o que corrigir; vai na primeira verificação que falhou.
+      const verificacoes = comoCorrigir((teste.regras || []).map((regra) => verificarRegra(regra)), teste.dica);
       const ok = verificacoes.every((v) => v.ok);
       resultados.push({ ok, resultados: verificacoes, ms: 1 });
     }
@@ -479,7 +548,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       const verificacoes = (r.resultados || []).map((v) => `
         <li class="verificacao ${v.ok ? 'ok' : 'falha'}">
           <span class="marca" aria-hidden="true">${v.ok ? '✅' : '❌'}</span>
-          <div>${esc(v.mensagem)}${v.detalhe ? `<br><span class="detalhe">${esc(v.detalhe)}</span>` : ''}</div>
+          <div>${esc(v.mensagem)}${v.detalhe ? `<br><span class="detalhe">${esc(v.detalhe)}</span>` : ''}${v.dica ? `<span class="dica">🔧 Como corrigir: ${esc(v.dica)}</span>` : ''}</div>
         </li>`).join('');
       return `
         <details class="caso ${situacao}" ${situacao === 'falha' ? 'open' : ''}>
