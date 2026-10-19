@@ -12,10 +12,11 @@ import { licao, exercicio, teste, yaml } from '../src/conteudo/util.js';
 import { kindsDoYaml } from '../src/k8s/comandos.js';
 import { criarTelaItem, listaDeDicas, comoCorrigir } from '../src/ui/item.js';
 import { falaDosTestes } from '../src/ui/anuncios.js';
+import { caminhoLegivel, explicarCampo, aplicarYaml, resetarEstado, verificarRegra } from '../src/k8s/simulador.js';
 
 // Os módulos (ou tópicos de um módulo) já revisados no padrão. Módulo novo entra aqui quando
 // seguir docs/didatica.md.
-const REVISADOS = ['basico', 'pods'];
+const REVISADOS = ['fundamentos'];
 const revisado = (i) => REVISADOS.includes(i.modulo) || REVISADOS.includes(i.grupo);
 
 const texto = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
@@ -141,6 +142,39 @@ describe('atalhos do conteúdo', () => {
   it('o leitor de tela fala o "como corrigir"', () => {
     const fala = falaDosTestes({ aprovado: false, relatorio: [{ ok: false, resultados: [{ ok: false, mensagem: 'Porta 80 exposta', dica: 'Use containerPort: 80' }] }] });
     expect(fala).toContain('Dica: Use containerPort: 80.');
+  });
+});
+
+describe('mensagens de erro em linguagem simples', () => {
+  it('o caminho do campo aparece como no YAML', () => {
+    expect(caminhoLegivel('rules[*].verbs')).toBe('rules → verbs');
+    expect(caminhoLegivel('spec.containers[name=web].securityContext.capabilities.drop')).toBe('spec → containers (web) → securityContext → capabilities → drop');
+    expect(caminhoLegivel('metadata.annotations["service.kubernetes.io/topology-mode"]')).toBe('metadata → annotations → service.kubernetes.io/topology-mode');
+    expect(caminhoLegivel('spec.ports[0].targetPort')).toBe('spec → ports → targetPort');
+  });
+
+  it('cada condição diz o que fazer', () => {
+    const r = { kind: 'Role', nome: 'leitor', caminho: 'rules[*].verbs' };
+    expect(explicarCampo({ ...r, contem: 'watch' }, ['*'])).toBe('Em Role "leitor", rules → verbs ainda não tem watch. Inclua watch.');
+    expect(explicarCampo({ ...r, naoContem: '*' }, ['*'])).toContain('curinga *');
+    expect(explicarCampo({ ...r, naoContem: 'delete' }, ['delete'])).toContain('Tire delete.');
+    expect(explicarCampo({ ...r, contem: 'get' }, undefined)).toContain('falta rules → verbs');
+    expect(explicarCampo({ ...r, valor: 'x' }, undefined)).toContain('Escreva o valor x');
+    expect(explicarCampo({ ...r, valor: 'x' }, 'y')).toContain('está y, mas deveria ser x');
+    expect(explicarCampo({ ...r, ausente: true }, 'y')).toContain('Apague essa linha');
+    expect(explicarCampo({ ...r, minimo: 2 }, 1)).toContain('pelo menos 2');
+    expect(explicarCampo({ ...r, maximo: 2 }, 3)).toContain('no máximo 2');
+    expect(explicarCampo(r, undefined)).toContain('Confira o nome e a indentação');
+    expect(explicarCampo(r, '')).toContain('Preencha esse campo');
+  });
+
+  it('a verificação que falha traz a explicação e, à parte, o detalhe técnico', () => {
+    resetarEstado();
+    aplicarYaml(['apiVersion: v1', 'kind: Pod', 'metadata:', '  name: p', 'spec:', '  containers:', '    - name: c', '      image: nginx:1.25'].join('\n'));
+    const v = verificarRegra({ tipo: 'campo', kind: 'Pod', nome: 'p', caminho: 'spec.restartPolicy', valor: 'OnFailure' });
+    expect(v.ok).toBe(false);
+    expect(v.detalhe).toBe('Em Pod "p", falta spec → restartPolicy. Escreva o valor OnFailure.');
+    expect(v.tecnico).toContain('spec.restartPolicy: esperado que é OnFailure');
   });
 });
 

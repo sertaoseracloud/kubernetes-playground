@@ -1057,11 +1057,50 @@ function verificarCampo(regra) {
   if (!manifesto) return { ok: false, detalhe: `${regra.kind} "${regra.nome}" não encontrado.`, mensagem, categoria, obtido: '(nenhum)' };
   const obtido = lerCampo(manifesto, regra.caminho);
   const ok = campoConfere(regra, obtido);
+  if (ok) return { ok, detalhe: `${regra.caminho} confere.`, mensagem, categoria, obtido: curto(obtido) };
   return {
     ok,
-    detalhe: ok ? `${regra.caminho} confere.` : `${regra.caminho}: esperado que ${condicaoDoCampo(regra)}, obtido ${curto(obtido)}.`,
+    detalhe: explicarCampo(regra, obtido),
+    tecnico: `${regra.caminho}: esperado que ${condicaoDoCampo(regra)}, obtido ${curto(obtido)}.`,
     mensagem, categoria, obtido: curto(obtido),
   };
+}
+
+/** O caminho do campo como o aluno vê no YAML: "rules[*].verbs" vira "rules → verbs". */
+export function caminhoLegivel(caminho) {
+  return [...String(caminho).matchAll(PEDACO_DO_CAMINHO)].map(([, indice, chave, todos, filtroK, filtroV, nome]) => {
+    if (indice !== undefined || todos) return null;
+    if (filtroK !== undefined) return `(${filtroK === 'name' ? '' : `${filtroK} `}${filtroV})`;
+    return chave ?? nome;
+  }).filter(Boolean).join(' → ').replace(/ → \(/g, ' (');
+}
+
+const valorLegivel = (v) => (ehObjeto(v) ? estavel(v) : String(v));
+
+/**
+ * Por que a regra "campo" falhou, em linguagem simples e dizendo o que fazer
+ * ("Em rules → verbs, inclua watch."). O caminho técnico vai à parte, em `tecnico`.
+ */
+export function explicarCampo(regra, obtido) {
+  const onde = caminhoLegivel(regra.caminho);
+  const recurso = `${regra.kind} "${regra.nome}"`;
+  const faltando = obtido === undefined || obtido === null;
+  if (regra.ausente) return `Em ${recurso}, ${onde} não deveria estar definido. Apague essa linha.`;
+  if (regra.naoContem !== undefined) {
+    const v = valorLegivel(regra.naoContem);
+    if (v === '*') return `Em ${recurso}, ${onde} usa o curinga *, que libera tudo. Troque o * pela lista do que é necessário.`;
+    return `Em ${recurso}, ${onde} tem ${v}, que não deveria estar lá. Tire ${v}.`;
+  }
+  if (faltando) {
+    if (regra.valor !== undefined) return `Em ${recurso}, falta ${onde}. Escreva o valor ${valorLegivel(regra.valor)}.`;
+    if (regra.contem !== undefined) return `Em ${recurso}, falta ${onde}. Crie o campo e inclua ${valorLegivel(regra.contem)}.`;
+    return `Em ${recurso}, falta ${onde}. Confira o nome e a indentação desse campo.`;
+  }
+  if (regra.contem !== undefined) return `Em ${recurso}, ${onde} ainda não tem ${valorLegivel(regra.contem)}. Inclua ${valorLegivel(regra.contem)}.`;
+  if (regra.valor !== undefined) return `Em ${recurso}, ${onde} está ${curto(obtido)}, mas deveria ser ${valorLegivel(regra.valor)}.`;
+  if (regra.minimo !== undefined) return `Em ${recurso}, ${onde} está ${curto(obtido)}, mas precisa ser pelo menos ${regra.minimo}.`;
+  if (regra.maximo !== undefined) return `Em ${recurso}, ${onde} está ${curto(obtido)}, mas pode ser no máximo ${regra.maximo}.`;
+  return `Em ${recurso}, ${onde} está vazio. Preencha esse campo.`;
 }
 
 /**

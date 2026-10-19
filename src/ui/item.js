@@ -548,7 +548,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       const verificacoes = (r.resultados || []).map((v) => `
         <li class="verificacao ${v.ok ? 'ok' : 'falha'}">
           <span class="marca" aria-hidden="true">${v.ok ? '✅' : '❌'}</span>
-          <div>${esc(v.mensagem)}${v.detalhe ? `<br><span class="detalhe">${esc(v.detalhe)}</span>` : ''}${v.dica ? `<span class="dica">🔧 Como corrigir: ${esc(v.dica)}</span>` : ''}</div>
+          <div>${esc(v.mensagem)}${v.detalhe ? `<br><span class="detalhe">${esc(v.detalhe)}</span>` : ''}${v.dica ? `<span class="dica">🔧 Como corrigir: ${esc(v.dica)}</span>` : ''}${!v.ok && v.tecnico ? `<details class="detalhe-tecnico"><summary>Detalhe técnico</summary><code>${esc(v.tecnico)}</code></details>` : ''}</div>
         </li>`).join('');
       return `
         <details class="caso ${situacao}" ${situacao === 'falha' ? 'open' : ''}>
