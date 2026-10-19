@@ -15,7 +15,7 @@ import { anunciar, falaDosTestes, leitorDeTela } from './anuncios.js';
 import { solucaoLiberada, minutosQueFaltam, criarCronometro } from './solucao.js';
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
-import { interpretar, completarKubectl } from '../k8s/comandos.js';
+import { interpretar, completarKubectl, kindsDoYaml, explicarKind } from '../k8s/comandos.js';
 import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
@@ -274,6 +274,22 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     return blocos ? `<section class="secao secao-conferir"><h2>✅ Como saber que deu certo</h2>${blocos}</section>` : '';
   }
 
+  // Aba 📘 Docs: os tipos de recurso que o exercício usa, com uma explicação curta e o link da
+  // documentação oficial (no terraform-playground, a aba mostra os argumentos de cada recurso).
+  function renderDocs() {
+    const item = estado.item;
+    const kinds = item?.tipo === 'licao' ? [] : kindsDoYaml(item?.solucao ?? item?.inicial ?? '');
+    el.abaDocs.hidden = !kinds.length;
+    if (!kinds.length) return;
+    el.docs.innerHTML = `
+      <p>Os tipos de recurso usados aqui. A documentação completa (em inglês) abre em outra aba.</p>
+      <dl class="docs-kinds">
+        ${kinds.map((k) => `<dt><code>${esc(k)}</code></dt><dd>${esc(explicarKind(k) ?? 'Recurso nativo do Kubernetes.')}
+          <a href="https://kubernetes.io/search/?q=${encodeURIComponent(k)}" target="_blank" rel="noopener noreferrer">Documentação de ${esc(k)}</a></dd>`).join('')}
+      </dl>
+      <p class="caso-exemplo">Dica: no terminal, <code>kubectl explain ${esc(kinds[0].toLowerCase())}</code> também explica o tipo.</p>`;
+  }
+
   function renderSolucao() {
     const item = estado.item;
     if (!item?.solucao || !solucaoLiberada(item)) {
@@ -335,6 +351,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     el.enviar.hidden = item.tipo !== 'exercicio';
     el.abaTestes.hidden = item.tipo !== 'exercicio';
     renderSolucao();
+    renderDocs();
     cronometro.iniciar(item);
     layout.aplicar();
     leitura.parar();

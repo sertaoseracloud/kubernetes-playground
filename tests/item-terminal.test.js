@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { criarTelaItem, ESQUELETO } from '../src/ui/item.js';
 import { problemas, LIVRE } from '../src/conteudo/trilha.js';
 import { statusDe } from '../src/progresso.js';
-import { interpretar, completarKubectl, tipoPorNome } from '../src/k8s/comandos.js';
+import { interpretar, completarKubectl, tipoPorNome, kindsDoYaml, explicarKind } from '../src/k8s/comandos.js';
 
 const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
 const corpo = html.slice(html.indexOf('>', html.indexOf('<body')) + 1, html.lastIndexOf('</body>')).replace(/<script[\s\S]*?<\/script>/g, '');
@@ -60,6 +60,10 @@ describe('terminal na tela do exercício', () => {
     expect(tela.editor().getValue()).toBe(ESQUELETO);
     expect(tela.editor().getValue()).not.toBe(PRIMEIRO.solucao);
     expect(falas).toEqual([]); // abrir não fala nada: só o que a pessoa pede
+    // A aba 📘 Docs mostra os kinds do exercício, com link que abre em outra aba de forma segura.
+    expect(document.getElementById('aba-docs').hidden).toBe(false);
+    expect(document.querySelector('#desc-docs .docs-kinds dt').textContent).toBe('Pod');
+    expect(document.querySelector('#desc-docs a').getAttribute('rel')).toBe('noopener noreferrer');
   });
 
   it('kubectl apply, get, describe e delete no prompt', async () => {
@@ -135,6 +139,12 @@ describe('comandos do kubectl (src/k8s/comandos.js)', () => {
     expect(texto(interpretar('kubectl explain svc', vazio))).toContain('Service');
     expect(interpretar('clear', vazio).acao).toBe('clear');
     expect(interpretar('   ', vazio).linhas).toEqual([]);
+  });
+
+  it('kinds de um manifesto (aba Docs) e explicação de cada um', () => {
+    expect(kindsDoYaml('kind: Deployment\n---\nkind: Service\n---\nkind: Service')).toEqual(['Deployment', 'Service']);
+    expect(explicarKind('Service')).toContain('ClusterIP');
+    expect(explicarKind('Inventado')).toBeNull();
   });
 
   it('Tab completa os comandos', () => {

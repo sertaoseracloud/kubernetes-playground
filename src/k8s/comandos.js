@@ -186,7 +186,7 @@ const AJUDA = [
   linha('Teclas: ↑/↓ histórico · Tab completa · Ctrl+C cancela · Esc sai do terminal.', 'comentario'),
 ];
 
-const EXPLICACOES = {
+export const EXPLICACOES = {
   pods: 'Pod: a menor unidade do Kubernetes; um ou mais containers que compartilham rede e volumes.',
   services: 'Service: um endereço estável (ClusterIP, NodePort ou LoadBalancer) na frente de um grupo de Pods.',
   deployments: 'Deployment: mantém N réplicas de um Pod rodando e faz atualizações sem parar o serviço.',
@@ -201,6 +201,15 @@ const EXPLICACOES = {
   jobs: 'Job: roda Pods até terminarem com sucesso (tarefas que acabam).',
   nodes: 'Node: uma máquina (virtual ou física) onde os Pods rodam.',
 };
+
+/** Os kinds de um manifesto YAML, na ordem em que aparecem (sem repetir). */
+export const kindsDoYaml = (texto) => [...new Set([...String(texto ?? '').matchAll(/^kind:\s*([A-Za-z]+)/gm)].map((m) => m[1]))];
+
+/** Explicação curta de um kind (ou null se não houver). */
+export function explicarKind(kind) {
+  const tipo = Object.keys(TIPOS).find((t) => TIPOS[t].kind === kind);
+  return tipo ? EXPLICACOES[tipo] : null;
+}
 
 /**
  * Interpreta uma linha do terminal. Devolve `{ linhas }` para mostrar e, quando o comando
