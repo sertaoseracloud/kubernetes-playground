@@ -21,6 +21,7 @@ import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
 import { renderArquitetura } from './arquitetura.js';
+import { desenharGrafo } from './grafo.js';
 import { termosDoTexto } from '../conteudo/glossario.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
@@ -64,6 +65,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     saidaCluster: $('saida-cluster'),
     saidaEstado: $('saida-estado'),
     saidaArquitetura: $('saida-arquitetura'),
+    grafo: $('saida-grafo'),
   };
 
   const estado = { item: null, ocupado: false };
@@ -152,7 +154,12 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     aoMudar: (arquivos) => {
       clearTimeout(salvarTimer);
       const item = estado.item;
-      if (item) salvarTimer = setTimeout(() => gravarRascunho(item.id, formaDeGuardar(arquivos)), 300);
+      if (item) {
+        salvarTimer = setTimeout(() => {
+          gravarRascunho(item.id, formaDeGuardar(arquivos));
+          if (!el.grafo.hidden) desenharGrafo(el.grafo, obterCodigo()); // o grafo acompanha o que você escreve
+        }, 300);
+      }
     },
   });
 
@@ -208,7 +215,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   });
 
   // ---------- abas saída ----------
-  const saidas = { terminal: el.janelaTerminal, estado: el.saidaEstado, arquitetura: el.saidaArquitetura };
+  const saidas = { terminal: el.janelaTerminal, grafo: el.grafo, estado: el.saidaEstado, arquitetura: el.saidaArquitetura };
   let estadoAnterior = null;
   function mostrarSaida(nome) {
     for (const [chave, painel] of Object.entries(saidas)) painel.hidden = chave !== nome;
@@ -217,6 +224,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       b.setAttribute('aria-selected', String(b.dataset.saida === nome));
     });
     if (nome === 'estado') atualizarPainelEstado();
+    if (nome === 'grafo') desenharGrafo(el.grafo, obterCodigo());
     if (nome === 'arquitetura') {
       renderArquitetura().then((html) => { el.saidaArquitetura.innerHTML = html; });
     }
