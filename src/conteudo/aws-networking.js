@@ -43,13 +43,40 @@ export const awsNetworking = {
       titulo: 'Ingress com anotações ALB',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie um Ingress chamado <code>app-ingress</code> que usa o AWS Load Balancer Controller.</p>
-        <p>Configure as seguintes anotações:</p>
-        <ul>
-          <li><code>alb.ingress.kubernetes.io/scheme: internet-facing</code></li>
-          <li><code>alb.ingress.kubernetes.io/target-type: ip</code></li>
-        </ul>
-        <p>Use <code>ingressClassName: alb</code> e aponte para o Service <code>app-svc</code> na porta 80.</p>`,
+      resumo: `
+        <p>Na AWS, o <b>AWS Load Balancer Controller</b> transforma um Ingress num <b>ALB</b>. As escolhas do ALB vão em annotations.</p>
+        <ol>
+          <li>No Ingress <code>app-ingress</code>, escreva <code>ingressClassName: alb</code>.</li>
+          <li>Annotation <code>alb.ingress.kubernetes.io/scheme: internet-facing</code> (ALB público).</li>
+          <li>Annotation <code>alb.ingress.kubernetes.io/target-type: ip</code> (o ALB manda direto para o IP dos Pods).</li>
+          <li>A regra leva <code>/</code> (<code>pathType: Prefix</code>) ao Service <code>app-svc</code> na porta 80.</li>
+        </ol>
+        <p><b>No cluster:</b> o controlador cria o ALB, um target group com os IPs dos Pods e põe o endereço DNS do ALB em
+        <code>kubectl get ingress app-ingress</code>.</p>`,
+      inicial: `apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  annotations:
+    # TODO: alb.ingress.kubernetes.io/scheme: internet-facing
+    # TODO: alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName:      # TODO: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-svc
+                port:
+                  number: 80
+`,
+      dica: [
+        "As duas annotations ficam em metadata.annotations, uma por linha.",
+        "ingressClassName: alb fica em spec, alinhado com rules.",
+      ],
       solucao: `apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -72,10 +99,12 @@ spec:
       testes: [
         {
           descricao: 'O Ingress app-ingress existe',
+          dica: "Preencha as annotations e o ingressClassName: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'Ingress', nome: 'app-ingress' }],
         },
         {
           descricao: 'O Ingress tem anotação ALB scheme internet-facing',
+          dica: "Em metadata.annotations: alb.ingress.kubernetes.io/scheme: internet-facing.",
           regras: [{ tipo: 'alb-ingress-anotacao', ingress: 'app-ingress', anotacao: 'alb.ingress.kubernetes.io/scheme', valor: 'internet-facing' }],
         },
       ],
@@ -86,8 +115,37 @@ spec:
       titulo: 'NetworkPolicy restritiva',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie uma NetworkPolicy chamada <code>restrict-backend</code> que permite tráfego apenas de pods com label <code>role: frontend</code> para pods com label <code>role: backend</code> na porta 8080.</p>
-        <p>Todos os demais tráfegos de entrada devem ser bloqueados.</p>`,
+      resumo: `
+        <p>No EKS, as NetworkPolicies são aplicadas pelo VPC CNI (com o recurso de políticas ligado). A regra é a mesma de qualquer cluster.</p>
+        <ol>
+          <li>A NetworkPolicy <code>restrict-backend</code> seleciona os Pods com <code>role: backend</code>.</li>
+          <li><code>policyTypes: [Ingress]</code>: controla só a entrada.</li>
+          <li>Em <code>ingress[0].from</code>, só os Pods com <code>role: frontend</code>, na porta <code>8080/TCP</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> qualquer outra origem que tente chegar ao backend tem os pacotes descartados.</p>`,
+      inicial: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-backend
+spec:
+  podSelector:
+    matchLabels:
+      role:              # TODO: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role:      # TODO: frontend
+      ports:
+        - protocol: TCP
+          port:          # TODO: 8080
+`,
+      dica: [
+        "Releia o exemplo da lição \"Firewall entre Pods\" (Recursos Avançados): a estrutura é a mesma.",
+        "O podSelector de cima é QUEM é protegido (backend); o de dentro do from é QUEM pode entrar (frontend).",
+      ],
       solucao: `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -109,10 +167,12 @@ spec:
       testes: [
         {
           descricao: 'A NetworkPolicy restrict-backend existe',
+          dica: "Preencha os TODO: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'NetworkPolicy', nome: 'restrict-backend' }],
         },
         {
           descricao: 'A NetworkPolicy seleciona pods backend e restringe ingress',
+          dica: "podSelector com role: backend e, em from, role: frontend.",
           regras: [{ tipo: 'network-policy', policy: 'restrict-backend', podSelector: 'role=backend', direction: 'Ingress' }],
         },
       ],

@@ -43,7 +43,30 @@ export const awsStorage = {
       titulo: 'PVC com StorageClass EBS',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Crie um PersistentVolumeClaim chamado <code>dados-pvc</code> que solicita 10Gi de armazenamento usando a StorageClass <code>ebs-gp3</code> com modo de acesso <code>ReadWriteOnce</code>.</p>`,
+      resumo: `
+        <p>Na AWS, discos de bloco são volumes <b>EBS</b>, criados pelo driver EBS CSI a partir de uma StorageClass (aqui, <code>ebs-gp3</code>).</p>
+        <ol>
+          <li>Crie o PVC <code>dados-pvc</code>.</li>
+          <li><code>accessModes: [ReadWriteOnce]</code> (um EBS se liga a um nó por vez).</li>
+          <li><code>storageClassName: ebs-gp3</code> e <code>10Gi</code> em <code>resources.requests.storage</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> quando um Pod usar o PVC, o driver cria um volume gp3 de 10 GiB na mesma zona do nó e o anexa à máquina.</p>`,
+      inicial: `apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dados-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName:      # TODO: ebs-gp3
+  resources:
+    requests:
+      storage:           # TODO: 10Gi
+`,
+      dica: [
+        "É um PVC como o da lição \"Workloads com estado\", com outra StorageClass.",
+        "storageClassName: ebs-gp3 e storage: 10Gi.",
+      ],
       solucao: `apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -58,10 +81,12 @@ spec:
       testes: [
         {
           descricao: 'O PersistentVolumeClaim dados-pvc existe',
+          dica: "Preencha os TODO: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'PersistentVolumeClaim', nome: 'dados-pvc' }],
         },
         {
           descricao: 'O PVC usa a StorageClass ebs-gp3',
+          dica: "Em spec: storageClassName: ebs-gp3.",
           regras: [{ tipo: 'pvc-existe', pvc: 'dados-pvc', storageClass: 'ebs-gp3' }],
         },
       ],
@@ -72,8 +97,45 @@ spec:
       titulo: 'Pod com volume persistente',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie um Pod chamado <code>app-com-dados</code> usando a imagem <code>nginx:1.25</code> que monta o PVC <code>dados-pvc</code> no caminho <code>/usr/share/nginx/html</code>.</p>
-        <p>O volume deve se chamar <code>dados</code>.</p>`,
+      resumo: `
+        <p>O PVC <code>dados-pvc</code> já existe no cluster. Agora um Pod vai usar esse disco para guardar as páginas do site.</p>
+        <ol>
+          <li>No Pod <code>app-com-dados</code> (container <code>nginx</code>, imagem <code>nginx:1.25</code>), declare o volume <code>dados</code>.</li>
+          <li>O tipo do volume é <code>persistentVolumeClaim</code>, com <code>claimName: dados-pvc</code>.</li>
+          <li>Monte <code>dados</code> em <code>/usr/share/nginx/html</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o volume EBS é anexado ao nó do Pod. Se o Pod for recriado (no mesmo nó ou em outro da mesma zona), os
+        arquivos continuam lá.</p>`,
+      inicial: `apiVersion: v1
+kind: Pod
+metadata:
+  name: app-com-dados
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25
+      volumeMounts:
+        - name: dados
+          mountPath:     # TODO: /usr/share/nginx/html
+  volumes:
+    - name: dados
+      # TODO: persistentVolumeClaim com claimName: dados-pvc
+`,
+      existentes: `apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dados-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ebs-gp3
+  resources:
+    requests:
+      storage: 10Gi`,
+      dica: [
+        "Volume em duas partes: declarar (volumes) e montar (volumeMounts).",
+        "persistentVolumeClaim:\n  claimName: dados-pvc",
+      ],
       solucao: `apiVersion: v1
 kind: Pod
 metadata:
@@ -92,10 +154,12 @@ spec:
       testes: [
         {
           descricao: 'O Pod app-com-dados existe',
+          dica: "Preencha os TODO: um volume sem tipo impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'Pod', nome: 'app-com-dados' }],
         },
         {
           descricao: 'O volume dados está montado no container nginx',
+          dica: "volumeMounts com name: dados e mountPath: /usr/share/nginx/html.",
           regras: [{ tipo: 'volume-montado', pod: 'app-com-dados', container: 'nginx', volume: 'dados', caminho: '/usr/share/nginx/html' }],
         },
       ],
