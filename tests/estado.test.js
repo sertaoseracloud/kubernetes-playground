@@ -98,3 +98,13 @@ describe('renderEstado', () => {
     expect(html).toMatch(/(&lt;|&#60;)script(&gt;|&#62;)/);
   });
 });
+describe('painel de Estado com recursos genéricos', () => {
+  it('mostra o kind dos recursos genéricos e não repete os manifestos guardados', () => {
+    const anterior = { pods: [], outros: [], manifestos: {} };
+    const atual = { pods: [], outros: [{ kind: 'StatefulSet', nome: 'db', spec: {} }], manifestos: { 'StatefulSet/db': { kind: 'StatefulSet' } } };
+    const html = renderEstado(atual, compararEstados(anterior, atual));
+    expect(html).toContain('StatefulSet/db');
+    expect(html).not.toContain('outros/db');
+    expect(html).not.toContain('manifestos');
+  });
+});

@@ -19,17 +19,17 @@ export const EMISSOR = {
 export const CERTIFICADOS = {
   fundamentos: {
     titulo: 'Fundamentos do Kubernetes',
-    cargaHoraria: 29,
+    cargaHoraria: 30,
     resumo: 'concluiu o módulo Fundamentos do Kubernetes, dominando arquitetura, Pods, Services e Deployments',
     hashtags: ['Kubernetes', 'K8s', 'DevOps'],
     conteudos: ['Arquitetura do Kubernetes', 'Pods e Containers', 'Services e Networking', 'Deployments e Escalabilidade'],
   },
   avancados: {
     titulo: 'Recursos Avançados de Kubernetes',
-    cargaHoraria: 12,
-    resumo: 'concluiu o módulo Recursos Avançados, dominando GitOps, CronJobs e Secrets',
+    cargaHoraria: 22,
+    resumo: 'concluiu o módulo Recursos Avançados, dominando RBAC, escala automática, StatefulSet, NetworkPolicy, Ingress e GitOps',
     hashtags: ['Kubernetes', 'GitOps', 'Security'],
-    conteudos: ['GitOps com ArgoCD e Flux', 'CronJobs e Jobs', 'Secrets e Segurança'],
+    conteudos: ['RBAC e ServiceAccounts', 'HPA, probes e recursos', 'StatefulSet, DaemonSet e Storage', 'Jobs e CronJobs', 'NetworkPolicy e Ingress', 'Secrets', 'GitOps com Argo CD e Flux'],
   },
   aws: {
     titulo: 'Kubernetes na AWS (EKS)',
@@ -61,7 +61,7 @@ export const CERTIFICADOS = {
   },
   final: {
     titulo: 'Especialista Kubernetes: Trilha Completa',
-    cargaHoraria: 60,
+    cargaHoraria: 71,
     resumo: 'concluiu a trilha completa de Kubernetes, dos fundamentos ao multi-cloud',
     hashtags: ['Kubernetes', 'K8s', 'AWS', 'Azure', 'DevOps', 'Cloud Native'],
     conteudos: ['Fundamentos', 'Recursos Avançados', 'AWS (EKS)', 'Azure (AKS)', 'Projetos Práticos'],
