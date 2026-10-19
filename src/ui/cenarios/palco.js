@@ -8,7 +8,7 @@
  * @param {HTMLElement} el - Elemento raiz que contém os cenários
  * @returns {{ desligar: () => void }} Objeto com função de cleanup
  */
-export function ligarCenarios(el) {
+export function ligarCenarios(_el) {
   // Por enquanto, os cenários de Kubernetes são puramente visuais e estáticos.
   // Esta função retorna um no-op para manter a consistência da API.
   // Futuramente, pode-se adicionar tooltips interativos, zoom ou filtros aqui.

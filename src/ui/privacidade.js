@@ -71,11 +71,43 @@ export function renderPrivacidade(el, { definirStatus = () => {} } = {}) {
         <h2 id="priv-certificado">5. Nome e certificados</h2>
         <p>O nome é <b>opcional</b> e só é pedido quando você quer ver um certificado. Ele fica salvo neste navegador e
           vai dentro do link do certificado (<code>#/certificado/...</code> e <code>badge/.../?c=...</code>).
-          O link é codificado, <b>não criptografado</b>: qualquer pessoa com ele vê o nome, o módulo e a data.</p>
+          O link é codificado, <b>não criptografado</b>: qualquer pessoa com ele vê o nome, o módulo e a data.
+          Só compartilhe se quiser, e lembre que o que você publica no LinkedIn segue as regras do LinkedIn.</p>
+        <p>Para trocar o nome, use "editar" no painel da trilha. Certificados já compartilhados continuam com o nome antigo,
+          porque o nome está no próprio link.</p>
       </section>
 
-      <section aria-labelledby="priv-menores">
-        <h2 id="priv-menores">8. Menores de idade</h2>
+      <section aria-labelledby="priv-lgpd">
+        <h2 id="priv-lgpd">6. Como a LGPD é atendida</h2>
+        <p>A Lei Geral de Proteção de Dados (Lei nº 13.709/2018) se aplica a dados pessoais, como o nome do certificado.
+          Veja como o site trata isso:</p>
+        <ul>
+          <li><b>Finalidade e necessidade</b> (art. 6º): só guardamos o mínimo para o site funcionar (progresso, código,
+            preferências) e o nome, só se você quiser um certificado.</li>
+          <li><b>Base legal</b> (art. 7º): o nome é informado por você, por vontade própria, para gerar o certificado
+            (consentimento). Os demais dados não identificam ninguém e servem só para o funcionamento do site.</li>
+          <li><b>Onde o tratamento acontece:</b> no seu aparelho. A ${esc(CONTROLADOR.nome)} não recebe, não vê e não guarda
+            esses dados, e não os compartilha com ninguém.</li>
+          <li><b>Transparência</b> (art. 9º): esta página explica o que é guardado, por quê e onde.</li>
+          <li><b>Segurança</b> (art. 46): o site é servido por HTTPS; o seu YAML é lido pelo simulador como texto
+            e nunca é executado como programa.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="priv-direitos">
+        <h2 id="priv-direitos">7. Seus direitos (art. 18) e como exercer</h2>
+        <ul>
+          <li><b>Saber e acessar</b> o que está guardado: botão <b>📥 Baixar meus dados</b> (arquivo JSON).</li>
+          <li><b>Levar para outro lugar</b> (portabilidade): o mesmo arquivo JSON.</li>
+          <li><b>Corrigir</b> o nome: "editar" no painel da trilha.</li>
+          <li><b>Apagar tudo</b> e <b>retirar o consentimento</b>: botão <b>🗑️ Apagar meus dados</b>.</li>
+          <li>Como não guardamos seus dados em servidor, não há cópia nossa para pedir ou apagar.
+            Para outras dúvidas, use o canal da seção 1.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="priv-criancas">
+        <h2 id="priv-criancas">8. Crianças e adolescentes (art. 14)</h2>
         <p>O site é usado em aulas e pode ser usado por menores de 18 anos. Ele não pede dados de identificação e funciona
           sem nome. Para estudantes menores, a recomendação é <b>usar só o primeiro nome</b> no certificado (ou nenhum) e
           compartilhar o link com acompanhamento do responsável ou do professor.</p>

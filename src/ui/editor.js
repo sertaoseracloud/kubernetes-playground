@@ -1,33 +1,35 @@
-// Editor de código YAML/Markdown para Kubernetes Playground.
-// Usa CodeMirror 6 com suporte a YAML, Markdown e atalhos de teclado.
+// Editor de código YAML/Markdown do Kubernetes Playground (CodeMirror 6).
+// Como no terraform-playground: as cores vêm do tema do site (tema-editor.js), o leitor de
+// tela ouve o nome do editor e os atalhos (#ajuda-editor), Ctrl+Enter roda e Ctrl+Shift+Enter
+// envia. O Tab não fica preso aqui dentro: ele sai do editor (recuar a linha é Ctrl+[).
 import { EditorView, basicSetup } from 'codemirror';
+import { EditorState, Prec } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
 import { yaml } from '@codemirror/lang-yaml';
 import { markdown } from '@codemirror/lang-markdown';
-import { keymap } from '@codemirror/view';
-import { indentWithTab } from '@codemirror/commands';
+import { temaEditor } from './tema-editor.js';
 import { $ } from './util.js';
 
-export function criarEditor(container, { linguagem = 'yaml', inicial = '', onChange } = {}) {
+const ROTULO = { yaml: 'Editor de código YAML (Kubernetes)', markdown: 'Editor de texto Markdown' };
+
+export function criarEditor(container, { linguagem = 'yaml', inicial = '', onChange, aoExecutar, aoEnviar } = {}) {
   const extensoes = [
     basicSetup,
-    keymap.of([indentWithTab]),
     linguagem === 'markdown' ? markdown() : yaml(),
+    temaEditor,
+    EditorView.lineWrapping,
+    EditorState.tabSize.of(2),
+    Prec.highest(keymap.of([
+      { key: 'Mod-Enter', run: () => { aoExecutar?.(); return Boolean(aoExecutar); } },
+      { key: 'Mod-Shift-Enter', run: () => { aoEnviar?.(); return Boolean(aoEnviar); } },
+    ])),
+    EditorView.contentAttributes.of({ 'aria-label': ROTULO[linguagem] ?? ROTULO.yaml, tabindex: '0', 'aria-describedby': 'ajuda-editor' }),
     EditorView.updateListener.of((update) => {
-      if (update.docChanged && onChange) {
-        onChange(update.state.doc.toString());
-      }
-    }),
-    EditorView.theme({
-      '&': { height: '100%' },
-      '.cm-scroller': { overflow: 'auto' },
+      if (update.docChanged && onChange) onChange(update.state.doc.toString());
     }),
   ];
 
-  const view = new EditorView({
-    doc: inicial,
-    extensions: extensoes,
-    parent: container,
-  });
+  const view = new EditorView({ doc: inicial, extensions: extensoes, parent: container });
 
   return {
     view,

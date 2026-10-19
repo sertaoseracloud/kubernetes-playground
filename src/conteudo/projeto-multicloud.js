@@ -81,7 +81,7 @@ spec:
         },
         {
           descricao: 'O Service app-svc existe',
-          regras: [{ tipo: 'service-tipo', service: 'app-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'app-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O container tem resource limits definidos',

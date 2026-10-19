@@ -95,7 +95,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'web-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'web-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=web',
@@ -163,7 +163,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo NodePort',
-          regras: [{ tipo: 'service-tipo', service: 'web-nodeport', tipo: 'NodePort' }],
+          regras: [{ tipo: 'service-tipo', service: 'web-nodeport', serviceType: 'NodePort' }],
         },
         {
           descricao: 'O Service seleciona pods com app=web',
@@ -196,7 +196,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo LoadBalancer',
-          regras: [{ tipo: 'service-tipo', service: 'api-lb', tipo: 'LoadBalancer' }],
+          regras: [{ tipo: 'service-tipo', service: 'api-lb', serviceType: 'LoadBalancer' }],
         },
         {
           descricao: 'O Service seleciona pods com app=api',
@@ -256,7 +256,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ExternalName',
-          regras: [{ tipo: 'service-tipo', service: 'ext-api', tipo: 'ExternalName' }],
+          regras: [{ tipo: 'service-tipo', service: 'ext-api', serviceType: 'ExternalName' }],
         },
       ],
     },
@@ -293,7 +293,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'multi-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'multi-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=multi',
@@ -327,7 +327,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'slice-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'slice-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=slice-app',
@@ -362,7 +362,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'topo-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'topo-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=topo',
@@ -397,7 +397,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', nome: 'backend-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', nome: 'backend-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=backend',
@@ -484,7 +484,7 @@ spec:
         },
         {
           descricao: 'O Service é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'srv-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'srv-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O Service seleciona pods com app=srv-app',

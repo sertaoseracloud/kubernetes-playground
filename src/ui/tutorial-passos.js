@@ -1,59 +1,117 @@
-// Passos do tutorial interativo do Kubernetes Playground.
-// Adaptado do terraform-playground: cada passo destaca um elemento da UI e explica o que fazer.
+// Passos do tutorial. `tela` diz em qual tela o passo acontece ('inicio' ou 'item');
+// `alvo` é o seletor do elemento destacado (sem alvo, o modal fica no centro).
+// tests/tutorial.test.js confere que todos os alvos existem na página.
 
-/** ID do primeiro exercício da trilha, usado como destino final do tutorial. */
 export const PROBLEMA_DO_TUTORIAL = 'k8s-primeiro-yaml';
 
-/**
- * Cada passo tem:
- * - titulo: texto curto do cabeçalho
- * - texto: HTML com a explicação
- * - alvo: seletor CSS do elemento destacado (desktop)
- * - alvoCelular: seletor alternativo para celular (opcional)
- * - soDesktop: true se o passo só existe no desktop (opcional)
- * - tela: 'inicio' | 'item' | null — para onde levar o aluno antes de mostrar o passo
- */
 export const PASSOS = [
   {
-    titulo: 'Bem-vindo ao DivergeKubernetes! ☸️',
-    texto: '<p>Aqui você aprende Kubernetes escrevendo YAML de verdade e vendo o resultado na hora, sem precisar de um cluster real.</p><p>Vamos fazer um tour rápido pela interface?</p>',
-    alvo: '.marca',
-    tela: 'inicio',
+    titulo: 'Bem-vindo ao DivergeKubernetes ☸️',
+    texto: `<p>Aqui você aprende <b>Kubernetes</b> escrevendo manifestos YAML e vendo o cluster responder,
+      do Pod ao deploy na <b>AWS (EKS)</b> e no <b>Azure (AKS)</b>.</p>
+      <p>Tudo roda no seu navegador, num <b>simulador</b>: não precisa instalar nada nem ter um cluster,
+      e nada é cobrado. Este tutorial leva 1 minuto.</p>`,
   },
   {
-    titulo: 'A trilha de aprendizado',
-    texto: '<p>A trilha é o caminho dos exercícios. Cada módulo desbloqueia quando você resolve 70% do anterior.</p><p>Os nós são lições (📖) e exercícios (⭐ fácil, 🔥 médio, 💎 difícil).</p>',
-    alvo: '.caminho',
     tela: 'inicio',
+    alvo: '#tela-inicio .bloco-unidade',
+    titulo: 'O caminho',
+    texto: `<p>A trilha é um caminho: Fundamentos → Recursos Avançados → AWS → Azure → Projetos.</p>
+      <ul>
+        <li>📖 <b>lições</b> e exercícios ⭐ <span class="dificuldade facil">fácil</span>,
+          🔥 <span class="dificuldade medio">médio</span> e 💎 <span class="dificuldade dificil">difícil</span>;</li>
+        <li>o nó que pisca com <b>COMEÇAR</b> é o seu próximo passo;</li>
+        <li>🔒 o próximo módulo abre quando você resolve <b>70%</b> do atual.</li>
+      </ul>`,
   },
   {
-    titulo: 'Seu progresso',
-    texto: '<p>No painel lateral você vê seu nível, XP, sequência de dias e certificados conquistados.</p><p>O nome aparece nos certificados — clique em <b>informar nome</b> quando quiser.</p>',
+    tela: 'inicio',
     alvo: '.painel-jogador',
+    titulo: 'XP, nível e certificados',
+    texto: `<p>Cada lição e exercício resolvido dá <b>XP</b> e sobe o seu <b>nível</b>. Estudar em dias seguidos
+      aumenta a sua sequência 🔥.</p>
+      <p>Ao concluir um módulo, o 🏆 libera um <b>certificado</b> emitido pela <b>Sertão será cloud</b>, que você pode
+      salvar em PDF e compartilhar no LinkedIn. Concluindo tudo, ganha o certificado final 🎓.</p>`,
+  },
+  {
     tela: 'inicio',
+    alvo: '.menu',
+    alvoCelular: '#btn-menu',
+    titulo: 'Trilha e Playground livre',
+    texto: `<p><b>Trilha</b> volta para este caminho. O <b>Playground livre</b> é para experimentar
+      à vontade: o YAML e o cluster ficam salvos no navegador.</p>
+      <p class="so-celular">No celular, eles ficam no menu <b>☰</b>, no canto de cima.</p>`,
   },
   {
-    titulo: 'Dentro de um exercício',
-    texto: '<p>Cada exercício tem um editor de YAML à esquerda e o terminal simulado à direita.</p><p>Escreva o manifesto, clique em <b>▶ Apply</b> para validar e em <b>⬆ Enviar</b> para rodar todos os testes.</p>',
+    tela: 'item',
+    alvo: '#painel-descricao',
+    titulo: 'O enunciado',
+    texto: `<p>Leia o que o exercício pede e como saber que deu certo. A <b>Solução</b> aparece depois do
+      tempo estimado do exercício (o ⏱), se você ainda não resolveu.</p>
+      <p>O botão <b>🔊</b> lê o enunciado em voz alta.</p>`,
+  },
+  {
+    tela: 'item',
+    alvo: '.painel-codigo',
+    titulo: 'O editor de YAML',
+    texto: `<p>Escreva o manifesto aqui; vários recursos vão no mesmo arquivo, separados por <code>---</code>.
+      Seu código é salvo sozinho enquanto você digita.</p>
+      <p>Atalho: <kbd>Ctrl</kbd> + <kbd>Enter</kbd> roda o apply. <kbd>Tab</kbd> sai do editor.</p>`,
+  },
+  {
+    tela: 'item',
+    alvo: '.painel-preview',
+    titulo: 'O terminal',
+    texto: `<p>Mostra a saída do <code>kubectl</code>, em inglês, igual à de verdade, e os erros do YAML com uma
+      explicação em português.</p>
+      <p>É um terminal de verdade: digite <code>kubectl get pods</code>, <code>kubectl describe svc web</code>,
+      <code>kubectl delete pod nginx</code>... e <code>help</code> para ver todos. <kbd>Esc</kbd> sai do terminal.</p>
+      <p>A aba <b>📦 Estado</b> mostra o cluster e a <b>🏛️ Arquitetura</b>, como o simulador funciona.</p>`,
+  },
+  {
+    tela: 'item',
     alvo: '#btn-executar',
+    titulo: '▶ Apply, Diff e Drift',
+    texto: `<p><b>Apply</b> cria os recursos no cluster simulado e confere os <b>casos de teste visíveis</b>.
+      <b>Diff</b> mostra antes o que vai mudar, e <b>Drift</b> compara o YAML com o que está rodando.</p>`,
+  },
+  {
     tela: 'item',
+    alvo: '#aba-testes',
+    titulo: '🧪 Testes',
+    texto: `<p>Os testes ficam nesta aba, ao lado da descrição. Ela abre sozinha quando você clica em
+      <b>▶ Apply</b>, e o resultado aparece no nome da aba (ex.: ✅ 3/3).</p>
+      <p>Cada cartão é um caso de teste: ⏳ ainda não rodou, ✅ passou, ❌ falhou, com <b>o que faltou</b>.</p>`,
   },
   {
-    titulo: 'Abas de descrição',
-    texto: '<p>As abas acima do painel mostram:</p><ul><li><b>Descrição</b>: o que fazer e como conferir</li><li><b>Solução</b>: aparece depois de um tempo tentando</li><li><b>Testes</b>: o resultado de cada caso</li></ul>',
-    alvo: '[data-desc="enunciado"]',
     tela: 'item',
+    alvo: '#btn-enviar',
+    titulo: '⬆ Enviar',
+    texto: `<p>Roda <b>todos</b> os casos de teste. Se tudo passar, aparece <b>Aceito 🎉</b> e o exercício fica
+      marcado como resolvido.</p>
+      <p>Atalho: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Enter</kbd>.</p>`,
   },
   {
-    titulo: 'Ajuda e preferências',
-    texto: '<p>Os botões flutuantes (⚙️) abrem o tutorial novamente, o painel de acessibilidade e a página de privacidade.</p><p>No painel ♿ você ajusta tema, tamanho do texto, régua de leitura e lembrete de pausa.</p>',
-    alvo: '#btn-flutuantes',
-    tela: null,
+    tela: 'item',
+    alvo: '#grupo-layout',
+    soDesktop: true, // no celular o código e o terminal sempre ficam empilhados
+    titulo: 'Posição do código e do terminal',
+    texto: `<p><b>Auto</b> escolhe sozinho: lado a lado quando há espaço, senão o código fica em cima
+      e o terminal embaixo.</p>
+      <p>Use <b>⇆</b> ou <b>⇅</b> para fixar e <b>📄</b> para ocultar a descrição.</p>`,
   },
   {
-    titulo: 'Pronto para começar! 🚀',
-    texto: '<p>Agora é com você. Abra o primeiro exercício e escreva seu primeiro Pod em YAML.</p><p>Boa jornada! ☸️</p>',
-    alvo: null,
-    tela: null,
+    alvo: '#btn-acessibilidade',
+    titulo: '♿ Acessibilidade',
+    texto: `<p>Mude o <b>tema</b>, o <b>tamanho do texto</b>, a fonte e o espaçamento.</p>
+      <p>Há <b>perfis rápidos</b> para estudar do seu jeito: <b>🎯 Foco</b>, <b>📖 Leitura facilitada</b>,
+      <b>🌿 Calmo</b> e <b>🤝 Sem pressão</b>.</p>`,
+  },
+  {
+    alvo: '#btn-tutorial',
+    titulo: 'Pronto! 🚀',
+    texto: `<p>Você pode rever este tutorial quando quiser no botão <b>❓</b>, no canto de baixo à direita.
+      Ali também ficam <b>♿ Acessibilidade</b> e <b>🔒 Privacidade</b>.</p>
+      <p>Comece pelo primeiro exercício de Fundamentos. Bons estudos!</p>`,
   },
 ];

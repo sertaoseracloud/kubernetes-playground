@@ -80,7 +80,7 @@ spec:
         },
         {
           descricao: 'O Service backend-svc é do tipo ClusterIP',
-          regras: [{ tipo: 'service-tipo', service: 'backend-svc', tipo: 'ClusterIP' }],
+          regras: [{ tipo: 'service-tipo', service: 'backend-svc', serviceType: 'ClusterIP' }],
         },
         {
           descricao: 'O container tem resource limits definidos',

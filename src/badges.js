@@ -141,8 +141,8 @@ export function svgCapa({ exercicios, projetos }) {
   <text x="70" y="468" font-family="${SANS}" font-size="26" fill="#9e9bb8">Leitor de tela, Libras, teclado e perfis para TDAH.</text>
   <rect x="70" y="510" width="330" height="62" rx="12" fill="#50fa7b"/>
   <text x="235" y="551" text-anchor="middle" font-family="${SANS}" font-size="28" font-weight="800" fill="#21222c">Começar a trilha</text>
-  ${badge('basico', 760, 70, 230)}
-  ${badge('pods', 930, 200, 230)}
+  ${badge('fundamentos', 760, 70, 230)}
+  ${badge('aws', 930, 200, 230)}
   ${badge('final', 760, 330, 230)}
 </svg>`;
 }

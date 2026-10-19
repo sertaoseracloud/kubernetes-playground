@@ -87,6 +87,10 @@ function validarCamposObrigatorios(recurso) {
       break;
     }
     case 'Service': {
+      if (recurso.spec?.type === 'ExternalName') {
+        if (!recurso.spec?.externalName) erros.push(`Missing required argument "externalName" in spec of Service "${nome}".`);
+        break;
+      }
       if (!recurso.spec?.selector || Object.keys(recurso.spec.selector).length === 0) {
         erros.push(`Missing required argument "selector" in spec of Service "${nome}".`);
       }
@@ -132,7 +136,6 @@ function hashNome(nome) {
 function gerarClusterIP(nome) {
   const h = hashNome(nome);
   const b2 = (h >> 8) & 0xff;
-  const b3 = (h >> 16) & 0xff;
   const b4 = (h & 0xfe) | 2; // evita .0 e .1
   return `10.96.${b2}.${b4}`;
 }
@@ -144,9 +147,9 @@ function gerarNodePort(nome) {
 }
 
 /** Gera IPs de pod simulados para endpoints de um Service, baseados nos pods que matcham o selector. */
-function gerarEndpoints(selector) {
+function gerarEndpoints(selector, alvo = estado) {
   if (!selector || Object.keys(selector).length === 0) return [];
-  return estado.pods
+  return alvo.pods
     .filter((pod) => {
       for (const [k, v] of Object.entries(selector)) {
         if (pod.labels?.[k] !== v) return false;
@@ -166,9 +169,9 @@ let _diffUsadoFlag = false;
 export function definirDiffUsado(valor) { _diffUsadoFlag = !!valor; }
 
 /** Estado global do cluster simulado. Persistido por exercício via progresso.js. */
-let estado = { pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [] };
+let estado = { pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [], outros: [] };
 
-const ESTADO_PADRAO = () => ({ pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [] });
+const ESTADO_PADRAO = () => ({ pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [], outros: [] });
 
 export function resetarEstado(chaveExercicio) {
   estado = ESTADO_PADRAO();
@@ -177,7 +180,8 @@ export function resetarEstado(chaveExercicio) {
 
 export function carregarEstado(chaveExercicio) {
   const salvo = chaveExercicio ? lerEstado(chaveExercicio) : null;
-  estado = salvo ?? ESTADO_PADRAO();
+  // Estados salvos por versões antigas podem não ter todas as listas.
+  estado = { ...ESTADO_PADRAO(), ...(salvo ?? {}) };
 }
 
 export function obterEstado() {
@@ -254,6 +258,22 @@ export function buscarRecurso(kind, nome) {
   return lista.find((r) => r.nome === nome) ?? null;
 }
 
+/** Lista do estado para cada kind (o kubectl delete e o get usam). */
+const LISTA_DO_KIND = {
+  Pod: 'pods', Service: 'services', Deployment: 'deployments', ConfigMap: 'configmaps', Secret: 'secrets',
+  Ingress: 'ingresses', HorizontalPodAutoscaler: 'hpas', NetworkPolicy: 'networkpolicies',
+  PersistentVolumeClaim: 'pvcs', ServiceAccount: 'serviceaccounts', CronJob: 'cronjobs', Job: 'jobs',
+};
+
+/** Remove um recurso (kubectl delete). Devolve true se ele existia. */
+export function removerRecurso(kind, nome, chaveExercicio) {
+  const lista = LISTA_DO_KIND[kind];
+  if (!lista || !estado[lista].some((r) => r.nome === nome)) return false;
+  estado[lista] = estado[lista].filter((r) => r.nome !== nome);
+  if (chaveExercicio) gravarEstado(chaveExercicio, estado);
+  return true;
+}
+
 /**
  * Simula a aplicação de um manifesto YAML sem modificar o estado global.
  * Compara o estado atual com o estado projetado e retorna as diferenças.
@@ -285,7 +305,7 @@ export function simularApply(yamlTexto) {
     // Aplica cada recurso no estado projetado (sem tocar no global)
     const recursosProjetados = [];
     for (const doc of documentos) {
-      const resultado = aplicarRecursoEmEstado(doc, estadoProjetado);
+      const resultado = aplicarRecursoEm(doc, estadoProjetado);
       if (!resultado.ok) {
         return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: resultado.mensagem };
       }
@@ -327,70 +347,149 @@ export function simularApply(yamlTexto) {
  * Aplica um recurso em um estado específico (não no global).
  * Usado internamente por simularApply para projetar mudanças.
  */
-function aplicarRecursoEmEstado(recurso, estadoAlvo) {
+/** Os dados de cada container que os testes e o kubectl describe usam. */
+function mapearContainers(lista) {
+  return (lista ?? []).map((c) => ({
+    nome: c.name, imagem: c.image ?? '', portas: (c.ports ?? []).map((p) => Number(p.containerPort)),
+    resources: c.resources ?? null, livenessProbe: c.livenessProbe ?? null, readinessProbe: c.readinessProbe ?? null,
+    volumeMounts: c.volumeMounts ?? [], env: c.env ?? [], envFrom: c.envFrom ?? [],
+  }));
+}
+
+/** Kinds nativos guardados de forma genérica (sem regra própria nos testes, além de existir). */
+const KINDS_GENERICOS = new Set([
+  'Namespace', 'ResourceQuota', 'LimitRange', 'PodDisruptionBudget', 'PriorityClass', 'DaemonSet', 'StatefulSet',
+  'ReplicaSet', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding', 'StorageClass', 'PersistentVolume',
+  'EndpointSlice', 'Endpoints', 'IngressClass',
+]);
+
+/**
+ * Aplica um recurso (já validado) num estado: o global (apply) ou uma cópia (diff).
+ * A mensagem segue o kubectl: "created" na primeira vez e "configured" quando já existia.
+ */
+function aplicarRecursoEm(recurso, alvo) {
   if (!recurso?.kind || !recurso?.metadata?.name) {
     return { ok: false, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.', recursos: [] };
   }
   const nome = recurso.metadata.name;
   const kind = recurso.kind;
+  const metadataLabels = recurso.metadata.labels ?? {};
+  alvo.outros ??= [];
+  /** Troca (ou cria) o recurso na lista e devolve a mensagem do kubectl. */
+  const guardar = (lista, obj, prefixo) => {
+    const existia = alvo[lista].some((r) => r.nome === nome && (lista !== 'outros' || r.kind === kind));
+    alvo[lista] = alvo[lista].filter((r) => !(r.nome === nome && (lista !== 'outros' || r.kind === kind)));
+    alvo[lista].push(obj);
+    return { ok: true, mensagem: `${prefixo}/${nome} ${existia ? 'configured' : 'created'}`, recursos: [obj] };
+  };
 
   switch (kind) {
     case 'Pod': {
-      const container = recurso.spec?.containers?.[0] ?? {};
-      const porta = container.ports?.[0]?.containerPort ?? null;
+      const containers = mapearContainers(recurso.spec?.containers);
+      const primeiro = containers[0] ?? {};
       const pod = {
-        nome, imagem: container.image ?? '', porta: porta !== null ? Number(porta) : null,
-        status: 'Running', no: 'node-1', labels: recurso.metadata.labels ?? {},
-        containers: (recurso.spec?.containers ?? []).map((c) => ({
-          nome: c.name, imagem: c.image, portas: (c.ports ?? []).map((p) => p.containerPort),
-          resources: c.resources ?? null, livenessProbe: c.livenessProbe ?? null, readinessProbe: c.readinessProbe ?? null,
-        })),
-        volumes: recurso.spec?.volumes ?? [], volumeMounts: container.volumeMounts ?? [],
+        nome, imagem: primeiro.imagem ?? '', porta: primeiro.portas?.[0] ?? null,
+        status: 'Running', no: 'node-1', labels: metadataLabels, metadataLabels, annotations: recurso.metadata.annotations ?? {},
+        containers, initContainers: mapearContainers(recurso.spec?.initContainers),
+        volumes: recurso.spec?.volumes ?? [], volumeMounts: primeiro.volumeMounts ?? [],
+        restartPolicy: recurso.spec?.restartPolicy ?? 'Always',
       };
-      estadoAlvo.pods = estadoAlvo.pods.filter((p) => p.nome !== nome);
-      estadoAlvo.pods.push(pod);
-      return { ok: true, mensagem: `pod/${nome}`, recursos: [pod] };
+      if (!alvo.nos.find((n) => n.nome === 'node-1')) alvo.nos.push({ nome: 'node-1', status: 'Ready' });
+      return guardar('pods', pod, 'pod');
     }
     case 'Service': {
+      const tipo = recurso.spec?.type ?? 'ClusterIP';
+      const selector = recurso.spec?.selector ?? {};
+      const clusterIP = tipo === 'ExternalName' ? null : recurso.spec?.clusterIP === 'None' ? 'None' : gerarClusterIP(nome);
+      const nodePort = tipo === 'NodePort' || tipo === 'LoadBalancer' ? gerarNodePort(nome) : null;
       const svc = {
-        nome, alvo: recurso.spec?.selector ?? {}, tipo: recurso.spec?.type ?? 'ClusterIP',
-        portas: (recurso.spec?.ports ?? []).map((p) => ({ porta: p.port, targetPort: p.targetPort, protocolo: p.protocol ?? 'TCP' })),
+        nome, alvo: selector, tipo, metadataLabels, annotations: recurso.metadata.annotations ?? {},
+        portas: (recurso.spec?.ports ?? []).map((p) => ({ nome: p.name, porta: p.port, targetPort: p.targetPort, protocolo: p.protocol ?? 'TCP' })),
+        clusterIP, nodePort, externalName: recurso.spec?.externalName ?? null,
+        endpoints: tipo !== 'ExternalName' ? gerarEndpoints(selector, alvo) : [],
       };
-      estadoAlvo.services = estadoAlvo.services.filter((s) => s.nome !== nome);
-      estadoAlvo.services.push(svc);
-      return { ok: true, mensagem: `service/${nome}`, recursos: [svc] };
+      return guardar('services', svc, 'service');
     }
     case 'Deployment': {
+      const replicas = Number(recurso.spec?.replicas ?? 1);
+      const containers = mapearContainers(recurso.spec?.template?.spec?.containers);
       const dep = {
-        nome, replicas: Number(recurso.spec?.replicas ?? 1),
-        imagem: recurso.spec?.template?.spec?.containers?.[0]?.image ?? '',
+        nome, replicas, metadataLabels,
+        imagem: containers[0]?.imagem ?? '',
         labels: recurso.spec?.template?.metadata?.labels ?? {},
         selector: recurso.spec?.selector?.matchLabels ?? {},
         strategy: recurso.spec?.strategy ?? null,
-        containers: (recurso.spec?.template?.spec?.containers ?? []).map((c) => ({
-          nome: c.name, imagem: c.image, resources: c.resources ?? null,
-        })),
+        containers,
+        volumes: recurso.spec?.template?.spec?.volumes ?? [],
+        status: { availableReplicas: replicas, readyReplicas: replicas },
       };
-      estadoAlvo.deployments = estadoAlvo.deployments.filter((d) => d.nome !== nome);
-      estadoAlvo.deployments.push(dep);
-      return { ok: true, mensagem: `deployment/${nome}`, recursos: [dep] };
+      return guardar('deployments', dep, 'deployment.apps');
     }
-    case 'ConfigMap': {
-      const cm = { nome, data: recurso.data ?? {} };
-      estadoAlvo.configmaps = estadoAlvo.configmaps.filter((c) => c.nome !== nome);
-      estadoAlvo.configmaps.push(cm);
-      return { ok: true, mensagem: `configmap/${nome}`, recursos: [cm] };
+    case 'ConfigMap':
+      return guardar('configmaps', { nome, data: recurso.data ?? {}, metadataLabels }, 'configmap');
+    case 'Secret':
+      return guardar('secrets', { nome, tipo: recurso.type ?? 'Opaque', data: recurso.data ?? {}, stringData: recurso.stringData ?? {}, metadataLabels }, 'secret');
+    case 'Ingress':
+      return guardar('ingresses', {
+        nome, rules: recurso.spec?.rules ?? [], annotations: recurso.metadata.annotations ?? {},
+        ingressClassName: recurso.spec?.ingressClassName ?? null, tls: recurso.spec?.tls ?? [], metadataLabels,
+      }, 'ingress.networking.k8s.io');
+    case 'HorizontalPodAutoscaler':
+      return guardar('hpas', {
+        nome, target: recurso.spec?.scaleTargetRef?.name ?? '', min: recurso.spec?.minReplicas ?? 1,
+        max: recurso.spec?.maxReplicas ?? 1, metrics: recurso.spec?.metrics ?? [],
+      }, 'horizontalpodautoscaler.autoscaling');
+    case 'NetworkPolicy':
+      return guardar('networkpolicies', {
+        nome, podSelector: recurso.spec?.podSelector ?? {}, ingress: recurso.spec?.ingress ?? [],
+        egress: recurso.spec?.egress ?? [], policyTypes: recurso.spec?.policyTypes ?? [],
+      }, 'networkpolicy.networking.k8s.io');
+    case 'PersistentVolumeClaim':
+      return guardar('pvcs', {
+        nome, storageClass: recurso.spec?.storageClassName ?? '', size: recurso.spec?.resources?.requests?.storage ?? '',
+        accessModes: recurso.spec?.accessModes ?? [],
+      }, 'persistentvolumeclaim');
+    case 'ServiceAccount':
+      return guardar('serviceaccounts', { nome, annotations: recurso.metadata.annotations ?? {}, automountToken: recurso.automountServiceAccountToken ?? true }, 'serviceaccount');
+    case 'CronJob': {
+      const containers = mapearContainers(recurso.spec?.jobTemplate?.spec?.template?.spec?.containers);
+      return guardar('cronjobs', {
+        nome, schedule: recurso.spec?.schedule ?? '', concurrencyPolicy: recurso.spec?.concurrencyPolicy ?? 'Allow',
+        successfulJobsHistoryLimit: recurso.spec?.successfulJobsHistoryLimit ?? 3,
+        failedJobsHistoryLimit: recurso.spec?.failedJobsHistoryLimit ?? 1,
+        container: recurso.spec?.jobTemplate?.spec?.template?.spec?.containers?.[0] ?? {}, containers,
+      }, 'cronjob.batch');
     }
-    case 'Secret': {
-      const sec = { nome, tipo: recurso.type ?? 'Opaque', data: recurso.data ?? {}, stringData: recurso.stringData ?? {} };
-      estadoAlvo.secrets = estadoAlvo.secrets.filter((s) => s.nome !== nome);
-      estadoAlvo.secrets.push(sec);
-      return { ok: true, mensagem: `secret/${nome}`, recursos: [sec] };
+    case 'Job': {
+      const containers = mapearContainers(recurso.spec?.template?.spec?.containers);
+      return guardar('jobs', {
+        nome, completions: recurso.spec?.completions ?? 1, parallelism: recurso.spec?.parallelism ?? 1,
+        backoffLimit: recurso.spec?.backoffLimit ?? 6, container: recurso.spec?.template?.spec?.containers?.[0] ?? {}, containers,
+      }, 'job.batch');
     }
-    default:
-      // Para outros tipos, usa a mesma lógica simplificada
-      return { ok: true, mensagem: `${kind.toLowerCase()}/${nome}`, recursos: [{ nome, kind }] };
+    default: {
+      if (!KINDS_GENERICOS.has(kind)) {
+        return { ok: false, mensagem: `Kind "${kind}" não suportado neste simulador.`, recursos: [] };
+      }
+      const obj = {
+        kind, nome, metadataLabels, spec: recurso.spec ?? {},
+        containers: mapearContainers(recurso.spec?.template?.spec?.containers),
+      };
+      return guardar('outros', obj, kind.toLowerCase());
+    }
   }
+}
+
+/** Valida e aplica um recurso no cluster (estado global). */
+function aplicarRecurso(recurso) {
+  if (!recurso?.kind || !recurso?.metadata?.name) {
+    return { ok: false, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.', recursos: [] };
+  }
+  const errosValidacao = validarCamposObrigatorios(recurso);
+  if (errosValidacao.length > 0) {
+    return { ok: false, mensagem: errosValidacao.join('\n'), recursos: [] };
+  }
+  return aplicarRecursoEm(recurso, estado);
 }
 
 /** Formata detalhes de um recurso para exibição no diff. */
@@ -439,11 +538,7 @@ function formatarValorDiff(valor) {
   return String(valor);
 }
 
-/**
- * Aplica um manifesto YAML (string) no cluster simulado.
- * Suporta múltiplos documentos separados por ---.
- * Devolve { ok, mensagem, recursos }.
- */
+
 export function aplicarYaml(yamlTexto, chaveExercicio) {
   try {
     const documentos = yaml.loadAll(yamlTexto).filter(Boolean);
@@ -466,161 +561,52 @@ export function aplicarYaml(yamlTexto, chaveExercicio) {
   }
 }
 
-function aplicarRecurso(recurso) {
-  if (!recurso?.kind || !recurso?.metadata?.name) {
-    return { ok: false, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.', recursos: [] };
-  }
-  const nome = recurso.metadata.name;
-  const kind = recurso.kind;
+/** Workload pelo nome (Pod, Deployment, Job, CronJob ou outro com containers, como DaemonSet). */
+function workload(nome) {
+  return estado.pods.find((p) => p.nome === nome)
+    ?? estado.deployments.find((d) => d.nome === nome)
+    ?? estado.jobs.find((j) => j.nome === nome)
+    ?? estado.cronjobs.find((c) => c.nome === nome)
+    ?? (estado.outros ?? []).find((o) => o.nome === nome && o.containers?.length)
+    ?? null;
+}
 
-  // Validação de campos obrigatórios antes de processar
-  const errosValidacao = validarCamposObrigatorios(recurso);
-  if (errosValidacao.length > 0) {
-    return { ok: false, mensagem: errosValidacao.join('\n'), recursos: [] };
-  }
+const CAMPOS_DE_NOME = ['nome', 'service', 'configmap', 'secret', 'ingress', 'hpa', 'sa', 'serviceAccount', 'policy', 'pvc', 'cronjob'];
 
-  switch (kind) {
-    case 'Pod': {
-      const container = recurso.spec?.containers?.[0] ?? {};
-      const porta = container.ports?.[0]?.containerPort ?? null;
-      const pod = {
-        nome, imagem: container.image ?? '', porta: porta !== null ? Number(porta) : null,
-        status: 'Running', no: 'node-1', labels: recurso.metadata.labels ?? {},
-        containers: (recurso.spec?.containers ?? []).map((c) => ({
-          nome: c.name, imagem: c.image, portas: (c.ports ?? []).map((p) => p.containerPort),
-          resources: c.resources ?? null, livenessProbe: c.livenessProbe ?? null, readinessProbe: c.readinessProbe ?? null,
-        })),
-        volumes: recurso.spec?.volumes ?? [], volumeMounts: container.volumeMounts ?? [],
-      };
-      estado.pods = estado.pods.filter((p) => p.nome !== nome);
-      estado.pods.push(pod);
-      if (!estado.nos.find((n) => n.nome === 'node-1')) estado.nos.push({ nome: 'node-1', status: 'Ready' });
-      return { ok: true, mensagem: `pod/${nome} created`, recursos: [pod] };
-    }
-    case 'Service': {
-      const tipo = recurso.spec?.type ?? 'ClusterIP';
-      const selector = recurso.spec?.selector ?? {};
-      const clusterIP = recurso.spec?.clusterIP === 'None' ? 'None' : gerarClusterIP(nome);
-      const nodePort = tipo === 'NodePort' ? gerarNodePort(nome) : null;
-      const endpoints = tipo !== 'ExternalName' ? gerarEndpoints(selector) : [];
-      const svc = {
-        nome, alvo: selector, tipo,
-        portas: (recurso.spec?.ports ?? []).map((p) => ({ porta: p.port, targetPort: p.targetPort, protocolo: p.protocol ?? 'TCP' })),
-        clusterIP, nodePort, endpoints,
-      };
-      estado.services = estado.services.filter((s) => s.nome !== nome);
-      estado.services.push(svc);
-      return { ok: true, mensagem: `service/${nome} created`, recursos: [svc] };
-    }
-    case 'Deployment': {
-      const replicas = Number(recurso.spec?.replicas ?? 1);
-      const dep = {
-        nome, replicas,
-        imagem: recurso.spec?.template?.spec?.containers?.[0]?.image ?? '',
-        labels: recurso.spec?.template?.metadata?.labels ?? {},
-        selector: recurso.spec?.selector?.matchLabels ?? {},
-        strategy: recurso.spec?.strategy ?? null,
-        containers: (recurso.spec?.template?.spec?.containers ?? []).map((c) => ({
-          nome: c.name, imagem: c.image, resources: c.resources ?? null,
-          env: c.env ?? [],
-        })),
-        status: { availableReplicas: replicas, readyReplicas: replicas },
-      };
-      estado.deployments = estado.deployments.filter((d) => d.nome !== nome);
-      estado.deployments.push(dep);
-      return { ok: true, mensagem: `deployment.apps/${nome} created`, recursos: [dep] };
-    }
-    case 'ConfigMap': {
-      const cm = { nome, data: recurso.data ?? {} };
-      estado.configmaps = estado.configmaps.filter((c) => c.nome !== nome);
-      estado.configmaps.push(cm);
-      return { ok: true, mensagem: `configmap/${nome} created`, recursos: [cm] };
-    }
-    case 'Secret': {
-      const sec = { nome, tipo: recurso.type ?? 'Opaque', data: recurso.data ?? {}, stringData: recurso.stringData ?? {} };
-      estado.secrets = estado.secrets.filter((s) => s.nome !== nome);
-      estado.secrets.push(sec);
-      return { ok: true, mensagem: `secret/${nome} created`, recursos: [sec] };
-    }
-    case 'Ingress': {
-      const ing = {
-        nome, rules: recurso.spec?.rules ?? [], annotations: recurso.metadata.annotations ?? {},
-        ingressClassName: recurso.spec?.ingressClassName ?? null,
-      };
-      estado.ingresses = estado.ingresses.filter((i) => i.nome !== nome);
-      estado.ingresses.push(ing);
-      return { ok: true, mensagem: `ingress/${nome} created`, recursos: [ing] };
-    }
-    case 'HorizontalPodAutoscaler': {
-      const hpa = {
-        nome, target: recurso.spec?.scaleTargetRef?.name ?? '', min: recurso.spec?.minReplicas ?? 1,
-        max: recurso.spec?.maxReplicas ?? 1, metrics: recurso.spec?.metrics ?? [],
-      };
-      estado.hpas = estado.hpas.filter((h) => h.nome !== nome);
-      estado.hpas.push(hpa);
-      return { ok: true, mensagem: `horizontalpodautoscaler/${nome} created`, recursos: [hpa] };
-    }
-    case 'NetworkPolicy': {
-      const np = {
-        nome, podSelector: recurso.spec?.podSelector ?? {}, ingress: recurso.spec?.ingress ?? [],
-        egress: recurso.spec?.egress ?? [], policyTypes: recurso.spec?.policyTypes ?? [],
-      };
-      estado.networkpolicies = estado.networkpolicies.filter((n) => n.nome !== nome);
-      estado.networkpolicies.push(np);
-      return { ok: true, mensagem: `networkpolicy/${nome} created`, recursos: [np] };
-    }
-    case 'PersistentVolumeClaim': {
-      const pvc = {
-        nome, storageClass: recurso.spec?.storageClassName ?? '', size: recurso.spec?.resources?.requests?.storage ?? '',
-        accessModes: recurso.spec?.accessModes ?? [],
-      };
-      estado.pvcs = estado.pvcs.filter((p) => p.nome !== nome);
-      estado.pvcs.push(pvc);
-      return { ok: true, mensagem: `persistentvolumeclaim/${nome} created`, recursos: [pvc] };
-    }
-    case 'ServiceAccount': {
-      const sa = { nome, annotations: recurso.metadata.annotations ?? {}, automountToken: recurso.automountServiceAccountToken ?? true };
-      estado.serviceaccounts = estado.serviceaccounts.filter((s) => s.nome !== nome);
-      estado.serviceaccounts.push(sa);
-      return { ok: true, mensagem: `serviceaccount/${nome} created`, recursos: [sa] };
-    }
-    case 'CronJob': {
-      const cj = {
-        nome, schedule: recurso.spec?.schedule ?? '', concurrencyPolicy: recurso.spec?.concurrencyPolicy ?? 'Allow',
-        successfulJobsHistoryLimit: recurso.spec?.successfulJobsHistoryLimit ?? 3,
-        failedJobsHistoryLimit: recurso.spec?.failedJobsHistoryLimit ?? 1,
-        container: recurso.spec?.jobTemplate?.spec?.template?.spec?.containers?.[0] ?? {},
-      };
-      estado.cronjobs = estado.cronjobs.filter((c) => c.nome !== nome);
-      estado.cronjobs.push(cj);
-      return { ok: true, mensagem: `cronjob/${nome} created`, recursos: [cj] };
-    }
-    case 'Job': {
-      const job = {
-        nome, completions: recurso.spec?.completions ?? 1, parallelism: recurso.spec?.parallelism ?? 1,
-        backoffLimit: recurso.spec?.backoffLimit ?? 6, container: recurso.spec?.template?.spec?.containers?.[0] ?? {},
-      };
-      estado.jobs = estado.jobs.filter((j) => j.nome !== nome);
-      estado.jobs.push(job);
-      return { ok: true, mensagem: `job/${nome} created`, recursos: [job] };
-    }
-    default:
-      return { ok: false, mensagem: `Kind "${kind}" não suportado neste simulador.`, recursos: [] };
+/**
+ * Aceita os nomes de campo que o conteúdo usa nas regras (deployment ou nome, service ou nome,
+ * replicas ou valor, volume ou nomeVolume...) e devolve a regra com os nomes canônicos.
+ */
+export function normalizarRegra(regra) {
+  const r = { ...regra };
+  r.nome = CAMPOS_DE_NOME.map((c) => regra[c]).find((v) => v !== undefined);
+  if (regra.tipo?.startsWith('deployment-')) r.deployment = regra.deployment ?? regra.nome;
+  r.pod = regra.pod ?? regra.deployment ?? regra.nome;
+  if (regra.tipo === 'deployment-replicas') r.valor = regra.valor ?? regra.replicas;
+  if (regra.tipo === 'hpa-configurado') {
+    r.min = regra.min ?? regra.minReplicas;
+    r.max = regra.max ?? regra.maxReplicas;
   }
+  if (regra.tipo === 'volume-montado') {
+    r.nomeVolume = regra.nomeVolume ?? regra.volume;
+    r.mountPath = regra.mountPath ?? regra.caminho;
+  }
+  return r;
 }
 
 /**
  * Verifica uma regra de teste contra o estado atual do cluster.
  * Devolve { ok, detalhe, mensagem, categoria, obtido }.
  */
-export function verificarRegra(regra) {
+export function verificarRegra(regraOriginal) {
+  const regra = normalizarRegra(regraOriginal);
   switch (regra.tipo) {
     case 'diff-usado': {
       if (!_diffUsadoFlag) return { ok: false, detalhe: 'O botão 🔍 Diff não foi usado antes de aplicar.', mensagem: 'Você usou 🔍 Diff antes de aplicar', categoria: 'Workflow', obtido: '(não usado)' };
       return { ok: true, detalhe: 'Diff foi executado antes do Apply.', mensagem: 'Você usou 🔍 Diff antes de aplicar', categoria: 'Workflow', obtido: 'diff executado' };
     }
     case 'recurso-existe': {
-      const lista = { Pod: estado.pods, Service: estado.services, Deployment: estado.deployments, ConfigMap: estado.configmaps, Secret: estado.secrets, Ingress: estado.ingresses, HorizontalPodAutoscaler: estado.hpas, NetworkPolicy: estado.networkpolicies, PersistentVolumeClaim: estado.pvcs, ServiceAccount: estado.serviceaccounts, CronJob: estado.cronjobs, Job: estado.jobs }[regra.kind] ?? [];
+      const lista = { Pod: estado.pods, Service: estado.services, Deployment: estado.deployments, ConfigMap: estado.configmaps, Secret: estado.secrets, Ingress: estado.ingresses, HorizontalPodAutoscaler: estado.hpas, NetworkPolicy: estado.networkpolicies, PersistentVolumeClaim: estado.pvcs, ServiceAccount: estado.serviceaccounts, CronJob: estado.cronjobs, Job: estado.jobs }[regra.kind] ?? (estado.outros ?? []).filter((o) => o.kind === regra.kind);
       const recurso = lista.find((r) => r.nome === regra.nome);
       if (!recurso) return { ok: false, detalhe: `${regra.kind} "${regra.nome}" não encontrado.`, mensagem: `Recurso ${regra.kind} "${regra.nome}" existe`, categoria: 'Estrutura', obtido: '(nenhum)' };
       if (regra.status && recurso.status !== regra.status) return { ok: false, detalhe: `Status esperado "${regra.status}", obtido "${recurso.status}".`, mensagem: `Recurso ${regra.kind} "${regra.nome}" está ${regra.status}`, categoria: 'Estrutura', obtido: recurso.status };
@@ -646,16 +632,16 @@ export function verificarRegra(regra) {
       return { ok: true, detalhe: `Valor "${envVar2.value}" contém "${regra.valor}".`, mensagem: `Env ${regra.chave} contém "${regra.valor}"`, categoria: 'Configuração', obtido: envVar2.value };
     }
     case 'container-imagem': {
-      const pod = estado.pods.find((p) => p.nome === regra.pod);
-      if (!pod) return { ok: false, detalhe: `Pod "${regra.pod}" não encontrado.`, mensagem: `Container "${regra.container}" usa imagem ${regra.imagem}`, categoria: 'Configuração', obtido: '(nenhum)' };
+      const pod = workload(regra.pod);
+      if (!pod) return { ok: false, detalhe: `Pod ou Deployment "${regra.pod}" não encontrado.`, mensagem: `Container "${regra.container}" usa imagem ${regra.imagem}`, categoria: 'Configuração', obtido: '(nenhum)' };
       const container = pod.containers?.find((c) => c.nome === regra.container) ?? pod.containers?.[0];
       const img = container?.imagem ?? pod.imagem;
       if (img !== regra.imagem) return { ok: false, detalhe: `Imagem esperada "${regra.imagem}", obtida "${img}".`, mensagem: `Container "${regra.container}" usa imagem ${regra.imagem}`, categoria: 'Configuração', obtido: img };
       return { ok: true, detalhe: `Container "${regra.container}" usa a imagem correta.`, mensagem: `Container "${regra.container}" usa imagem ${regra.imagem}`, categoria: 'Configuração', obtido: img };
     }
     case 'container-porta': {
-      const pod = estado.pods.find((p) => p.nome === regra.pod);
-      if (!pod) return { ok: false, detalhe: `Pod "${regra.pod}" não encontrado.`, mensagem: `Porta ${regra.porta} exposta`, categoria: 'Configuração', obtido: '(nenhuma)' };
+      const pod = workload(regra.pod);
+      if (!pod) return { ok: false, detalhe: `Pod ou Deployment "${regra.pod}" não encontrado.`, mensagem: `Porta ${regra.porta} exposta`, categoria: 'Configuração', obtido: '(nenhuma)' };
       const container = pod.containers?.find((c) => c.nome === regra.container) ?? pod.containers?.[0];
       const portas = container?.portas ?? (pod.porta != null ? [pod.porta] : []);
       if (!portas.includes(regra.porta)) return { ok: false, detalhe: `Porta esperada ${regra.porta}, obtidas [${portas.join(', ')}].`, mensagem: `Porta ${regra.porta} exposta`, categoria: 'Configuração', obtido: portas.length ? portas.join(', ') : '(nenhuma)' };
@@ -664,6 +650,10 @@ export function verificarRegra(regra) {
     case 'deployment-replicas': {
       const dep = estado.deployments.find((d) => d.nome === regra.deployment);
       if (!dep) return { ok: false, detalhe: `Deployment "${regra.deployment}" não encontrado.`, mensagem: `Replicas = ${regra.valor}`, categoria: 'Escala', obtido: '(nenhum)' };
+      if (regra.minimo != null) {
+        const okMin = dep.replicas >= regra.minimo;
+        return { ok: okMin, detalhe: okMin ? `Deployment tem ${dep.replicas} réplicas (mínimo ${regra.minimo}).` : `Pelo menos ${regra.minimo} réplicas; obtidas ${dep.replicas}.`, mensagem: `Replicas ≥ ${regra.minimo}`, categoria: 'Escala', obtido: String(dep.replicas) };
+      }
       if (dep.replicas !== regra.valor) return { ok: false, detalhe: `Replicas esperadas ${regra.valor}, obtidas ${dep.replicas}.`, mensagem: `Replicas = ${regra.valor}`, categoria: 'Escala', obtido: String(dep.replicas) };
       return { ok: true, detalhe: `Deployment tem ${regra.valor} réplicas.`, mensagem: `Replicas = ${regra.valor}`, categoria: 'Escala', obtido: String(regra.valor) };
     }
@@ -671,6 +661,7 @@ export function verificarRegra(regra) {
       const cm = estado.configmaps.find((c) => c.nome === regra.nome);
       if (!cm) return { ok: false, detalhe: `ConfigMap "${regra.nome}" não encontrado.`, mensagem: `ConfigMap contém ${regra.chave}`, categoria: 'Configuração', obtido: '(nenhum)' };
       if (!(regra.chave in cm.data)) return { ok: false, detalhe: `Chave "${regra.chave}" não encontrada no ConfigMap.`, mensagem: `ConfigMap contém ${regra.chave}`, categoria: 'Configuração', obtido: Object.keys(cm.data).join(', ') || '(vazio)' };
+      if (regra.contem != null && !String(cm.data[regra.chave]).includes(regra.contem)) return { ok: false, detalhe: `O valor de "${regra.chave}" não contém "${regra.contem}".`, mensagem: `ConfigMap ${regra.chave} contém "${regra.contem}"`, categoria: 'Configuração', obtido: String(cm.data[regra.chave]).slice(0, 80) };
       if (regra.valor != null && cm.data[regra.chave] !== regra.valor) return { ok: false, detalhe: `Valor esperado "${regra.valor}", obtido "${cm.data[regra.chave]}".`, mensagem: `ConfigMap contém ${regra.chave}=${regra.valor}`, categoria: 'Configuração', obtido: cm.data[regra.chave] };
       return { ok: true, detalhe: `ConfigMap contém a chave "${regra.chave}".`, mensagem: `ConfigMap contém ${regra.chave}`, categoria: 'Configuração', obtido: cm.data[regra.chave] };
     }
@@ -682,16 +673,20 @@ export function verificarRegra(regra) {
       return { ok: true, detalhe: `Secret contém a chave "${regra.chave}".`, mensagem: `Secret contém ${regra.chave}`, categoria: 'Segurança', obtido: regra.chave };
     }
     case 'service-tipo': {
-      const svc = estado.services.find((s) => s.nome === regra.nome);
-      if (!svc) return { ok: false, detalhe: `Service "${regra.nome}" não encontrado.`, mensagem: `Service tipo ${regra.tipo}`, categoria: 'Networking', obtido: '(nenhum)' };
-      if (svc.tipo !== regra.tipo) return { ok: false, detalhe: `Tipo esperado "${regra.tipo}", obtido "${svc.tipo}".`, mensagem: `Service tipo ${regra.tipo}`, categoria: 'Networking', obtido: svc.tipo };
-      return { ok: true, detalhe: `Service é do tipo ${regra.tipo}.`, mensagem: `Service tipo ${regra.tipo}`, categoria: 'Networking', obtido: svc.tipo };
+      const svc = estado.services.find((s) => s.nome === (regra.service ?? regra.nome));
+      const tipoEsperado = regra.serviceType ?? regra.valorEsperado ?? regra.tipo;
+      if (!svc) return { ok: false, detalhe: `Service "${regra.service ?? regra.nome}" não encontrado.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: '(nenhum)' };
+      if (svc.tipo !== tipoEsperado) return { ok: false, detalhe: `Tipo esperado "${tipoEsperado}", obtido "${svc.tipo}".`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: svc.tipo };
+      return { ok: true, detalhe: `Service é do tipo ${tipoEsperado}.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: svc.tipo };
     }
     case 'service-selector': {
       const svc = estado.services.find((s) => s.nome === regra.nome);
-      if (!svc) return { ok: false, detalhe: `Service "${regra.nome}" não encontrado.`, mensagem: `Service seleciona ${regra.chave}=${regra.valor}`, categoria: 'Networking', obtido: '(nenhum)' };
-      if (svc.alvo?.[regra.chave] !== regra.valor) return { ok: false, detalhe: `Selector esperado ${regra.chave}=${regra.valor}, obtido ${JSON.stringify(svc.alvo)}.`, mensagem: `Service seleciona ${regra.chave}=${regra.valor}`, categoria: 'Networking', obtido: JSON.stringify(svc.alvo) };
-      return { ok: true, detalhe: `Service seleciona pods com ${regra.chave}=${regra.valor}.`, mensagem: `Service seleciona ${regra.chave}=${regra.valor}`, categoria: 'Networking', obtido: `${regra.chave}=${regra.valor}` };
+      const pares = regra.selector ?? { [regra.chave]: regra.valor };
+      const texto = Object.entries(pares).map(([k, v]) => `${k}=${v}`).join(',');
+      if (!svc) return { ok: false, detalhe: `Service "${regra.nome}" não encontrado.`, mensagem: `Service seleciona ${texto}`, categoria: 'Networking', obtido: '(nenhum)' };
+      const confere = Object.entries(pares).every(([k, v]) => svc.alvo?.[k] === v);
+      if (!confere) return { ok: false, detalhe: `Selector esperado ${texto}, obtido ${JSON.stringify(svc.alvo)}.`, mensagem: `Service seleciona ${texto}`, categoria: 'Networking', obtido: JSON.stringify(svc.alvo) };
+      return { ok: true, detalhe: `Service seleciona pods com ${texto}.`, mensagem: `Service seleciona ${texto}`, categoria: 'Networking', obtido: texto };
     }
     case 'ingress-existe': {
       const ing = estado.ingresses.find((i) => i.nome === regra.nome);
@@ -705,14 +700,17 @@ export function verificarRegra(regra) {
     case 'hpa-configurado': {
       const hpa = estado.hpas.find((h) => h.nome === regra.nome);
       if (!hpa) return { ok: false, detalhe: `HPA "${regra.nome}" não encontrado.`, mensagem: `HPA configurado para ${regra.target}`, categoria: 'Escala', obtido: '(nenhum)' };
-      if (regra.target && hpa.target !== regra.target) return { ok: false, detalhe: `Target esperado "${regra.target}", obtido "${hpa.target}".`, mensagem: `HPA configurado para ${regra.target}`, categoria: 'Escala', obtido: hpa.target };
+      if (typeof regra.target === 'number') {
+        const cpu = hpa.metrics.find((m) => m.resource?.name === 'cpu')?.resource?.target?.averageUtilization;
+        if (cpu !== regra.target) return { ok: false, detalhe: `Uso de CPU alvo esperado ${regra.target}%, obtido ${cpu ?? '(nenhum)'}.`, mensagem: `HPA mira ${regra.target}% de CPU`, categoria: 'Escala', obtido: String(cpu ?? '(nenhum)') };
+      } else if (regra.target && hpa.target !== regra.target) return { ok: false, detalhe: `Target esperado "${regra.target}", obtido "${hpa.target}".`, mensagem: `HPA configurado para ${regra.target}`, categoria: 'Escala', obtido: hpa.target };
       if (regra.min != null && hpa.min !== regra.min) return { ok: false, detalhe: `Min replicas esperado ${regra.min}, obtido ${hpa.min}.`, mensagem: `HPA min=${regra.min}`, categoria: 'Escala', obtido: String(hpa.min) };
       if (regra.max != null && hpa.max !== regra.max) return { ok: false, detalhe: `Max replicas esperado ${regra.max}, obtido ${hpa.max}.`, mensagem: `HPA max=${regra.max}`, categoria: 'Escala', obtido: String(hpa.max) };
       return { ok: true, detalhe: `HPA configurado: ${hpa.min}-${hpa.max} réplicas para ${hpa.target}.`, mensagem: `HPA configurado`, categoria: 'Escala', obtido: `${hpa.min}-${hpa.max}` };
     }
     case 'resource-limits': {
-      const pod = estado.pods.find((p) => p.nome === regra.pod);
-      if (!pod) return { ok: false, detalhe: `Pod "${regra.pod}" não encontrado.`, mensagem: `Resource limits configurados`, categoria: 'Recursos', obtido: '(nenhum)' };
+      const pod = workload(regra.pod);
+      if (!pod) return { ok: false, detalhe: `Pod ou Deployment "${regra.pod}" não encontrado.`, mensagem: `Resource limits configurados`, categoria: 'Recursos', obtido: '(nenhum)' };
       const container = pod.containers?.find((c) => c.nome === regra.container) ?? pod.containers?.[0];
       if (!container?.resources?.limits) return { ok: false, detalhe: `Resource limits não definidos no container "${regra.container}".`, mensagem: `Resource limits configurados`, categoria: 'Recursos', obtido: '(não definido)' };
       const limits = container.resources.limits;
@@ -721,8 +719,8 @@ export function verificarRegra(regra) {
       return { ok: true, detalhe: `Resource limits configurados: cpu=${limits.cpu}, memory=${limits.memory}.`, mensagem: `Resource limits configurados`, categoria: 'Recursos', obtido: `cpu=${limits.cpu}, memory=${limits.memory}` };
     }
     case 'probe-configurada': {
-      const pod = estado.pods.find((p) => p.nome === regra.pod);
-      if (!pod) return { ok: false, detalhe: `Pod "${regra.pod}" não encontrado.`, mensagem: `Probe ${regra.tipoProbe} configurada`, categoria: 'Saúde', obtido: '(nenhum)' };
+      const pod = workload(regra.pod);
+      if (!pod) return { ok: false, detalhe: `Pod ou Deployment "${regra.pod}" não encontrado.`, mensagem: `Probe ${regra.tipoProbe} configurada`, categoria: 'Saúde', obtido: '(nenhum)' };
       const container = pod.containers?.find((c) => c.nome === regra.container) ?? pod.containers?.[0];
       const probe = regra.tipoProbe === 'liveness' ? container?.livenessProbe : container?.readinessProbe;
       if (!probe) return { ok: false, detalhe: `Probe ${regra.tipoProbe} não definida no container "${regra.container}".`, mensagem: `Probe ${regra.tipoProbe} configurada`, categoria: 'Saúde', obtido: '(não definido)' };
@@ -730,17 +728,25 @@ export function verificarRegra(regra) {
       return { ok: true, detalhe: `Probe ${regra.tipoProbe} configurada.`, mensagem: `Probe ${regra.tipoProbe} configurada`, categoria: 'Saúde', obtido: regra.tipoProbe };
     }
     case 'volume-montado': {
-      const pod = estado.pods.find((p) => p.nome === regra.pod);
-      if (!pod) return { ok: false, detalhe: `Pod "${regra.pod}" não encontrado.`, mensagem: `Volume montado`, categoria: 'Storage', obtido: '(nenhum)' };
+      const pod = workload(regra.pod);
+      if (!pod) return { ok: false, detalhe: `Pod ou Deployment "${regra.pod}" não encontrado.`, mensagem: `Volume montado`, categoria: 'Storage', obtido: '(nenhum)' };
       const container = pod.containers?.find((c) => c.nome === regra.container) ?? pod.containers?.[0];
-      const mount = container?.volumeMounts?.find((m) => m.name === regra.nomeVolume);
-      if (!mount) return { ok: false, detalhe: `Volume "${regra.nomeVolume}" não montado no container "${regra.container}".`, mensagem: `Volume montado em ${regra.mountPath}`, categoria: 'Storage', obtido: container?.volumeMounts?.map((m) => m.name).join(', ') || '(nenhum)' };
+      const mount = container?.volumeMounts?.find((m) => (regra.nomeVolume ? m.name === regra.nomeVolume : m.mountPath === regra.mountPath));
+      if (!mount) return { ok: false, detalhe: `Volume "${regra.nomeVolume ?? regra.mountPath}" não montado no container "${regra.container}".`, mensagem: `Volume ${regra.nomeVolume ?? ''} montado${regra.mountPath ? ` em ${regra.mountPath}` : ''}`, categoria: 'Storage', obtido: container?.volumeMounts?.map((m) => m.name).join(', ') || '(nenhum)' };
       if (regra.mountPath && mount.mountPath !== regra.mountPath) return { ok: false, detalhe: `MountPath esperado "${regra.mountPath}", obtido "${mount.mountPath}".`, mensagem: `Volume montado em ${regra.mountPath}`, categoria: 'Storage', obtido: mount.mountPath };
-      return { ok: true, detalhe: `Volume "${regra.nomeVolume}" montado em ${mount.mountPath}.`, mensagem: `Volume montado`, categoria: 'Storage', obtido: `${regra.nomeVolume} → ${mount.mountPath}` };
+      return { ok: true, detalhe: `Volume "${mount.name}" montado em ${mount.mountPath}.`, mensagem: `Volume montado`, categoria: 'Storage', obtido: `${regra.nomeVolume} → ${mount.mountPath}` };
     }
     case 'network-policy': {
       const np = estado.networkpolicies.find((n) => n.nome === regra.nome);
       if (!np) return { ok: false, detalhe: `NetworkPolicy "${regra.nome}" não encontrada.`, mensagem: `NetworkPolicy existe`, categoria: 'Networking', obtido: '(nenhuma)' };
+      if (regra.podSelector) {
+        const [k, v] = String(regra.podSelector).split('=');
+        if (np.podSelector?.matchLabels?.[k] !== v) return { ok: false, detalhe: `A política deveria selecionar ${regra.podSelector}.`, mensagem: `NetworkPolicy seleciona ${regra.podSelector}`, categoria: 'Networking', obtido: JSON.stringify(np.podSelector?.matchLabels ?? {}) };
+      }
+      if (regra.direction) {
+        const tipos = np.policyTypes.length ? np.policyTypes : ['Ingress', ...(np.egress.length ? ['Egress'] : [])];
+        if (!tipos.includes(regra.direction)) return { ok: false, detalhe: `A política não controla o tráfego ${regra.direction}.`, mensagem: `NetworkPolicy controla ${regra.direction}`, categoria: 'Networking', obtido: tipos.join(', ') };
+      }
       return { ok: true, detalhe: `NetworkPolicy "${regra.nome}" configurada.`, mensagem: `NetworkPolicy existe`, categoria: 'Networking', obtido: regra.nome };
     }
     case 'pvc-existe': {
@@ -786,10 +792,14 @@ export function verificarRegra(regra) {
     case 'agic-anotacao': {
       const ing = estado.ingresses.find((i) => i.nome === regra.nome);
       if (!ing) return { ok: false, detalhe: `Ingress "${regra.nome}" não encontrado.`, mensagem: `Anotação AGIC`, categoria: 'Azure', obtido: '(nenhum)' };
-      const valor = ing.annotations?.[regra.anotacao];
-      if (!valor) return { ok: false, detalhe: `Anotação "${regra.anotacao}" não encontrada.`, mensagem: `AGIC ${regra.anotacao}`, categoria: 'Azure', obtido: '(sem anotação)' };
-      if (regra.valor && valor !== regra.valor) return { ok: false, detalhe: `Valor esperado "${regra.valor}", obtido "${valor}".`, mensagem: `AGIC ${regra.anotacao}=${regra.valor}`, categoria: 'Azure', obtido: valor };
-      return { ok: true, detalhe: `Ingress tem anotação AGIC "${regra.anotacao}".`, mensagem: `Anotação AGIC configurada`, categoria: 'Azure', obtido: valor };
+      // Sem anotação pedida, vale qualquer sinal do Application Gateway (anotação appgw.* ou a classe).
+      const agic = Object.entries(ing.annotations ?? {}).find(([k, v]) => k.startsWith('appgw.ingress.kubernetes.io') || String(v).includes('azure/application-gateway'));
+      const valor = regra.anotacao ? ing.annotations?.[regra.anotacao]
+        : agic?.[1] ?? (ing.ingressClassName === 'azure-application-gateway' ? ing.ingressClassName : undefined);
+      const nomeAnotacao = regra.anotacao ?? 'appgw.ingress.kubernetes.io/*';
+      if (!valor) return { ok: false, detalhe: `Anotação "${nomeAnotacao}" não encontrada.`, mensagem: `AGIC ${nomeAnotacao}`, categoria: 'Azure', obtido: '(sem anotação)' };
+      if (regra.valor && valor !== regra.valor) return { ok: false, detalhe: `Valor esperado "${regra.valor}", obtido "${valor}".`, mensagem: `AGIC ${nomeAnotacao}=${regra.valor}`, categoria: 'Azure', obtido: valor };
+      return { ok: true, detalhe: `Ingress usa o Application Gateway (${nomeAnotacao}).`, mensagem: `Anotação AGIC configurada`, categoria: 'Azure', obtido: valor };
     }
     case 'azure-identity': {
       const dep = estado.deployments.find((d) => d.nome === regra.deployment);
@@ -799,6 +809,15 @@ export function verificarRegra(regra) {
     }
     case 'storageclass-azure': {
       return { ok: true, detalhe: `StorageClass Azure "${regra.nome}" assumida.`, mensagem: `StorageClass Azure`, categoria: 'Azure', obtido: regra.nome };
+    }
+    case 'recurso-label': {
+      const lista = { Pod: estado.pods, Service: estado.services, Deployment: estado.deployments, ConfigMap: estado.configmaps, Secret: estado.secrets }[regra.kind] ?? [];
+      const recurso = lista.find((r) => r.nome === regra.nome);
+      const rotulo = `${regra.kind} "${regra.nome}" tem o label ${regra.label}=${regra.valor}`;
+      if (!recurso) return { ok: false, detalhe: `${regra.kind} "${regra.nome}" não encontrado.`, mensagem: rotulo, categoria: 'Estrutura', obtido: '(nenhum)' };
+      const valor = recurso.metadataLabels?.[regra.label] ?? recurso.labels?.[regra.label];
+      if (valor !== regra.valor) return { ok: false, detalhe: `Label ${regra.label} esperado "${regra.valor}", obtido "${valor ?? '(sem label)'}".`, mensagem: rotulo, categoria: 'Estrutura', obtido: valor ?? '(sem label)' };
+      return { ok: true, detalhe: `Label ${regra.label}=${valor}.`, mensagem: rotulo, categoria: 'Estrutura', obtido: valor };
     }
     default:
       return { ok: false, detalhe: `Tipo de regra "${regra.tipo}" desconhecido.`, mensagem: `Regra desconhecida`, categoria: 'Outros', obtido: regra.tipo };
@@ -812,10 +831,10 @@ export function verificarRegra(regra) {
  */
 export function detectarDrift(yamlTexto) {
   const drifts = [];
-  let documentos = [];
+  let documentos;
   try {
     documentos = yaml.loadAll(yamlTexto).filter(Boolean);
-  } catch {
+  } catch (_e) {
     return { drifts: [], temDrift: false };
   }
 
@@ -937,7 +956,7 @@ export function descreverRegra(regra) {
     case 'deployment-replicas': return `O Deployment "${regra.deployment}" tem ${regra.valor} réplicas`;
     case 'configmap-contem': return `O ConfigMap "${regra.nome}" contém a chave "${regra.chave}"${regra.valor != null ? ` com valor "${regra.valor}"` : ''}`;
     case 'secret-contem': return `O Secret "${regra.nome}" contém a chave "${regra.chave}"`;
-    case 'service-tipo': return `O Service "${regra.nome}" é do tipo ${regra.tipo}`;
+    case 'service-tipo': return `O Service "${regra.nome}" é do tipo ${regra.valorEsperado ?? regra.tipo}`;
     case 'service-selector': return `O Service "${regra.nome}" seleciona pods com ${regra.chave}=${regra.valor}`;
     case 'ingress-existe': return `O Ingress "${regra.nome}" existe${regra.host ? ` e roteia ${regra.host}` : ''}`;
     case 'hpa-configurado': return `HPA "${regra.nome}" configurado para ${regra.target}${regra.min != null ? ` (${regra.min}-${regra.max} réplicas)` : ''}`;

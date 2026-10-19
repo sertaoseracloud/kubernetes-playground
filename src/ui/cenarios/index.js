@@ -1,5 +1,7 @@
 // Renderização dos cenários visuais da trilha (cluster com nós, pods e serviços).
-// Cada módulo tem um cenário que evolui conforme o aluno resolve exercícios.
+// Cada módulo tem um cenário que evolui conforme o aluno resolve exercícios. É decorativo
+// (aria-hidden, como no terraform-playground): fica atrás do caminho, no canto de baixo do
+// módulo, sem cobrir o cabeçalho; o progresso de verdade está no anel e na contagem.
 import { esc } from '../util.js';
 
 /**
@@ -18,15 +20,15 @@ export function htmlDoCenario(cenario, moduloId, feitos) {
 
   if (!estagio || estagio.elementos.length === 0) {
     return `
-      <div class="cenario-palco" data-modulo="${esc(moduloId)}" aria-label="${esc(cenario.titulo)}">
+      <div class="cenario cenario-k8s" aria-hidden="true" data-modulo="${esc(moduloId)}"><div class="cenario-palco">
         <p class="cenario-vazio">${esc(estagio?.descricao ?? 'Cluster vazio')}</p>
-      </div>`;
+      </div></div>`;
   }
 
   const elementosHtml = estagio.elementos.map((el) => {
     const classes = ['cenario-elemento', `tipo-${el.tipo}`, `status-${el.status?.toLowerCase() ?? 'ativo'}`];
-    let conteudo = '';
-    let titulo = '';
+    let conteudo;
+    let titulo;
 
     switch (el.tipo) {
       case 'no':
@@ -46,12 +48,11 @@ export function htmlDoCenario(cenario, moduloId, feitos) {
         titulo = `${el.tipo}: ${el.nome ?? ''}`;
     }
 
-    return `<div class="${classes.join(' ')}" title="${esc(titulo)}" aria-label="${esc(titulo)}">${conteudo}</div>`;
+    return `<div class="${classes.join(' ')}" title="${esc(titulo)}">${conteudo}</div>`;
   }).join('');
 
   return `
-    <div class="cenario-palco" data-modulo="${esc(moduloId)}" aria-label="${esc(cenario.titulo)}: ${esc(estagio.descricao)}">
-      <p class="cenario-desc sr-only">${esc(estagio.descricao)}</p>
+    <div class="cenario cenario-k8s" aria-hidden="true" data-modulo="${esc(moduloId)}"><div class="cenario-palco">
       <div class="cenario-elementos">${elementosHtml}</div>
-    </div>`;
+    </div></div>`;
 }

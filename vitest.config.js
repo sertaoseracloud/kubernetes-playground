@@ -23,6 +23,8 @@ export default defineConfig({
       include: ['src/**/*.js'],
       exclude: ['src/conteudo/**'],
       reporter: ['text-summary', 'json-summary', 'html'],
+      // Os limites de antes (70/60/60/70) voltaram: a cobertura medida em 2026-10-19 é 71/63/74/74.
+      // Só podem subir.
       thresholds: { statements: 70, branches: 60, functions: 60, lines: 70 },
     },
   },

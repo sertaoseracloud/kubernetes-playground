@@ -2,7 +2,7 @@
 // O build (scripts/prerender.mjs) usa isto para escrever o <head> do index.html,
 // e o site usa `definirPagina` para atualizar título e descrição a cada tela.
 import { SITE, EMISSOR, CERTIFICADOS } from './certificados.js';
-import { modulos, problemas, itens } from './conteudo/trilha.js';
+import { modulos, problemas, itens, contarProjetos } from './conteudo/trilha.js';
 
 export const NOME = 'DivergeKubernetes';
 export const IMAGEM = `${SITE}og-capa.png`;
@@ -11,9 +11,9 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 const totalLicoes = itens.filter((i) => i.tipo === 'licao').length;
 
 export const PRINCIPAL = {
-  titulo: `${NOME}: Kubernetes acessível para todas as pessoas`,
+  titulo: `${NOME}: K8s acessível para todas as pessoas`, // até 60 caracteres (Google)
   descricao: `Aprenda Kubernetes grátis com acessibilidade: leitor de tela, Libras, teclado e perfis para TDAH e dislexia. `
-    + `${problemas.length} exercícios de Pods, Services e Deployments com certificado.`,
+    + `${problemas.length} exercícios práticos, com certificado.`, // até 160 caracteres
 };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -63,7 +63,7 @@ export function dadosEstruturados() {
         '@id': `${SITE}#curso`,
         name: EMISSOR.curso,
         description: `Trilha gamificada e acessível com ${totalLicoes} lições, ${problemas.length} exercícios corrigidos por testes `
-          + `automáticos e ${modulos.find((m) => m.grupos)?.grupos.length ?? 0} projetos completos: Kubernetes do básico aos recursos avançados.`,
+          + `automáticos e ${contarProjetos(modulos)} projetos completos: Kubernetes do básico aos recursos avançados.`,
         url: SITE,
         image: IMAGEM,
         inLanguage: 'pt-BR',
