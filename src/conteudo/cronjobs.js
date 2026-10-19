@@ -1,3 +1,5 @@
+import { exercicio, teste, existe, campo } from './util.js';
+
 // Módulo avançado: CronJobs e Jobs.
 // Lições sobre Jobs, CronJobs e padrões de uso.
 // Exercícios com validação via recurso-existe, container-imagem e cronjob-schedule.
@@ -136,5 +138,40 @@ spec:
         },
       ],
     },
+    exercicio({
+      id: 'jobs-indexado',
+      titulo: 'Job indexado em paralelo',
+      dificuldade: 'medio',
+      resumo: `<p>Processe 5 lotes de arquivos, 2 de cada vez. Crie o Job <code>processa-lotes</code>:</p>
+        <ul>
+          <li><code>completions: 5</code>, <code>parallelism: 2</code> e <code>completionMode: Indexed</code> (cada Pod recebe o
+            número do lote na variável <code>JOB_COMPLETION_INDEX</code>).</li>
+          <li><code>backoffLimit: 3</code> e <code>ttlSecondsAfterFinished: 600</code> (o Job some 10 minutos depois de terminar).</li>
+          <li>Container <code>lote</code> com a imagem <code>busybox:1.36</code>, comando
+            <code>["sh", "-c", "echo processando o lote $JOB_COMPLETION_INDEX"]</code> e <code>restartPolicy: Never</code>.</li>
+        </ul>`,
+      solucao: `apiVersion: batch/v1
+kind: Job
+metadata:
+  name: processa-lotes
+spec:
+  completions: 5
+  parallelism: 2
+  completionMode: Indexed
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: lote
+          image: busybox:1.36
+          command: ["sh", "-c", "echo processando o lote $JOB_COMPLETION_INDEX"]`,
+      testes: [
+        teste('O Job processa 5 lotes, 2 por vez', existe('Job', 'processa-lotes'), campo('Job', 'processa-lotes', 'spec.completions', { valor: 5 }), campo('Job', 'processa-lotes', 'spec.parallelism', { valor: 2 })),
+        teste('Cada Pod recebe o número do lote', campo('Job', 'processa-lotes', 'spec.completionMode', { valor: 'Indexed' })),
+        teste('O Job é limpo 10 minutos depois de terminar', campo('Job', 'processa-lotes', 'spec.ttlSecondsAfterFinished', { valor: 600 }), campo('Job', 'processa-lotes', 'spec.backoffLimit', { valor: 3 })),
+      ],
+    }),
   ],
 };

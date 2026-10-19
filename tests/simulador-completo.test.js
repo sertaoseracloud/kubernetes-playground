@@ -280,6 +280,7 @@ spec:
     spec:
       template:
         spec:
+          restartPolicy: OnFailure
           containers:
             - name: backup
               image: postgres:15`;
@@ -301,6 +302,7 @@ spec:
   backoffLimit: 3
   template:
     spec:
+      restartPolicy: Never
       containers:
         - name: migrate
           image: flyway:latest`;
@@ -520,7 +522,7 @@ describe('buscarRecurso', () => {
   it('busca em todos os tipos suportados', () => {
     aplicarYaml(`apiVersion: v1\nkind: Secret\nmetadata:\n  name: s1\ndata:\n  k: v`, CHAVE);
     expect(buscarRecurso('Secret', 's1')).not.toBeNull();
-    aplicarYaml(`apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: i1\nspec:\n  rules: []`, CHAVE);
+    aplicarYaml(`apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata:\n  name: i1\nspec:\n  defaultBackend:\n    service:\n      name: web\n      port:\n        number: 80`, CHAVE);
     expect(buscarRecurso('Ingress', 'i1')).not.toBeNull();
   });
 });

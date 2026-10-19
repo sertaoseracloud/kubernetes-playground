@@ -29,6 +29,11 @@ export function renderEstado(estadoAtual, diff) {
   }
 
   const temDiff = diff && (diff.adicionados.length || diff.removidos.length || diff.alterados.length);
+  // Recursos genéricos (StatefulSet, Role, CRDs) aparecem pelo kind, e não como "outros".
+  const rotulo = (item) => (item.tipo === 'outros' ? (item.recurso ?? item.atual)?.kind ?? item.tipo : item.tipo);
+  // Os manifestos guardados para os testes repetiriam o estado inteiro: o painel não os mostra.
+  const visivel = { ...estadoAtual };
+  delete visivel.manifestos;
 
   let html = `<div class="estado-container" aria-label="Estado do cluster">`;
 
@@ -50,19 +55,19 @@ export function renderEstado(estadoAtual, diff) {
     for (const item of diff.adicionados) {
       html += `<li class="estado-item estado-adicionado">
         <span class="estado-marca" aria-hidden="true">+</span>
-        <span class="sr">Adicionado:</span> ${esc(item.tipo)}/${esc(item.nome)}
+        <span class="sr">Adicionado:</span> ${esc(rotulo(item))}/${esc(item.nome)}
       </li>`;
     }
     for (const item of diff.removidos) {
       html += `<li class="estado-item estado-removido">
         <span class="estado-marca" aria-hidden="true">-</span>
-        <span class="sr">Removido:</span> ${esc(item.tipo)}/${esc(item.nome)}
+        <span class="sr">Removido:</span> ${esc(rotulo(item))}/${esc(item.nome)}
       </li>`;
     }
     for (const item of diff.alterados) {
       html += `<li class="estado-item estado-alterado">
         <span class="estado-marca" aria-hidden="true">~</span>
-        <span class="sr">Alterado:</span> ${esc(item.tipo)}/${esc(item.nome)}
+        <span class="sr">Alterado:</span> ${esc(rotulo(item))}/${esc(item.nome)}
       </li>`;
     }
 
@@ -72,7 +77,7 @@ export function renderEstado(estadoAtual, diff) {
   // JSON completo do estado
   html += `<details class="estado-json" open>
     <summary>Estado completo (JSON)</summary>
-    <pre class="estado-codigo"><code>${esc(formatarJson(estadoAtual))}</code></pre>
+    <pre class="estado-codigo"><code>${esc(formatarJson(visivel))}</code></pre>
   </details>`;
 
   html += `</div>`;
