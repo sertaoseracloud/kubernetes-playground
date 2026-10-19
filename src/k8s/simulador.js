@@ -40,11 +40,158 @@ const CAMPOS_CONHECIDOS = {
   ConfigMap: ['apiVersion', 'kind', 'metadata', 'data', 'binaryData', 'name'],
 };
 
+/**
+ * As versões de API que o servidor serve para cada kind (Kubernetes 1.31+ e as CRDs simuladas
+ * dos módulos AWS, Azure e avançados). Versões removidas (batch/v1beta1, extensions/v1beta1,
+ * autoscaling/v2beta2, policy/v1beta1...) não estão aqui: o apply falha como no cluster real.
+ */
+export const API_VERSIONS = {
+  Pod: ['v1'], Service: ['v1'], ConfigMap: ['v1'], Secret: ['v1'], ServiceAccount: ['v1'], Namespace: ['v1'],
+  ResourceQuota: ['v1'], LimitRange: ['v1'], PersistentVolume: ['v1'], PersistentVolumeClaim: ['v1'], Endpoints: ['v1'],
+  Deployment: ['apps/v1'], StatefulSet: ['apps/v1'], DaemonSet: ['apps/v1'], ReplicaSet: ['apps/v1'],
+  Job: ['batch/v1'], CronJob: ['batch/v1'],
+  Ingress: ['networking.k8s.io/v1'], IngressClass: ['networking.k8s.io/v1'], NetworkPolicy: ['networking.k8s.io/v1'],
+  HorizontalPodAutoscaler: ['autoscaling/v2', 'autoscaling/v1'],
+  PodDisruptionBudget: ['policy/v1'], PriorityClass: ['scheduling.k8s.io/v1'],
+  Role: ['rbac.authorization.k8s.io/v1'], RoleBinding: ['rbac.authorization.k8s.io/v1'],
+  ClusterRole: ['rbac.authorization.k8s.io/v1'], ClusterRoleBinding: ['rbac.authorization.k8s.io/v1'],
+  StorageClass: ['storage.k8s.io/v1'], CSIDriver: ['storage.k8s.io/v1'], EndpointSlice: ['discovery.k8s.io/v1'],
+  CustomResourceDefinition: ['apiextensions.k8s.io/v1'],
+  // CRDs comuns (instaladas pelos add-ons e operadores que as lições apresentam)
+  VolumeSnapshot: ['snapshot.storage.k8s.io/v1'], VolumeSnapshotClass: ['snapshot.storage.k8s.io/v1'],
+  GatewayClass: ['gateway.networking.k8s.io/v1'], Gateway: ['gateway.networking.k8s.io/v1'], HTTPRoute: ['gateway.networking.k8s.io/v1'],
+  Application: ['argoproj.io/v1alpha1'], AppProject: ['argoproj.io/v1alpha1'], ApplicationSet: ['argoproj.io/v1alpha1'],
+  GitRepository: ['source.toolkit.fluxcd.io/v1'], HelmRepository: ['source.toolkit.fluxcd.io/v1'],
+  Kustomization: ['kustomize.toolkit.fluxcd.io/v1'], HelmRelease: ['helm.toolkit.fluxcd.io/v2'],
+  SecretProviderClass: ['secrets-store.csi.x-k8s.io/v1'],
+  ExternalSecret: ['external-secrets.io/v1'], SecretStore: ['external-secrets.io/v1'], ClusterSecretStore: ['external-secrets.io/v1'],
+  Certificate: ['cert-manager.io/v1'], Issuer: ['cert-manager.io/v1'], ClusterIssuer: ['cert-manager.io/v1'],
+  ServiceMonitor: ['monitoring.coreos.com/v1', 'azmonitoring.coreos.com/v1'], PodMonitor: ['monitoring.coreos.com/v1', 'azmonitoring.coreos.com/v1'],
+  PrometheusRule: ['monitoring.coreos.com/v1'],
+  VerticalPodAutoscaler: ['autoscaling.k8s.io/v1'],
+  // AWS (EKS)
+  TargetGroupBinding: ['elbv2.k8s.aws/v1beta1'], IngressClassParams: ['elbv2.k8s.aws/v1beta1'],
+  NodePool: ['karpenter.sh/v1'], EC2NodeClass: ['karpenter.k8s.aws/v1'],
+  ENIConfig: ['crd.k8s.amazonaws.com/v1alpha1'], SecurityGroupPolicy: ['vpcresources.k8s.aws/v1beta1'],
+  // Azure (AKS)
+  ScaledObject: ['keda.sh/v1alpha1'], ScaledJob: ['keda.sh/v1alpha1'], TriggerAuthentication: ['keda.sh/v1alpha1'],
+  ClusterTriggerAuthentication: ['keda.sh/v1alpha1'],
+  NginxIngressController: ['approuting.kubernetes.azure.com/v1alpha1'],
+  AKSNodeClass: ['karpenter.azure.com/v1beta1'],
+  ApplicationLoadBalancer: ['alb.networking.azure.io/v1'],
+};
+
+const invalido = (kind, nome, campo, motivo) => `The ${kind} "${nome}" is invalid: ${campo}: ${motivo}`;
+const labelsCasam = (selector, labels) => Object.entries(selector ?? {}).every(([k, v]) => labels?.[k] === v);
+
+/** O selector de um workload precisa casar com os labels do template de Pod. */
+function validarSelector(recurso, erros) {
+  const selector = recurso.spec?.selector?.matchLabels;
+  if (selector && !labelsCasam(selector, recurso.spec?.template?.metadata?.labels)) {
+    erros.push(invalido(recurso.kind, recurso.metadata.name, 'spec.template.metadata.labels', '`selector` does not match template `labels`'));
+  }
+}
+
+/** StatefulSet e DaemonSet: selector obrigatório, containers e labels do template. */
+function validarWorkload(recurso, erros) {
+  const { kind } = recurso;
+  const nome = recurso.metadata.name;
+  if (!recurso.spec?.selector?.matchLabels && !recurso.spec?.selector?.matchExpressions) {
+    erros.push(invalido(kind, nome, 'spec.selector', 'Required value'));
+  }
+  const containers = recurso.spec?.template?.spec?.containers;
+  if (!Array.isArray(containers) || containers.length === 0) {
+    erros.push(invalido(kind, nome, 'spec.template.spec.containers', 'Required value'));
+  }
+  validarSelector(recurso, erros);
+}
+
+/** O template de Pod de um Job (direto ou dentro do CronJob): containers e restartPolicy Never/OnFailure. */
+function validarTemplateDeJob(kind, nome, podSpec, prefixo, erros) {
+  if (!Array.isArray(podSpec?.containers) || podSpec.containers.length === 0) {
+    erros.push(invalido(kind, nome, `${prefixo}.containers`, 'Required value'));
+  }
+  if (!['Never', 'OnFailure'].includes(podSpec?.restartPolicy)) {
+    erros.push(invalido(kind, nome, `${prefixo}.restartPolicy`, 'Required value: valid values: "OnFailure", "Never"'));
+  }
+}
+
+/** Ingress v1: regras ou defaultBackend; cada caminho com pathType e backend. */
+function validarIngress(recurso, erros) {
+  const { kind } = recurso;
+  const nome = recurso.metadata.name;
+  const regras = recurso.spec?.rules ?? [];
+  if (!regras.length && !recurso.spec?.defaultBackend) erros.push(invalido(kind, nome, 'spec', 'either `defaultBackend` or `rules` must be specified'));
+  regras.forEach((r, i) => (r.http?.paths ?? []).forEach((p, j) => {
+    const campo = `spec.rules[${i}].http.paths[${j}]`;
+    if (!['Exact', 'Prefix', 'ImplementationSpecific'].includes(p.pathType)) erros.push(invalido(kind, nome, `${campo}.pathType`, 'Required value: pathType must be specified'));
+    if (!p.backend?.service?.name && !p.backend?.resource) erros.push(invalido(kind, nome, `${campo}.backend`, 'Required value: service or resource'));
+  }));
+}
+
+/** Validações do servidor de API para os kinds além de Pod, Service, Deployment e ConfigMap. */
+function validarOutrosKinds(recurso, erros) {
+  const { kind, spec } = recurso;
+  const nome = recurso.metadata.name;
+  switch (kind) {
+    case 'StatefulSet':
+    case 'DaemonSet':
+      validarWorkload(recurso, erros);
+      break;
+    case 'Job':
+      validarTemplateDeJob(kind, nome, spec?.template?.spec, 'spec.template.spec', erros);
+      break;
+    case 'CronJob':
+      if (!spec?.schedule) erros.push(invalido(kind, nome, 'spec.schedule', 'Required value'));
+      validarTemplateDeJob(kind, nome, spec?.jobTemplate?.spec?.template?.spec, 'spec.jobTemplate.spec.template.spec', erros);
+      break;
+    case 'Ingress':
+      validarIngress(recurso, erros);
+      break;
+    case 'Role':
+    case 'ClusterRole':
+      (recurso.rules ?? []).forEach((r, i) => {
+        if (!Array.isArray(r.verbs) || r.verbs.length === 0) erros.push(invalido(kind, nome, `rules[${i}].verbs`, 'Required value: verbs must contain at least one value'));
+      });
+      break;
+    case 'RoleBinding':
+    case 'ClusterRoleBinding':
+      if (!recurso.roleRef?.kind || !recurso.roleRef?.name) erros.push(invalido(kind, nome, 'roleRef', 'Required value'));
+      else if (kind === 'ClusterRoleBinding' && recurso.roleRef.kind !== 'ClusterRole') erros.push(invalido(kind, nome, 'roleRef.kind', 'Unsupported value: only "ClusterRole"'));
+      break;
+    case 'HorizontalPodAutoscaler':
+      if (!spec?.scaleTargetRef?.name) erros.push(invalido(kind, nome, 'spec.scaleTargetRef', 'Required value'));
+      if (spec?.maxReplicas == null) erros.push(invalido(kind, nome, 'spec.maxReplicas', 'Required value'));
+      else if (Number(spec.maxReplicas) < Number(spec.minReplicas ?? 1)) erros.push(invalido(kind, nome, 'spec.maxReplicas', 'Invalid value: must be greater than or equal to `minReplicas`'));
+      break;
+    case 'PersistentVolumeClaim':
+      if (!spec?.accessModes?.length) erros.push(invalido(kind, nome, 'spec.accessModes', 'Required value: at least 1 access mode is required'));
+      if (!spec?.resources?.requests?.storage) erros.push(invalido(kind, nome, 'spec.resources[storage]', 'Required value'));
+      break;
+    case 'StorageClass':
+      if (!recurso.provisioner) erros.push(invalido(kind, nome, 'provisioner', 'Required value'));
+      break;
+    case 'NetworkPolicy':
+      if (!spec?.podSelector) erros.push(invalido(kind, nome, 'spec.podSelector', 'Required value'));
+      break;
+    case 'PodDisruptionBudget':
+      if (spec?.minAvailable != null && spec?.maxUnavailable != null) erros.push(invalido(kind, nome, 'spec', 'Invalid value: minAvailable and maxUnavailable cannot be both set'));
+      break;
+  }
+}
+
 /** Valida campos obrigatórios de um recurso antes de processá-lo. Devolve array de erros. */
 function validarCamposObrigatorios(recurso) {
   const erros = [];
   const kind = recurso.kind;
   const nome = recurso.metadata?.name ?? '(unnamed)';
+
+  if (!recurso.apiVersion) return [`error validating data: apiVersion not set (${kind} "${nome}")`];
+  const versoes = API_VERSIONS[kind];
+  if (versoes && !versoes.includes(recurso.apiVersion)) {
+    return [`error: resource mapping not found for name: "${nome}" from "manifest.yaml": no matches for kind "${kind}" in version "${recurso.apiVersion}" (a versão servida é ${versoes[0]})`];
+  }
+  validarOutrosKinds(recurso, erros);
 
   // Verifica campos desconhecidos no nível raiz e sugere correções
   const camposValidos = CAMPOS_CONHECIDOS[kind];
@@ -106,7 +253,7 @@ function validarCamposObrigatorios(recurso) {
       const containers = recurso.spec?.template?.spec?.containers;
       if (!containers || !Array.isArray(containers) || containers.length === 0) {
         erros.push(`Missing required argument "containers" in spec.template.spec of Deployment "${nome}".`);
-      }
+      } else validarSelector(recurso, erros);
       break;
     }
     case 'ConfigMap': {
@@ -169,9 +316,10 @@ let _diffUsadoFlag = false;
 export function definirDiffUsado(valor) { _diffUsadoFlag = !!valor; }
 
 /** Estado global do cluster simulado. Persistido por exercício via progresso.js. */
-let estado = { pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [], outros: [] };
+// `manifestos` guarda o YAML aplicado de cada recurso ("Kind/nome"), para a regra "campo".
+const ESTADO_PADRAO = () => ({ pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [], outros: [], manifestos: {} });
 
-const ESTADO_PADRAO = () => ({ pods: [], services: [], deployments: [], configmaps: [], secrets: [], ingresses: [], hpas: [], networkpolicies: [], pvcs: [], serviceaccounts: [], cronjobs: [], jobs: [], nos: [], outros: [] });
+let estado = ESTADO_PADRAO();
 
 export function resetarEstado(chaveExercicio) {
   estado = ESTADO_PADRAO();
@@ -199,34 +347,36 @@ export function compararEstados(anterior, atual) {
   const removidos = [];
   const alterados = [];
 
-  const tipos = ['pods', 'services', 'deployments', 'configmaps', 'secrets', 'ingresses', 'hpas', 'networkpolicies', 'pvcs', 'serviceaccounts', 'cronjobs', 'jobs'];
+  const tipos = ['pods', 'services', 'deployments', 'configmaps', 'secrets', 'ingresses', 'hpas', 'networkpolicies', 'pvcs', 'serviceaccounts', 'cronjobs', 'jobs', 'outros'];
 
   for (const tipo of tipos) {
     const listaAnterior = anterior?.[tipo] ?? [];
     const listaAtual = atual?.[tipo] ?? [];
+    // Em "outros" convivem vários kinds: a chave inclui o kind.
+    const chave = (r) => (tipo === 'outros' ? `${r.kind}/${r.nome}` : r.nome);
 
-    const mapaAnterior = new Map(listaAnterior.map((r) => [r.nome, r]));
-    const mapaAtual = new Map(listaAtual.map((r) => [r.nome, r]));
+    const mapaAnterior = new Map(listaAnterior.map((r) => [chave(r), r]));
+    const mapaAtual = new Map(listaAtual.map((r) => [chave(r), r]));
 
     // Adicionados: existem no atual mas não no anterior
-    for (const [nome, recurso] of mapaAtual) {
-      if (!mapaAnterior.has(nome)) {
-        adicionados.push({ tipo, nome, recurso });
+    for (const [id, recurso] of mapaAtual) {
+      if (!mapaAnterior.has(id)) {
+        adicionados.push({ tipo, nome: recurso.nome, recurso });
       }
     }
 
     // Removidos: existem no anterior mas não no atual
-    for (const [nome, recurso] of mapaAnterior) {
-      if (!mapaAtual.has(nome)) {
-        removidos.push({ tipo, nome, recurso });
+    for (const [id, recurso] of mapaAnterior) {
+      if (!mapaAtual.has(id)) {
+        removidos.push({ tipo, nome: recurso.nome, recurso });
       }
     }
 
     // Alterados: existem em ambos mas com conteúdo diferente
-    for (const [nome, recursoAtual] of mapaAtual) {
-      const recursoAnterior = mapaAnterior.get(nome);
+    for (const [id, recursoAtual] of mapaAtual) {
+      const recursoAnterior = mapaAnterior.get(id);
       if (recursoAnterior && JSON.stringify(recursoAnterior) !== JSON.stringify(recursoAtual)) {
-        alterados.push({ tipo, nome, anterior: recursoAnterior, atual: recursoAtual });
+        alterados.push({ tipo, nome: recursoAtual.nome, anterior: recursoAnterior, atual: recursoAtual });
       }
     }
   }
@@ -267,9 +417,11 @@ const LISTA_DO_KIND = {
 
 /** Remove um recurso (kubectl delete). Devolve true se ele existia. */
 export function removerRecurso(kind, nome, chaveExercicio) {
-  const lista = LISTA_DO_KIND[kind];
-  if (!lista || !estado[lista].some((r) => r.nome === nome)) return false;
-  estado[lista] = estado[lista].filter((r) => r.nome !== nome);
+  const lista = LISTA_DO_KIND[kind] ?? (KINDS_GENERICOS.has(kind) ? 'outros' : null);
+  const eh = (r) => r.nome === nome && (lista !== 'outros' || r.kind === kind);
+  if (!lista || !estado[lista].some(eh)) return false;
+  estado[lista] = estado[lista].filter((r) => !eh(r));
+  if (estado.manifestos) delete estado.manifestos[`${kind}/${nome}`];
   if (chaveExercicio) gravarEstado(chaveExercicio, estado);
   return true;
 }
@@ -280,6 +432,9 @@ export function removerRecurso(kind, nome, chaveExercicio) {
  * @param {string} yamlTexto - YAML a ser simulado.
  * @returns {{ok: boolean, recursos: object[], diff: {criar: object[], atualizar: object[], destruir: object[]}, mensagem: string}}
  */
+/** Kind de um item do diff: o próprio (recursos genéricos) ou derivado do nome da lista. */
+const kindDoItem = (item) => (item.recurso ?? item.atual)?.kind ?? item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, '');
+
 export function simularApply(yamlTexto) {
   try {
     const documentos = yaml.loadAll(yamlTexto).filter(Boolean);
@@ -319,19 +474,19 @@ export function simularApply(yamlTexto) {
     const diff = {
       criar: comparacao.adicionados.map((item) => ({
         acao: 'criar',
-        kind: item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, ''),
+        kind: kindDoItem(item),
         nome: item.nome,
         detalhes: formatarDetalhesRecurso(item.recurso),
       })),
       atualizar: comparacao.alterados.map((item) => ({
         acao: 'atualizar',
-        kind: item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, ''),
+        kind: kindDoItem(item),
         nome: item.nome,
         detalhes: calcularCamposAlterados(item.anterior, item.atual),
       })),
       destruir: comparacao.removidos.map((item) => ({
         acao: 'destruir',
-        kind: item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, ''),
+        kind: kindDoItem(item),
         nome: item.nome,
         detalhes: formatarDetalhesRecurso(item.recurso),
       })),
@@ -357,11 +512,8 @@ function mapearContainers(lista) {
 }
 
 /** Kinds nativos guardados de forma genérica (sem regra própria nos testes, além de existir). */
-const KINDS_GENERICOS = new Set([
-  'Namespace', 'ResourceQuota', 'LimitRange', 'PodDisruptionBudget', 'PriorityClass', 'DaemonSet', 'StatefulSet',
-  'ReplicaSet', 'Role', 'RoleBinding', 'ClusterRole', 'ClusterRoleBinding', 'StorageClass', 'PersistentVolume',
-  'EndpointSlice', 'Endpoints', 'IngressClass',
-]);
+// Todos os kinds com versão conhecida e sem lista própria (StatefulSet, Role, CRDs da AWS e do Azure...).
+const KINDS_GENERICOS = new Set(Object.keys(API_VERSIONS).filter((k) => !LISTA_DO_KIND[k]));
 
 /**
  * Aplica um recurso (já validado) num estado: o global (apply) ou uma cópia (diff).
@@ -375,8 +527,10 @@ function aplicarRecursoEm(recurso, alvo) {
   const kind = recurso.kind;
   const metadataLabels = recurso.metadata.labels ?? {};
   alvo.outros ??= [];
+  alvo.manifestos ??= {};
   /** Troca (ou cria) o recurso na lista e devolve a mensagem do kubectl. */
   const guardar = (lista, obj, prefixo) => {
+    alvo.manifestos[`${kind}/${nome}`] = structuredClone(recurso);
     const existia = alvo[lista].some((r) => r.nome === nome && (lista !== 'outros' || r.kind === kind));
     alvo[lista] = alvo[lista].filter((r) => !(r.nome === nome && (lista !== 'outros' || r.kind === kind)));
     alvo[lista].push(obj);
@@ -475,7 +629,9 @@ function aplicarRecursoEm(recurso, alvo) {
         kind, nome, metadataLabels, spec: recurso.spec ?? {},
         containers: mapearContainers(recurso.spec?.template?.spec?.containers),
       };
-      return guardar('outros', obj, kind.toLowerCase());
+      // Como no kubectl: "statefulset.apps/db created", "nodepool.karpenter.sh/padrao created".
+      const grupo = String(recurso.apiVersion).includes('/') ? `.${String(recurso.apiVersion).split('/')[0]}` : '';
+      return guardar('outros', obj, `${kind.toLowerCase()}${grupo}`);
     }
   }
 }
@@ -587,6 +743,7 @@ export function normalizarRegra(regra) {
     r.min = regra.min ?? regra.minReplicas;
     r.max = regra.max ?? regra.maxReplicas;
   }
+  if (regra.tipo === 'probe-configurada') r.tipoProbe = regra.tipoProbe ?? regra.tipo_probe;
   if (regra.tipo === 'volume-montado') {
     r.nomeVolume = regra.nomeVolume ?? regra.volume;
     r.mountPath = regra.mountPath ?? regra.caminho;
@@ -601,6 +758,7 @@ export function normalizarRegra(regra) {
 export function verificarRegra(regraOriginal) {
   const regra = normalizarRegra(regraOriginal);
   switch (regra.tipo) {
+    case 'campo': return verificarCampo(regra);
     case 'diff-usado': {
       if (!_diffUsadoFlag) return { ok: false, detalhe: 'O botão 🔍 Diff não foi usado antes de aplicar.', mensagem: 'Você usou 🔍 Diff antes de aplicar', categoria: 'Workflow', obtido: '(não usado)' };
       return { ok: true, detalhe: 'Diff foi executado antes do Apply.', mensagem: 'Você usou 🔍 Diff antes de aplicar', categoria: 'Workflow', obtido: 'diff executado' };
@@ -824,6 +982,88 @@ export function verificarRegra(regraOriginal) {
   }
 }
 
+/** Stringify com as chaves em ordem (para comparar objetos). */
+const estavel = (v) => {
+  if (!v || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(estavel).join(',')}]`;
+  return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${estavel(v[k])}`).join(',')}}`;
+};
+const ehObjeto = (v) => v !== null && typeof v === 'object';
+const igual = (a, b) => (ehObjeto(a) || ehObjeto(b) ? estavel(a) === estavel(b) : String(a) === String(b));
+
+/** "Contém": item de uma lista, trecho de um texto ou subconjunto de um objeto. */
+function contem(obtido, esperado) {
+  const parcial = ehObjeto(esperado) && !Array.isArray(esperado);
+  if (Array.isArray(obtido)) return obtido.some((e) => igual(e, esperado) || (parcial && contem(e, esperado)));
+  if (ehObjeto(obtido)) return parcial && Object.entries(esperado).every(([k, v]) => igual(obtido[k], v));
+  return obtido != null && String(obtido).includes(String(esperado));
+}
+
+const curto = (v) => {
+  const t = v === undefined ? '(não definido)' : typeof v === 'string' ? v : estavel(v);
+  return t.length > 80 ? `${t.slice(0, 77)}...` : t;
+};
+
+const PEDACO_DO_CAMINHO = /\[(\d+)\]|\["([^"]+)"\]|\[(\*)\]|\[([^=\]]+)=([^\]]*)\]|([^.[\]]+)/g;
+
+/**
+ * Lê um campo de um objeto por caminho: "spec.containers[0].image", "spec.containers[name=app].image",
+ * 'metadata.annotations["eks.amazonaws.com/role-arn"]' e "spec.containers[*].name" (lista com todos).
+ */
+export function lerCampo(obj, caminho) {
+  const partes = [...String(caminho).matchAll(PEDACO_DO_CAMINHO)];
+  const ler = (atual, i) => {
+    if (i === partes.length) return atual;
+    if (atual == null) return undefined;
+    const [, indice, chave, todos, filtroK, filtroV, nome] = partes[i];
+    if (todos) return Array.isArray(atual) ? atual.map((x) => ler(x, i + 1)).filter((v) => v !== undefined).flat(Infinity) : undefined;
+    if (indice !== undefined) return Array.isArray(atual) ? ler(atual[Number(indice)], i + 1) : undefined;
+    if (filtroK !== undefined) return Array.isArray(atual) ? ler(atual.find((x) => String(lerCampo(x, filtroK)) === filtroV), i + 1) : undefined;
+    return ler(atual[chave ?? nome], i + 1);
+  };
+  return ler(obj, 0);
+}
+
+/** A condição da regra "campo" em português (aparece em "Como saber que deu certo"). */
+function condicaoDoCampo(regra) {
+  if (regra.ausente) return 'não está definido';
+  if (regra.valor !== undefined) return `é ${ehObjeto(regra.valor) ? estavel(regra.valor) : regra.valor}`;
+  if (regra.contem !== undefined) return `contém ${estavel(regra.contem)}`;
+  if (regra.naoContem !== undefined) return `não contém ${estavel(regra.naoContem)}`;
+  if (regra.minimo !== undefined) return `é pelo menos ${regra.minimo}`;
+  if (regra.maximo !== undefined) return `é no máximo ${regra.maximo}`;
+  return 'está definido';
+}
+
+/** O campo pedido pela regra confere? (valor, contem, ausente, minimo/maximo ou só existir) */
+function campoConfere(regra, obtido) {
+  if (regra.ausente) return obtido === undefined || obtido === null;
+  if (regra.valor !== undefined) return obtido !== undefined && igual(obtido, regra.valor);
+  if (regra.contem !== undefined) return contem(obtido, regra.contem);
+  if (regra.naoContem !== undefined) return obtido !== undefined && !contem(obtido, regra.naoContem);
+  if (regra.minimo !== undefined || regra.maximo !== undefined) {
+    const medida = Array.isArray(obtido) ? obtido.length : Number(obtido);
+    return obtido !== undefined && !Number.isNaN(medida)
+      && (regra.minimo === undefined || medida >= regra.minimo) && (regra.maximo === undefined || medida <= regra.maximo);
+  }
+  return obtido !== undefined && obtido !== null && obtido !== '' && !(Array.isArray(obtido) && obtido.length === 0);
+}
+
+/** Regra "campo": confere um campo do manifesto aplicado (qualquer kind, inclusive CRDs). */
+function verificarCampo(regra) {
+  const mensagem = descreverRegra(regra);
+  const categoria = regra.categoria ?? 'Configuração';
+  const manifesto = estado.manifestos?.[`${regra.kind}/${regra.nome}`];
+  if (!manifesto) return { ok: false, detalhe: `${regra.kind} "${regra.nome}" não encontrado.`, mensagem, categoria, obtido: '(nenhum)' };
+  const obtido = lerCampo(manifesto, regra.caminho);
+  const ok = campoConfere(regra, obtido);
+  return {
+    ok,
+    detalhe: ok ? `${regra.caminho} confere.` : `${regra.caminho}: esperado que ${condicaoDoCampo(regra)}, obtido ${curto(obtido)}.`,
+    mensagem, categoria, obtido: curto(obtido),
+  };
+}
+
 /**
  * Detecta drift entre o YAML fornecido e o estado atual do cluster simulado.
  * @param {string} yamlTexto - YAML com o estado desejado.
@@ -974,6 +1214,7 @@ export function descreverRegra(regra) {
     case 'azure-identity': return `Deployment "${regra.deployment}" com identidade Azure`;
     case 'storageclass-azure': return `StorageClass Azure "${regra.nome}" existe`;
     case 'diff-usado': return `Você usou 🔍 Diff antes de aplicar`;
+    case 'campo': return regra.texto ?? `Em ${regra.kind} "${regra.nome}", ${regra.caminho} ${condicaoDoCampo(regra)}`;
     default: return regra.mensagem || `Verificação: ${regra.tipo}`;
   }
 }

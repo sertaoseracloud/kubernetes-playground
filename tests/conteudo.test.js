@@ -31,6 +31,14 @@ describe('conteúdo da trilha', () => {
     for (const p of problemas) expect(passa(ESQUELETO, p.testes, p.existentes).ok, p.id).toBe(false);
   });
 
+  it('o código inicial de cada etapa (a etapa anterior pronta) ainda não resolve a etapa', () => {
+    for (const p of problemas.filter((x) => x.inicial)) expect(passa(p.inicial, p.testes, p.existentes).ok, p.id).toBe(false);
+  });
+
+  it('todo exercício confere pelo menos duas coisas', () => {
+    for (const p of problemas) expect(p.testes.flatMap((t) => t.regras || []).length, p.id).toBeGreaterThanOrEqual(2);
+  });
+
   it('toda regra de teste tem descrição em português para a aba Testes', () => {
     for (const p of problemas) {
       for (const t of p.testes) for (const regra of t.regras || []) expect(descreverRegra(regra), `${p.id} ${regra.tipo}`).toBeTruthy();

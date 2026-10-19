@@ -6,6 +6,8 @@
 // Comandos: kubectl apply|diff -f manifest.yaml, kubectl get, kubectl describe,
 // kubectl delete, kubectl version, kubectl cluster-info, kubectl explain, drift, help e clear.
 
+import { API_VERSIONS } from './simulador.js';
+
 /** Os tipos que o kubectl get/describe/delete aceitam, com os apelidos de verdade. */
 export const TIPOS = {
   pods: { kind: 'Pod', lista: 'pods', apelidos: ['pod', 'po'] },
@@ -22,6 +24,33 @@ export const TIPOS = {
   jobs: { kind: 'Job', lista: 'jobs', apelidos: ['job'], prefixo: 'job.batch' },
   nodes: { kind: 'Node', lista: 'nos', apelidos: ['node', 'no'] },
 };
+
+/** Apelidos curtos de verdade (kubectl api-resources) dos kinds guardados de forma genérica. */
+const APELIDOS = {
+  StatefulSet: ['sts'], DaemonSet: ['ds'], ReplicaSet: ['rs'], Namespace: ['ns'], StorageClass: ['sc'],
+  PersistentVolume: ['pv'], PodDisruptionBudget: ['pdb'], ResourceQuota: ['quota'], LimitRange: ['limits'],
+  PriorityClass: ['pc'], CustomResourceDefinition: ['crd', 'crds'], Endpoints: ['ep'], Gateway: ['gtw'],
+  Kustomization: ['ks'], HelmRelease: ['hr'], ExternalSecret: ['es'], Certificate: ['cert', 'certs'],
+  VerticalPodAutoscaler: ['vpa'], ScaledObject: ['so'], VolumeSnapshot: ['vs'],
+};
+
+const plural = (kind) => {
+  const k = kind.toLowerCase();
+  if (k.endsWith('s')) return k.endsWith('ss') ? `${k}es` : k;
+  return k.endsWith('y') ? `${k.slice(0, -1)}ies` : `${k}s`;
+};
+
+// Os kinds que o simulador guarda em "outros" (StatefulSet, Role, CRDs...) também entram no get/describe/delete.
+for (const [kind, versoes] of Object.entries(API_VERSIONS)) {
+  if (Object.values(TIPOS).some((t) => t.kind === kind)) continue;
+  const grupo = versoes[0].includes('/') ? versoes[0].split('/')[0] : '';
+  TIPOS[plural(kind)] = {
+    kind, lista: 'outros', apelidos: [kind.toLowerCase(), ...(APELIDOS[kind] ?? [])], prefixo: grupo ? `${kind.toLowerCase()}.${grupo}` : undefined,
+  };
+}
+
+/** Os recursos de um tipo no estado (a lista "outros" é filtrada pelo kind). */
+const recursosDoTipo = (t, estado) => (t.lista === 'outros' ? (estado.outros ?? []).filter((r) => r.kind === t.kind) : estado[t.lista] ?? []);
 
 const NOME_TIPO = Object.fromEntries(Object.entries(TIPOS).flatMap(([nome, t]) => [[nome, nome], ...t.apelidos.map((a) => [a, nome])]));
 
@@ -88,7 +117,7 @@ function todosOsPods(estado) {
 
 function linhasDoGet(nomeTipo, estado, nome) {
   const t = TIPOS[nomeTipo];
-  let itens = nomeTipo === 'pods' ? todosOsPods(estado) : [...(estado[t.lista] ?? [])];
+  let itens = nomeTipo === 'pods' ? todosOsPods(estado) : [...recursosDoTipo(t, estado)];
   if (nomeTipo === 'nodes' && !itens.length) itens = [{ nome: 'node-1', status: 'Ready' }];
   if (nome) {
     itens = itens.filter((r) => r.nome === nome);
@@ -105,6 +134,8 @@ function linhasDoGet(nomeTipo, estado, nome) {
     case 'configmaps': return tabela(['NAME', 'DATA', 'AGE'], itens.map((c) => [c.nome, Object.keys(c.data ?? {}).length, idade]));
     case 'secrets': return tabela(['NAME', 'TYPE', 'DATA', 'AGE'], itens.map((s) => [s.nome, s.tipo, Object.keys({ ...s.data, ...s.stringData }).length, idade]));
     case 'hpa': return tabela(['NAME', 'REFERENCE', 'MINPODS', 'MAXPODS', 'AGE'], itens.map((h) => [h.nome, `Deployment/${h.target}`, h.min, h.max, idade]));
+    case 'statefulsets': return tabela(['NAME', 'READY', 'AGE'], itens.map((s) => [s.nome, `${s.spec?.replicas ?? 1}/${s.spec?.replicas ?? 1}`, idade]));
+    case 'daemonsets': return tabela(['NAME', 'DESIRED', 'CURRENT', 'READY', 'AGE'], itens.map((d) => [d.nome, 1, 1, 1, idade]));
     case 'cronjobs': return tabela(['NAME', 'SCHEDULE', 'SUSPEND', 'ACTIVE', 'AGE'], itens.map((c) => [c.nome, c.schedule, 'False', 0, idade]));
     case 'nodes': return tabela(['NAME', 'STATUS', 'ROLES', 'AGE', 'VERSION'], itens.map((n) => [n.nome, n.status ?? 'Ready', 'control-plane', '1d', 'v1.31.0']));
     case 'pvc': return tabela(['NAME', 'STATUS', 'CAPACITY', 'ACCESS MODES', 'STORAGECLASS', 'AGE'], itens.map((p) => [p.nome, 'Bound', p.size || '<none>', (p.accessModes ?? []).join(',') || '<none>', p.storageClass || 'standard', idade]));
@@ -140,7 +171,7 @@ function describe(args, estado) {
   const [alvo, nome] = args.filter((a) => !a.startsWith('-'));
   const tipo = tipoPorNome(alvo);
   if (!tipo) return [linha(alvo ? `error: the server doesn't have a resource type "${alvo}"` : 'error: Required resource not specified.', 'erro')];
-  const lista = estado[TIPOS[tipo].lista] ?? [];
+  const lista = recursosDoTipo(TIPOS[tipo], estado);
   const recursos = nome ? lista.filter((r) => r.nome === nome) : lista;
   if (!recursos.length) return [linha(nome ? `Error from server (NotFound): ${tipo} "${nome}" not found` : `No resources found in default namespace.`, nome ? 'erro' : '')];
   const saida = [];
@@ -205,10 +236,69 @@ export const EXPLICACOES = {
 /** Os kinds de um manifesto YAML, na ordem em que aparecem (sem repetir). */
 export const kindsDoYaml = (texto) => [...new Set([...String(texto ?? '').matchAll(/^kind:\s*([A-Za-z]+)/gm)].map((m) => m[1]))];
 
+/** Explicações dos kinds guardados de forma genérica (nativos e CRDs dos add-ons). */
+const EXPLICACOES_POR_KIND = {
+  StatefulSet: 'StatefulSet: como o Deployment, mas cada Pod tem nome fixo (db-0, db-1) e disco próprio; para bancos e filas.',
+  DaemonSet: 'DaemonSet: um Pod em cada nó do cluster; para agentes de log, métricas e rede.',
+  ReplicaSet: 'ReplicaSet: mantém N cópias de um Pod; o Deployment cria e troca ReplicaSets por você.',
+  Namespace: 'Namespace: uma "pasta" do cluster que separa recursos, permissões e cotas por time ou ambiente.',
+  ResourceQuota: 'ResourceQuota: o limite total de CPU, memória e objetos de um namespace.',
+  LimitRange: 'LimitRange: valores padrão e máximos de CPU e memória para cada container de um namespace.',
+  PodDisruptionBudget: 'PodDisruptionBudget: quantos Pods podem sair ao mesmo tempo numa manutenção (drain, upgrade).',
+  PriorityClass: 'PriorityClass: a prioridade de um Pod; os mais importantes passam na frente e podem tirar os menos importantes.',
+  Role: 'Role: uma lista de permissões (verbos sobre recursos) dentro de um namespace.',
+  RoleBinding: 'RoleBinding: entrega uma Role (ou ClusterRole) a usuários, grupos ou ServiceAccounts num namespace.',
+  ClusterRole: 'ClusterRole: como a Role, mas vale para o cluster todo ou para recursos sem namespace.',
+  ClusterRoleBinding: 'ClusterRoleBinding: entrega uma ClusterRole no cluster inteiro.',
+  StorageClass: 'StorageClass: o "cardápio" de discos; diz qual driver CSI cria o volume e com quais parâmetros.',
+  PersistentVolume: 'PersistentVolume: um disco de verdade disponível no cluster, que um PVC reserva.',
+  CSIDriver: 'CSIDriver: registra um driver de armazenamento CSI no cluster.',
+  EndpointSlice: 'EndpointSlice: a lista de endereços (IPs e portas) dos Pods atrás de um Service.',
+  Endpoints: 'Endpoints: a lista antiga de endereços dos Pods de um Service (hoje, EndpointSlice).',
+  IngressClass: 'IngressClass: diz qual controlador (NGINX, ALB, Application Gateway...) atende um Ingress.',
+  CustomResourceDefinition: 'CustomResourceDefinition: ensina um tipo novo de recurso à API do Kubernetes.',
+  VolumeSnapshot: 'VolumeSnapshot: uma "foto" de um volume persistente, para backup ou para clonar.',
+  VolumeSnapshotClass: 'VolumeSnapshotClass: qual driver CSI tira os snapshots e o que fazer com eles depois.',
+  GatewayClass: 'GatewayClass (Gateway API): o tipo de balanceador que implementa os Gateways.',
+  Gateway: 'Gateway (Gateway API): o ponto de entrada (porta, protocolo, certificado) do tráfego do cluster.',
+  HTTPRoute: 'HTTPRoute (Gateway API): regras de HTTP que ligam um Gateway aos Services.',
+  Application: 'Application (Argo CD): um app que o Argo CD mantém igual ao que está no Git.',
+  AppProject: 'AppProject (Argo CD): limites de um grupo de Applications (repositórios e destinos permitidos).',
+  ApplicationSet: 'ApplicationSet (Argo CD): gera várias Applications a partir de um modelo (um por cluster ou ambiente).',
+  GitRepository: 'GitRepository (Flux): o repositório Git que o Flux acompanha.',
+  HelmRepository: 'HelmRepository (Flux): o repositório de charts Helm que o Flux acompanha.',
+  Kustomization: 'Kustomization (Flux): aplica uma pasta do repositório no cluster e mantém em sincronia.',
+  HelmRelease: 'HelmRelease (Flux): instala e atualiza um chart Helm de forma declarativa.',
+  SecretProviderClass: 'SecretProviderClass (Secrets Store CSI): de qual cofre (AWS Secrets Manager, Azure Key Vault) vêm os segredos montados no Pod.',
+  ExternalSecret: 'ExternalSecret (External Secrets Operator): copia um segredo do cofre externo para um Secret do Kubernetes.',
+  SecretStore: 'SecretStore (External Secrets Operator): como chegar ao cofre externo num namespace.',
+  ClusterSecretStore: 'ClusterSecretStore (External Secrets Operator): como chegar ao cofre externo, para o cluster todo.',
+  Certificate: 'Certificate (cert-manager): pede e renova um certificado TLS e guarda num Secret.',
+  Issuer: 'Issuer (cert-manager): quem emite os certificados (Let\'s Encrypt, CA própria) num namespace.',
+  ClusterIssuer: 'ClusterIssuer (cert-manager): o emissor de certificados para o cluster todo.',
+  ServiceMonitor: 'ServiceMonitor (Prometheus): diz de quais Services o Prometheus coleta métricas.',
+  PodMonitor: 'PodMonitor (Prometheus): diz de quais Pods o Prometheus coleta métricas.',
+  PrometheusRule: 'PrometheusRule (Prometheus): regras de alerta e de gravação de métricas.',
+  VerticalPodAutoscaler: 'VerticalPodAutoscaler: ajusta os requests de CPU e memória pelo uso real.',
+  TargetGroupBinding: 'TargetGroupBinding (AWS Load Balancer Controller): liga um Service a um target group que já existe.',
+  IngressClassParams: 'IngressClassParams (AWS Load Balancer Controller): parâmetros comuns dos ALBs de uma IngressClass.',
+  NodePool: 'NodePool (Karpenter): que tipo de nó o Karpenter pode criar e quando pode removê-lo.',
+  EC2NodeClass: 'EC2NodeClass (Karpenter na AWS): AMI, sub-redes, security groups e role IAM dos nós EC2.',
+  ENIConfig: 'ENIConfig (VPC CNI): a sub-rede e os security groups dos Pods numa zona (rede personalizada).',
+  SecurityGroupPolicy: 'SecurityGroupPolicy (VPC CNI): security groups da AWS aplicados direto aos Pods.',
+  ScaledObject: 'ScaledObject (KEDA): escala um Deployment por eventos (fila, tópico, métrica), até zero.',
+  ScaledJob: 'ScaledJob (KEDA): cria Jobs conforme chegam eventos numa fila.',
+  TriggerAuthentication: 'TriggerAuthentication (KEDA): como o KEDA se autentica na fonte de eventos.',
+  ClusterTriggerAuthentication: 'ClusterTriggerAuthentication (KEDA): a autenticação do KEDA para o cluster todo.',
+  NginxIngressController: 'NginxIngressController (roteamento de aplicativos do AKS): um controlador NGINX gerenciado.',
+  AKSNodeClass: 'AKSNodeClass (provisionamento automático de nós do AKS): imagem e disco dos nós criados pelo Karpenter.',
+  ApplicationLoadBalancer: 'ApplicationLoadBalancer (Application Gateway for Containers): o balanceador gerenciado pelo controlador ALB do Azure.',
+};
+
 /** Explicação curta de um kind (ou null se não houver). */
 export function explicarKind(kind) {
   const tipo = Object.keys(TIPOS).find((t) => TIPOS[t].kind === kind);
-  return tipo ? EXPLICACOES[tipo] : null;
+  return EXPLICACOES[tipo] ?? EXPLICACOES_POR_KIND[kind] ?? null;
 }
 
 /**
@@ -248,7 +338,7 @@ export function interpretar(texto, estado) {
       case 'explain': {
         const tipo = tipoPorNome(args[0]);
         if (!tipo) return { linhas: [linha(args[0] ? `error: couldn't find resource for "${args[0]}"` : 'error: You must specify the type of resource to explain.', 'erro')] };
-        return { linhas: [linha(`KIND:     ${TIPOS[tipo].kind}`, 'forte'), linha(''), linha(EXPLICACOES[tipo], 'explicacao')] };
+        return { linhas: [linha(`KIND:     ${TIPOS[tipo].kind}`, 'forte'), linha(''), linha(explicarKind(TIPOS[tipo].kind) ?? 'Recurso do Kubernetes.', 'explicacao')] };
       }
       case 'version':
         return { linhas: [linha('Client Version: v1.31.0'), linha('Server Version: v1.31.0 (simulado no navegador)')] };

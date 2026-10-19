@@ -10,6 +10,30 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.2.0',
+    data: '2026-10-19',
+    titulo: 'Recursos Avançados completos',
+    resumo: 'O módulo Recursos Avançados dobrou: RBAC, escala automática, StatefulSet, NetworkPolicy, Ingress com TLS e GitOps com Argo CD e Flux.',
+    grupos: [
+      {
+        titulo: '🗺️ Trilha e exercícios',
+        itens: [
+          'Recursos Avançados passa de 18 para 35 exercícios, em sete tópicos: RBAC, escala e saúde, StatefulSet e storage, Jobs, rede, Secrets e GitOps.',
+          'Fundamentos ganha dois exercícios: Pod endurecido com securityContext e desligamento gracioso com preStop.',
+          'Lições novas com analogias do dia a dia para RBAC, HPA e probes, StatefulSet e DaemonSet, NetworkPolicy e Ingress, e CRDs.',
+        ],
+      },
+      {
+        titulo: '🧪 Simulador',
+        itens: [
+          'O simulador recusa versões de API que não existem mais no Kubernetes 1.31 (como batch/v1beta1), com a mensagem do kubectl.',
+          'Erros reais do servidor: Job sem restartPolicy Never ou OnFailure, Ingress sem pathType, selector que não casa com os labels e mais.',
+          'StatefulSet, DaemonSet, Role, RoleBinding, StorageClass e recursos do Argo CD, do Flux e de outros operadores no apply, no kubectl get e na aba Docs.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.1.0',
     data: '2026-10-19',
     titulo: 'Primeira versão do Kubernetes Playground',
