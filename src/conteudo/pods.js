@@ -1,3 +1,5 @@
+import { exercicio, teste, existe, campo } from './util.js';
+
 // Módulo 2: Pods e Containers.
 // Lições e exercícios sobre ciclo de vida, volumes, probes e multi-container pods.
 
@@ -517,5 +519,83 @@ spec:
         },
       ],
     },
+    exercicio({
+      id: 'pods-security-context',
+      titulo: 'Pod endurecido com securityContext',
+      dificuldade: 'medio',
+      resumo: `<p>Rodar como root dentro do container é como deixar a chave do prédio debaixo do tapete. Crie o Pod
+        <code>app-seguro</code> com o container <code>web</code> (imagem <code>nginxinc/nginx-unprivileged:1.27</code>, porta 8080) e:</p>
+        <ul>
+          <li>No Pod: <code>runAsNonRoot: true</code>, <code>runAsUser: 10001</code> e <code>seccompProfile.type: RuntimeDefault</code>.</li>
+          <li>No container: <code>allowPrivilegeEscalation: false</code>, <code>readOnlyRootFilesystem: true</code> e
+            <code>capabilities.drop: ["ALL"]</code>.</li>
+          <li>Um volume <code>emptyDir</code> chamado <code>tmp</code> montado em <code>/tmp</code> (o único lugar onde o NGINX escreve).</li>
+        </ul>`,
+      dica: 'Há dois securityContext: o do Pod (spec.securityContext) e o de cada container (spec.containers[].securityContext).',
+      solucao: `apiVersion: v1
+kind: Pod
+metadata:
+  name: app-seguro
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: web
+      image: nginxinc/nginx-unprivileged:1.27
+      ports:
+        - containerPort: 8080
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}`,
+      testes: [
+        teste('O Pod não roda como root', existe('Pod', 'app-seguro'), campo('Pod', 'app-seguro', 'spec.securityContext.runAsNonRoot', { valor: true }), campo('Pod', 'app-seguro', 'spec.securityContext.seccompProfile.type', { valor: 'RuntimeDefault' })),
+        teste('O container não ganha privilégios nem escreve no sistema de arquivos',
+          campo('Pod', 'app-seguro', 'spec.containers[name=web].securityContext.allowPrivilegeEscalation', { valor: false }),
+          campo('Pod', 'app-seguro', 'spec.containers[name=web].securityContext.readOnlyRootFilesystem', { valor: true }),
+          campo('Pod', 'app-seguro', 'spec.containers[name=web].securityContext.capabilities.drop', { contem: 'ALL' })),
+        teste('/tmp continua gravável', { tipo: 'volume-montado', pod: 'app-seguro', container: 'web', volume: 'tmp', mountPath: '/tmp' }),
+      ],
+    }),
+    exercicio({
+      id: 'pods-desligamento-gracioso',
+      titulo: 'Desligamento gracioso com preStop',
+      dificuldade: 'medio',
+      resumo: `<p>Quando um Pod é removido, o Service demora alguns segundos para parar de mandar tráfego para ele. Crie o Pod
+        <code>app-gracioso</code> (container <code>web</code>, imagem <code>nginx:1.27</code>) que espera antes de desligar:</p>
+        <ul>
+          <li><code>terminationGracePeriodSeconds: 45</code> no Pod.</li>
+          <li>Um gancho <code>lifecycle.preStop</code> que roda <code>["sh", "-c", "sleep 10"]</code> no container.</li>
+        </ul>`,
+      solucao: `apiVersion: v1
+kind: Pod
+metadata:
+  name: app-gracioso
+spec:
+  terminationGracePeriodSeconds: 45
+  containers:
+    - name: web
+      image: nginx:1.27
+      ports:
+        - containerPort: 80
+      lifecycle:
+        preStop:
+          exec:
+            command: ["sh", "-c", "sleep 10"]`,
+      testes: [
+        teste('O Pod tem 45 segundos para encerrar', existe('Pod', 'app-gracioso'), campo('Pod', 'app-gracioso', 'spec.terminationGracePeriodSeconds', { valor: 45 })),
+        teste('O preStop espera 10 segundos', campo('Pod', 'app-gracioso', 'spec.containers[name=web].lifecycle.preStop.exec.command', { contem: 'sleep 10' })),
+      ],
+    }),
   ],
 };
