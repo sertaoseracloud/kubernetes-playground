@@ -693,6 +693,9 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 .legenda-grafo { color: var(--suave); font-size: 0.85rem; margin: 0 0 8px; }
 .area-grafo { overflow: auto; border: 1px solid var(--linha); border-radius: 8px; background: var(--fundo-mais-escuro); }
 .area-grafo svg { display: block; }
+.lista-grafo { margin-top: 8px; }
+.avisos-grafo { margin-top: 10px; border-left: 4px solid var(--amarelo); background: var(--fundo-escuro); padding: 6px 12px; overflow-wrap: anywhere; }
+.avisos-grafo p { margin: 0 0 4px; }
 .aresta { fill: none; stroke: var(--suave); stroke-width: 1.5; }
 #seta path { fill: var(--suave); }
 .no-grafo rect { fill: var(--fundo); stroke-width: 2; }
@@ -1141,6 +1144,7 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 .docs-kinds dt { margin-top: 10px; }
 .docs-kinds dd { margin: 4px 0 0; }
 .docs-kinds dd a { display: inline-block; margin-top: 4px; }
+.docs-kinds dd .doc-api { display: block; width: fit-content; margin-bottom: 4px; }
 .caso .detalhe-tecnico { margin-top: 4px; font-size: 0.8rem; color: var(--suave); }
 .caso .detalhe-tecnico summary { cursor: pointer; }
 .caso .detalhe-tecnico code { display: block; margin-top: 2px; overflow-wrap: anywhere; }

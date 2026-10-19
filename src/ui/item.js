@@ -5,7 +5,7 @@ import { minutosDoItem } from '../cargaHoraria.js';
 import { buscarItem, itens, modulos, vizinhos, DIFICULDADES } from '../conteudo/trilha.js';
 import { linkItem, linkCompartilhado } from '../compartilhar.js';
 import { statusDe, marcar, lerRascunho, gravarRascunho, apagarRascunho, lerHistorico, gravarHistorico } from '../progresso.js';
-import { criarEditor } from './editor.js';
+import { EditorArquivos, normalizarArquivos, formaDeGuardar } from './editor.js';
 import { iniciarLeitura } from './acessibilidade.js';
 import { aplicarChecklist } from './neuro.js';
 import { criarTerminal } from './terminal.js';
@@ -16,11 +16,12 @@ import { solucaoLiberada, minutosQueFaltam, criarCronometro } from './solucao.js
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
 import { interpretar, completarKubectl, kindsDoYaml, explicarKind } from '../k8s/comandos.js';
-import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
+import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado, API_VERSIONS } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
 import { renderArquitetura } from './arquitetura.js';
+import { desenharGrafo } from './grafo.js';
 import { termosDoTexto, termosVistosAntes } from '../conteudo/glossario.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
@@ -77,6 +78,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     saidaCluster: $('saida-cluster'),
     saidaEstado: $('saida-estado'),
     saidaArquitetura: $('saida-arquitetura'),
+    grafo: $('saida-grafo'),
   };
 
   const estado = { item: null, ocupado: false };
@@ -94,7 +96,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     rotulo: $('prompt-terminal'),
     historico: lerHistorico(),
     aoMudarHistorico: gravarHistorico,
-    completar: completarKubectl,
+    completar: (texto) => completarKubectl(texto, Object.keys(editorInstance.arquivos)),
   });
   const CLASSE = { info: 'comentario' };
   const pasta = () => `k8s/${estado.item?.id ?? 'livre'}`;
@@ -110,7 +112,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
 
   /** Roda uma linha digitada no prompt. */
   async function rodarLinha(texto) {
-    const { linhas, acao } = interpretar(texto, obterEstado());
+    const { linhas, acao } = interpretar(texto, obterEstado(), editorInstance.arquivos);
     if (linhas.length) terminal.mostrar(linhas, { animar: false, pasta: pasta() });
     if (acao === 'clear') terminal.limpar();
     else if (acao === 'apply') await executarApply({ digitado: true, falar: true });
@@ -155,32 +157,32 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   }
   el.pular.onclick = () => terminal.pular();
 
-  // Editor CodeMirror (YAML)
-  let editorInstance = null;
+  // Editor CodeMirror (YAML), com abas de arquivos: o apply junta todos os manifestos.
   let salvarTimer;
+  const editorInstance = new EditorArquivos({
+    abas: $('abas-arquivos'),
+    editor: $('editor'),
+    aoExecutar: () => executarApply(),
+    aoEnviar: () => enviar(),
+    aoMudar: (arquivos) => {
+      clearTimeout(salvarTimer);
+      const item = estado.item;
+      if (item) {
+        salvarTimer = setTimeout(() => {
+          gravarRascunho(item.id, formaDeGuardar(arquivos));
+          if (!el.grafo.hidden) desenharGrafo(el.grafo, obterCodigo()); // o grafo acompanha o que você escreve
+        }, 300);
+      }
+    },
+  });
 
   function obterCodigo() {
-    return editorInstance ? editorInstance.getValue() : '';
+    return editorInstance.getValue();
   }
 
+  /** Um texto (um arquivo só) ou um objeto { arquivo: conteúdo }. */
   function definirCodigo(codigo) {
-    if (editorInstance) editorInstance.setValue(codigo);
-  }
-
-  function iniciarEditor() {
-    if (editorInstance) editorInstance.destroy();
-    editorInstance = criarEditor($('editor'), {
-      linguagem: 'yaml',
-      inicial: '',
-      aoExecutar: () => executarApply(),
-      aoEnviar: () => enviar(),
-      onChange: (codigo) => {
-        clearTimeout(salvarTimer);
-        if (estado.item) {
-          salvarTimer = setTimeout(() => gravarRascunho(estado.item.id, codigo), 300);
-        }
-      },
-    });
+    editorInstance.carregar(codigo);
   }
 
   // 🔊 Ouvir
@@ -226,7 +228,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   });
 
   // ---------- abas saída ----------
-  const saidas = { terminal: el.janelaTerminal, estado: el.saidaEstado, arquitetura: el.saidaArquitetura };
+  const saidas = { terminal: el.janelaTerminal, grafo: el.grafo, estado: el.saidaEstado, arquitetura: el.saidaArquitetura };
   let estadoAnterior = null;
   function mostrarSaida(nome) {
     for (const [chave, painel] of Object.entries(saidas)) painel.hidden = chave !== nome;
@@ -235,6 +237,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       b.setAttribute('aria-selected', String(b.dataset.saida === nome));
     });
     if (nome === 'estado') atualizarPainelEstado();
+    if (nome === 'grafo') desenharGrafo(el.grafo, obterCodigo());
     if (nome === 'arquitetura') {
       renderArquitetura().then((html) => { el.saidaArquitetura.innerHTML = html; });
     }
@@ -350,9 +353,9 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     el.abaDocs.hidden = !kinds.length;
     if (!kinds.length) return;
     el.docs.innerHTML = `
-      <p>Os tipos de recurso usados aqui. A documentação completa (em inglês) abre em outra aba.</p>
+      <p>Os tipos de recurso usados aqui, com a <code>apiVersion</code> que o cluster serve para cada um. A documentação completa (em inglês) abre em outra aba.</p>
       <dl class="docs-kinds">
-        ${kinds.map((k) => `<dt><code>${esc(k)}</code></dt><dd>${esc(explicarKind(k) ?? 'Recurso nativo do Kubernetes.')}
+        ${kinds.map((k) => `<dt><code>${esc(k)}</code></dt><dd>${API_VERSIONS[k] ? `<code class="doc-api">apiVersion: ${esc(API_VERSIONS[k].join(' ou '))}</code> ` : ''}${esc(explicarKind(k) ?? 'Recurso nativo do Kubernetes.')}
           <a href="https://kubernetes.io/search/?q=${encodeURIComponent(k)}" target="_blank" rel="noopener noreferrer">Documentação de ${esc(k)}</a></dd>`).join('')}
       </dl>
       <p class="caso-exemplo">Dica: no terminal, <code>kubectl explain ${esc(kinds[0].toLowerCase())}</code> também explica o tipo.</p>`;
@@ -409,10 +412,9 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     if (!item) return false;
     estado.item = item;
 
-    iniciarEditor();
-    // Link compartilhado (#/s/...) traz o código de quem compartilhou; senão, o rascunho salvo.
-    const recebido = typeof compartilhado === 'string' ? compartilhado : null;
-    definirCodigo(recebido ?? lerRascunho(id) ?? codigoInicial(item));
+    clearTimeout(salvarTimer);
+    // Link compartilhado (#/s/...) traz os arquivos de quem compartilhou; senão, o rascunho salvo.
+    definirCodigo(normalizarArquivos(compartilhado) ?? normalizarArquivos(lerRascunho(id)) ?? codigoInicial(item));
 
     renderCabecalho();
     renderDescricao();
@@ -743,7 +745,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     executarApply();
   };
   el.compartilhar.onclick = async () => {
-    const link = `${location.origin}${location.pathname}${linkCompartilhado({ item: estado.item.id, arquivos: obterCodigo() })}`;
+    const link = `${location.origin}${location.pathname}${linkCompartilhado({ item: estado.item.id, arquivos: { ...editorInstance.arquivos } })}`;
     try {
       await navigator.clipboard.writeText(link);
       definirStatus('🔗 Link copiado!');

@@ -1,40 +1,73 @@
 // @vitest-environment happy-dom
-// O cenário de cada módulo (o cluster que cresce): decorativo, atrás do caminho e sem rótulos
-// soltos para o leitor de tela; o estágio acompanha os exercícios resolvidos.
+// Cenários da trilha: tiles em pixel art (estilo Tibia), decoração pura (o leitor de tela não
+// ouve nada), leve e completa.
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { htmlDoCenario } from '../src/ui/cenarios/index.js';
-import { CENARIO_DO_MODULO } from '../src/conteudo/cenarios.js';
-import { modulos } from '../src/conteudo/trilha.js';
+import { CENARIOS, htmlDoCenario } from '../src/ui/cenarios/index.js';
+import { LADO } from '../src/ui/cenarios/pixel.js';
 
-describe('cenários da trilha', () => {
-  it('todo cenário é decorativo (aria-hidden) e não usa aria-label sem papel', () => {
-    for (const m of modulos) {
-      const html = htmlDoCenario(CENARIO_DO_MODULO[m.id], m.id, 0);
-      if (!html) continue;
-      document.body.innerHTML = html;
-      expect(document.querySelector('.cenario').getAttribute('aria-hidden'), m.id).toBe('true');
-      expect(html, m.id).not.toContain('aria-label');
+const IDS = ['porto', 'cluster', 'nuvem-laranja', 'ceu', 'cidade', 'arquipelago', 'canteiro'];
+const COM_BLOQUEIO = ['porto', 'cluster', 'nuvem-laranja', 'ceu', 'arquipelago', 'canteiro'];
+const PESSOAS = ['timoneira', 'operadora', 'arquiteta', 'piloto', 'operaria', 'marinheira', 'mestre-de-obras', 'engenheira'];
+const camada = (id, semente) => {
+  const div = document.createElement('div');
+  div.innerHTML = htmlDoCenario(id, semente);
+  return div.firstElementChild;
+};
+const spriteValido = (s) => s.linhas.length === LADO
+  && s.linhas.every((l) => l.length === LADO && [...l].every((ch) => ch === '.' || ch in s.paleta));
+
+describe('cenários', () => {
+  it('existem os 7 cenários do site', () => {
+    expect(Object.keys(CENARIOS).sort()).toEqual([...IDS].sort());
+  });
+
+  it.each(IDS)('%s: chão, estrada, objetos e 3 personagens de 2 quadros, tudo em 16×16', (id) => {
+    const c = CENARIOS[id];
+    expect(c.chao.cores).toHaveLength(3);
+    expect(c.chao.pesos).toHaveLength(3);
+    expect(['terra', 'tabuas', 'pedras', 'liso']).toContain(c.estrada.padrao);
+    expect(Boolean(c.bloqueio)).toBe(COM_BLOQUEIO.includes(id));
+    expect(c.objetos.length).toBeGreaterThanOrEqual(2);
+    expect(c.objetos.every(spriteValido)).toBe(true);
+    expect(c.personagens).toHaveLength(3);
+    for (const p of c.personagens) {
+      expect(['andar', 'voar', 'nadar', 'saltar']).toContain(p.movimento);
+      expect(p.quadros).toHaveLength(2);
+      expect(p.quadros.every(spriteValido)).toBe(true);
     }
+    expect(spriteValido(c.casa)).toBe(true);
+    for (const p of c.personagens) expect(['pessoa', 'animal']).toContain(p.tipo);
   });
 
-  it('o cluster cresce com os exercícios resolvidos', () => {
-    const id = modulos.find((m) => CENARIO_DO_MODULO[m.id]?.estagios?.length > 1)?.id;
-    const cen = CENARIO_DO_MODULO[id];
-    const ultimo = Math.max(...cen.estagios.map((e) => e.feitos));
-    document.body.innerHTML = htmlDoCenario(cen, id, ultimo);
-    const depois = document.querySelectorAll('.cenario-elemento').length;
-    document.body.innerHTML = htmlDoCenario(cen, id, 0);
-    expect(depois).toBeGreaterThanOrEqual(document.querySelectorAll('.cenario-elemento').length);
+  it('quem é pessoa em cada cenário', () => {
+    const pessoas = Object.values(CENARIOS).flatMap((c) => c.personagens.filter((p) => p.tipo === 'pessoa').map((p) => p.id)).sort();
+    expect(pessoas).toEqual(PESSOAS.sort());
   });
 
-  it('sem cenário, nada é desenhado', () => {
-    expect(htmlDoCenario(undefined, 'x', 0)).toBe('');
+  it.each(IDS)('%s: no máximo 12 KB', (id) => {
+    expect(JSON.stringify(CENARIOS[id]).length).toBeLessThanOrEqual(12 * 1024);
   });
 
-  it('o cenário fica atrás do caminho (z-index -1) e não recebe clique', () => {
-    const css = readFileSync(resolve(process.cwd(), 'src/cenarios.css'), 'utf8');
-    expect(css).toMatch(/\.cenario \{[^}]*z-index: -1;[^}]*pointer-events: none;/s);
+  it.each(IDS)('%s: decoração escondida do leitor de tela, sem texto, sem foco e sem ids', (id) => {
+    const el = camada(id, 'fundamentos');
+    expect(el.getAttribute('aria-hidden')).toBe('true');
+    expect(el.classList.contains(`cenario-${id}`)).toBe(true);
+    expect(el.dataset.cenario).toBe(id);
+    expect(el.dataset.semente).toBe('fundamentos');
+    expect(el.textContent.trim()).toBe('');
+    expect(el.querySelector('a, button, input, [tabindex], title, text, [id]')).toBeNull();
+    expect(el.querySelector('.cenario-palco')).not.toBeNull();
+  });
+
+  it('a camada leva os exercícios feitos (a vila sai deles)', () => {
+    expect(camada(IDS[0], 'fundamentos').dataset.feitos).toBe('0');
+    const div = document.createElement('div');
+    div.innerHTML = htmlDoCenario(IDS[0], 'fundamentos', 7);
+    expect(div.firstElementChild.dataset.feitos).toBe('7');
+  });
+
+  it('id desconhecido não quebra a trilha', () => {
+    expect(htmlDoCenario('inventado')).toBe('');
+    expect(htmlDoCenario(undefined)).toBe('');
   });
 });

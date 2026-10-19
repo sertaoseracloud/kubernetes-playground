@@ -87,9 +87,9 @@ export function renderLanding(el) {
       <section class="faixa" aria-labelledby="como-titulo">
         <h2 id="como-titulo">Como funciona</h2>
         <ol class="passos-landing">
-          <li><span aria-hidden="true">📖</span><b>Leia o desafio</b><p>Instruções curtas, sempre na mesma ordem, com os conceitos de Kubernetes explicados por analogias.</p></li>
-          <li><span aria-hidden="true">⌨️</span><b>Escreva YAML</b><p>Editor de verdade, com cores e validação. Seu código fica salvo no navegador.</p></li>
-          <li><span aria-hidden="true">▶️</span><b>Rode o apply</b><p>Um simulador de Kubernetes no navegador valida o YAML, cria os recursos e mostra o estado do cluster. Nada é criado de verdade: zero custo.</p></li>
+          <li><span aria-hidden="true">📖</span><b>Leia o desafio</b><p>Instruções curtas, sempre na mesma ordem, com as palavras técnicas de Kubernetes explicadas por analogias.</p></li>
+          <li><span aria-hidden="true">⌨️</span><b>Escreva YAML</b><p>Editor de verdade, com cores, validação e vários arquivos (deployment.yaml, service.yaml). Seu código fica salvo no navegador.</p></li>
+          <li><span aria-hidden="true">▶️</span><b>Rode o apply</b><p>Um simulador de Kubernetes no navegador valida o YAML, cria os recursos e mostra o estado do cluster e o grafo de quem usa quem. Nada é criado de verdade: zero custo.</p></li>
           <li><span aria-hidden="true">✅</span><b>Veja os testes</b><p>Testes conferem o estado do cluster, os recursos criados e as configurações na hora e mostram o que falta.</p></li>
         </ol>
       </section>
