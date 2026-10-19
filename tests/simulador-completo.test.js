@@ -413,6 +413,7 @@ metadata:
     const yaml = `apiVersion: v1
 kind: Pod
 metadata:
+  name: typo-pod
   nme: typo-pod
 spec:
   containers:
@@ -634,7 +635,7 @@ spec:
   });
 
   it('service-tipo: valida tipo ClusterIP', () => {
-    const r = verificarRegra({ tipo: 'service-tipo', nome: 'test-svc', serviceType: 'ClusterIP' });
+    const r = verificarRegra({ tipo: 'service-tipo', nome: 'test-svc', tipo: 'ClusterIP' });
     expect(r.ok).toBe(true);
   });
 
