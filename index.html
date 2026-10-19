@@ -114,12 +114,12 @@
         <section class="painel painel-preview" aria-label="Saída do Kubernetes">
           <div class="abas">
             <div class="abas-grupo" role="tablist" aria-label="Saída">
-              <button class="aba ativa" data-saida="terminal" role="tab" aria-selected="true">🖥️ Terminal</button>
-              <button class="aba" data-saida="estado" role="tab" aria-selected="false" title="Estado do cluster simulado com diff">📦 Estado</button>
-              <button class="aba" data-saida="arquitetura" role="tab" aria-selected="false" title="Diagrama da arquitetura do simulador">🏛️ Arquitetura</button>
+              <button class="aba ativa" data-saida="terminal" role="tab" aria-selected="true" aria-controls="janela-terminal">🖥️ Terminal</button>
+              <button class="aba" data-saida="estado" role="tab" aria-selected="false" aria-controls="saida-estado" title="Estado do cluster simulado com diff">📦 Estado</button>
+              <button class="aba" data-saida="arquitetura" role="tab" aria-selected="false" aria-controls="saida-arquitetura" title="Diagrama da arquitetura do simulador">🏛️ Arquitetura</button>
             </div>
           </div>
-          <div id="janela-terminal" class="janela-terminal">
+          <div id="janela-terminal" class="janela-terminal" role="tabpanel" aria-label="Terminal">
             <div class="barra-terminal">
               <span class="luzes" aria-hidden="true"><i></i><i></i><i></i></span>
               <span class="titulo-terminal" id="titulo-terminal">aluno@sertao: ~/k8s</span>
@@ -131,8 +131,8 @@
             </div>
           </div>
           <div id="saida-cluster" class="saida cluster" hidden tabindex="0"></div>
-          <div id="saida-estado" class="saida estado" hidden tabindex="0" aria-label="Estado do cluster"></div>
-          <div id="saida-arquitetura" class="saida arquitetura" hidden tabindex="0" aria-label="Arquitetura do simulador"></div>
+          <div id="saida-estado" class="saida estado" role="tabpanel" hidden tabindex="0" aria-label="Estado do cluster"></div>
+          <div id="saida-arquitetura" class="saida arquitetura" role="tabpanel" hidden tabindex="0" aria-label="Arquitetura do simulador"></div>
         </section>
 
       </div>
