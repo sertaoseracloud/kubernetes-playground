@@ -10,6 +10,20 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.2.1',
+    data: '2026-10-19',
+    titulo: 'Ajuste na publicação',
+    resumo: 'Correção interna no processo que publica as novas versões do site. Nada muda nos exercícios nem no progresso salvo.',
+    grupos: [
+      {
+        titulo: '🔧 Bastidores',
+        itens: [
+          'A publicação deixa de abrir pedidos de atualização vazios quando não há nada novo para levar ao site principal.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.2.0',
     data: '2026-10-19',
     titulo: 'Recursos Avançados completos',
