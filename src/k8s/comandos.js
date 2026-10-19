@@ -4,7 +4,8 @@
 // apaga e roda os testes é a tela do exercício (src/ui/item.js), que recebe a `acao`.
 //
 // Comandos: kubectl apply|diff -f manifest.yaml, kubectl get, kubectl describe,
-// kubectl delete, kubectl version, kubectl cluster-info, kubectl explain, drift, help e clear.
+// kubectl delete, kubectl version, kubectl cluster-info, kubectl explain, drift, help e clear,
+// além de ls e cat para ver os arquivos do editor (como no terminal do DivergeTerraform).
 
 import { API_VERSIONS } from './simulador.js';
 
@@ -77,14 +78,20 @@ export const COMANDOS = [
   'kubectl version',
   'kubectl cluster-info',
   'drift',
+  'ls',
+  'cat',
   'help',
   'clear',
 ];
 
-/** Opções do Tab para o que já foi digitado. */
-export function completarKubectl(texto) {
+/** Opções do Tab para o que já foi digitado (`arquivos`: os nomes das abas, para o cat). */
+export function completarKubectl(texto, arquivos = []) {
   const t = texto.replace(/^\s+/, '');
-  if (!t) return ['kubectl', 'help', 'clear', 'drift'];
+  if (!t) return ['kubectl', 'ls', 'cat', 'help', 'clear', 'drift'];
+  if (/^cat\s+/.test(t)) {
+    const parcial = t.replace(/^cat\s+/, '');
+    return arquivos.filter((a) => a.startsWith(parcial) && a !== parcial).map((a) => `cat ${a}`);
+  }
   return COMANDOS.filter((c) => c.startsWith(t) && c !== t);
 }
 
@@ -204,7 +211,7 @@ const AJUDA = [
   linha('kubectl controla o cluster Kubernetes simulado deste exercício.', 'forte'),
   linha(''),
   linha('Comandos disponíveis:', 'forte'),
-  linha('  kubectl apply -f manifest.yaml    aplica o YAML do editor (o mesmo que ▶ Apply)'),
+  linha('  kubectl apply -f manifest.yaml    aplica os arquivos YAML do editor (o mesmo que ▶ Apply)'),
   linha('  kubectl diff -f manifest.yaml     mostra o que mudaria, sem aplicar'),
   linha('  kubectl get <tipo> [nome]         lista recursos: pods, svc, deploy, cm, secrets, nodes, all...'),
   linha('  kubectl describe <tipo> [nome]    detalhes de um recurso'),
@@ -212,6 +219,7 @@ const AJUDA = [
   linha('  kubectl explain <tipo>            o que é aquele tipo de recurso'),
   linha('  kubectl version · kubectl cluster-info'),
   linha('  drift                             compara o YAML do editor com o cluster'),
+  linha('  ls · cat <arquivo>                lista os arquivos do editor e mostra um deles'),
   linha('  clear                             limpa o terminal (ou Ctrl+L)'),
   linha(''),
   linha('Teclas: ↑/↓ histórico · Tab completa · Ctrl+C cancela · Esc sai do terminal.', 'comentario'),
@@ -306,10 +314,17 @@ export function explicarKind(kind) {
  * precisa da tela do exercício, `acao`: 'apply' | 'diff' | 'drift' | 'clear' |
  * { apagar: [{ kind, nome, prefixo }] } | 'delete-arquivo'.
  */
-export function interpretar(texto, estado) {
+export function interpretar(texto, estado, arquivos = {}) {
   const partes = texto.trim().split(/\s+/).filter(Boolean);
   if (!partes.length) return { linhas: [] };
   const [programa, sub, ...args] = partes;
+  if (programa === 'ls') return { linhas: [linha(Object.keys(arquivos).sort().join('  '))] };
+  if (programa === 'cat') {
+    if (!sub) return { linhas: [linha('cat: falta o nome do arquivo (ex.: cat manifest.yaml)', 'erro')] };
+    return { linhas: [sub, ...args].flatMap((nome) => (nome in arquivos
+      ? arquivos[nome].replace(/\n$/, '').split('\n').map((l) => linha(l))
+      : [linha(`cat: ${nome}: No such file or directory`, 'erro')])) };
+  }
   if (programa === 'help' || (programa === 'kubectl' && ['help', '--help', '-h'].includes(sub))) return { linhas: AJUDA };
   if (programa === 'clear') return { linhas: [], acao: 'clear' };
   if (programa === 'drift') return { linhas: [], acao: 'drift' };
@@ -348,5 +363,5 @@ export function interpretar(texto, estado) {
         return { linhas: [linha(`error: unknown command "${sub}" for "kubectl"`, 'erro'), linha('Run \'kubectl help\' for usage.', 'comentario')] };
     }
   }
-  return { linhas: [linha(`${programa}: command not found`, 'erro'), linha('# Aqui só o kubectl funciona. Digite help para ver os comandos.', 'comentario')] };
+  return { linhas: [linha(`${programa}: command not found`, 'erro'), linha('# Aqui funcionam o kubectl, o ls e o cat. Digite help para ver os comandos.', 'comentario')] };
 }

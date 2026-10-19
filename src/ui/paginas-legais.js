@@ -90,16 +90,36 @@ export function renderTermos(el) {
         </ul>
       </section>
 
+      <section aria-labelledby="ter-1">
+        <h2 id="ter-1">1. Aceitação</h2>
+        <p>Ao usar o DivergeKubernetes, você concorda com estes termos. Se não concordar, não use o site.</p>
+      </section>
+
       <section aria-labelledby="ter-2">
-        <h2 id="ter-2">2. Quem pode usar</h2>
-        <p>Qualquer pessoa pode usar o site, sem limite de idade. Ele é usado em aulas e pode ser usado por menores de
-          18 anos. Para estudantes menores, a recomendação é usar só o primeiro nome no certificado (ou nenhum) e
-          compartilhar o link com acompanhamento do responsável ou do professor.</p>
+        <h2 id="ter-2">2. O serviço</h2>
+        <p>O site oferece lições, exercícios corrigidos automaticamente, projetos e um playground para escrever manifestos
+          YAML e rodar comandos <code>kubectl</code> direto no navegador, com um <b>simulador</b>: nenhum cluster de verdade
+          é criado, nem na AWS nem no Azure. Ele é oferecido gratuitamente, <b>no estado em que se encontra</b>, e pode
+          mudar, ficar fora do ar ou ser encerrado a qualquer momento.</p>
+        <p>O simulador imita o Kubernetes e o kubectl para fins de ensino. Ele não cobre todos os recursos e campos, e o
+          comportamento pode diferir de um cluster real: antes de aplicar em produção, confira na documentação oficial.</p>
+        <p><b>Kubernetes</b> é marca registrada da The Linux Foundation, e AWS e Azure são marcas da Amazon e da
+          Microsoft. Este projeto é independente e não tem relação com essas organizações.</p>
       </section>
 
       <section aria-labelledby="ter-3">
-        <h2 id="ter-3">3. O que você não pode fazer</h2>
+        <h2 id="ter-3">3. Quem pode usar</h2>
+        <p>Qualquer pessoa pode usar o site, sem limite de idade. Ele é usado em aulas e pode ser usado por menores de
+          18 anos, com o acompanhamento de um responsável ou professor. Para estudantes menores, a recomendação é usar só
+          o primeiro nome no certificado (ou nenhum).</p>
+      </section>
+
+      <section aria-labelledby="ter-4">
+        <h2 id="ter-4">4. Uso permitido</h2>
+        <p>Você pode usar o site para estudar, ensinar, montar aulas e compartilhar links de exercícios e de código.
+          Não é permitido:</p>
         <ul>
+          <li>usar o playground ou os links compartilhados para enganar, atacar ou prejudicar outras pessoas ou sistemas;</li>
           <li>usar o site para hospedar sistemas reais, dados sensíveis ou informações pessoais de terceiros;</li>
           <li>compartilhar por aqui conteúdo ilegal, ofensivo ou que viole direitos de terceiros;</li>
           <li>alterar, falsificar ou emitir certificados em nome de outra pessoa ou da ${esc(TITULAR)};</li>
@@ -107,15 +127,15 @@ export function renderTermos(el) {
         </ul>
       </section>
 
-      <section aria-labelledby="ter-4">
-        <h2 id="ter-4">4. Seu código e seus dados</h2>
+      <section aria-labelledby="ter-5">
+        <h2 id="ter-5">5. Seu código e seus dados</h2>
         <p>O código que você escreve é seu. Ele fica salvo só no seu navegador; quando você compartilha um link, o código
           vai dentro do link e qualquer pessoa com ele pode ver. Os detalhes estão na
           <a href="#/privacidade">página de privacidade</a>.</p>
       </section>
 
-      <section aria-labelledby="ter-5">
-        <h2 id="ter-5">5. Certificados</h2>
+      <section aria-labelledby="ter-6">
+        <h2 id="ter-6">6. Certificados</h2>
         <ul>
           <li>São emitidos pela ${esc(TITULAR)} para quem conclui os módulos da trilha, na ordem da trilha.</li>
           <li>O nome que aparece no certificado é informado por você: use o seu nome verdadeiro.</li>
@@ -126,21 +146,21 @@ export function renderTermos(el) {
         </ul>
       </section>
 
-      <section aria-labelledby="ter-6">
-        <h2 id="ter-6">6. Licença e direitos autorais</h2>
+      <section aria-labelledby="ter-7">
+        <h2 id="ter-7">7. Licença e direitos autorais</h2>
         <p>O código é software livre (AGPL-3.0) e o conteúdo didático é aberto (CC BY-SA 4.0). O nome e a marca da
           ${esc(TITULAR)} não estão incluídos. Veja a <a href="#/licenca">licença</a>.</p>
       </section>
 
-      <section aria-labelledby="ter-7">
-        <h2 id="ter-7">7. Responsabilidade</h2>
+      <section aria-labelledby="ter-8">
+        <h2 id="ter-8">8. Responsabilidade</h2>
         <p>O site é uma ferramenta educacional e não deve ser usado para hospedar sistemas reais nem dados sensíveis. Na
           medida permitida pela lei, a ${esc(TITULAR)} não se responsabiliza por perdas causadas pelo uso do site, como
           código ou progresso apagados junto com os dados do navegador.</p>
       </section>
 
-      <section aria-labelledby="ter-8">
-        <h2 id="ter-8">8. Mudanças e contato</h2>
+      <section aria-labelledby="ter-9">
+        <h2 id="ter-9">9. Mudanças e contato</h2>
         <p>Estes termos podem mudar; a data de atualização fica no topo da página. Eles seguem as leis do Brasil. Dúvidas:
           ${link(CONTROLADOR.contato, 'issues do projeto no GitHub')}.</p>
       </section>

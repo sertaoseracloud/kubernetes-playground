@@ -46,8 +46,10 @@ export const PASSOS = [
     tela: 'item',
     alvo: '#painel-descricao',
     titulo: 'O enunciado',
-    texto: `<p>Leia o que o exercício pede e como saber que deu certo. A <b>Solução</b> aparece depois do
-      tempo estimado do exercício (o ⏱), se você ainda não resolveu.</p>
+    texto: `<p>Leia o que o exercício pede e como saber que deu certo. As <b>📚 Palavras técnicas</b> explicam
+      cada termo com uma comparação do dia a dia, e a aba <b>📘 Docs</b> mostra os tipos de recurso usados, com a
+      <code>apiVersion</code> de cada um. A <b>Solução</b> aparece depois do tempo estimado do exercício (o ⏱),
+      se você ainda não resolveu.</p>
       <p>O botão <b>🔊</b> lê o enunciado em voz alta.</p>`,
   },
   {
@@ -55,7 +57,8 @@ export const PASSOS = [
     alvo: '.painel-codigo',
     titulo: 'O editor de YAML',
     texto: `<p>Escreva o manifesto aqui; vários recursos vão no mesmo arquivo, separados por <code>---</code>.
-      Seu código é salvo sozinho enquanto você digita.</p>
+      O <b>+</b> cria outros arquivos (<code>service.yaml</code>, <code>base/deployment.yaml</code>), e o apply usa
+      todos juntos. Seu código é salvo sozinho enquanto você digita.</p>
       <p>Atalho: <kbd>Ctrl</kbd> + <kbd>Enter</kbd> roda o apply. <kbd>Tab</kbd> sai do editor.</p>`,
   },
   {
@@ -65,8 +68,10 @@ export const PASSOS = [
     texto: `<p>Mostra a saída do <code>kubectl</code>, em inglês, igual à de verdade, e os erros do YAML com uma
       explicação em português.</p>
       <p>É um terminal de verdade: digite <code>kubectl get pods</code>, <code>kubectl describe svc web</code>,
-      <code>kubectl delete pod nginx</code>... e <code>help</code> para ver todos. <kbd>Esc</kbd> sai do terminal.</p>
-      <p>A aba <b>📦 Estado</b> mostra o cluster e a <b>🏛️ Arquitetura</b>, como o simulador funciona.</p>`,
+      <code>kubectl delete pod nginx</code>, <code>ls</code>, <code>cat service.yaml</code>... e <code>help</code> para ver
+      todos. <kbd>Esc</kbd> sai do terminal.</p>
+      <p>As outras abas mostram o <b>🕸️ Grafo</b> (quem usa quem no seu YAML), o <b>📦 Estado</b> do cluster e a
+      <b>🏛️ Arquitetura</b>, como o simulador funciona.</p>`,
   },
   {
     tela: 'item',
@@ -98,14 +103,16 @@ export const PASSOS = [
     titulo: 'Posição do código e do terminal',
     texto: `<p><b>Auto</b> escolhe sozinho: lado a lado quando há espaço, senão o código fica em cima
       e o terminal embaixo.</p>
-      <p>Use <b>⇆</b> ou <b>⇅</b> para fixar e <b>📄</b> para ocultar a descrição.</p>`,
+      <p>Use <b>⇆</b> ou <b>⇅</b> para fixar, <b>📄</b> para ocultar a descrição e arraste
+      a divisória entre código e terminal para ajustar o tamanho.</p>`,
   },
   {
     alvo: '#btn-acessibilidade',
     titulo: '♿ Acessibilidade',
     texto: `<p>Mude o <b>tema</b>, o <b>tamanho do texto</b>, a fonte e o espaçamento.</p>
-      <p>Há <b>perfis rápidos</b> para estudar do seu jeito: <b>🎯 Foco</b>, <b>📖 Leitura facilitada</b>,
-      <b>🌿 Calmo</b> e <b>🤝 Sem pressão</b>.</p>`,
+      <p>Há <b>perfis rápidos</b> para estudar do seu jeito: <b>🎯 Foco</b> (menos distrações, tarefas
+      em lista, lembrete de pausa), <b>📖 Leitura facilitada</b> (fonte legível e régua de leitura),
+      <b>🌿 Calmo</b> (cores suaves, nada se mexe) e <b>🤝 Sem pressão</b> (sem pontuação, mensagens gentis).</p>`,
   },
   {
     alvo: '#btn-tutorial',

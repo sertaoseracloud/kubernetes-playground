@@ -173,7 +173,7 @@ function unidade(m, anterior, atual, cert) {
   } else {
     nos = m.itens.map(no).join('');
   }
-  // O cenário do cluster cresce com os exercícios resolvidos do módulo.
+  // A vila do cenário cresce com os exercícios resolvidos do módulo (src/ui/cenarios/vila.js).
   const feitos = m.itens.filter((i) => i.tipo === 'exercicio' && i.estado === 'concluido').length;
   const cenario = htmlDoCenario(CENARIO_DO_MODULO[m.id], m.id, feitos);
   return `

@@ -5,8 +5,8 @@
 // exige publicar o código de versões modificadas oferecidas pela internet, que é
 // exatamente como este site é usado.
 //
-// Kubernetes é marca da Cloud Native Computing Foundation (CNCF). Este projeto não usa
-// código da CNCF nem do Kubernetes: o simulador (src/k8s/) foi escrito do zero e só
+// Kubernetes é marca registrada da The Linux Foundation. Este projeto não usa
+// código do Kubernetes: o simulador (src/k8s/) foi escrito do zero e só
 // imita o comportamento e as mensagens da ferramenta.
 
 export const ATUALIZADA_EM = '2026-10-19';
