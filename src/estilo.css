@@ -1141,3 +1141,6 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 .docs-kinds dt { margin-top: 10px; }
 .docs-kinds dd { margin: 4px 0 0; }
 .docs-kinds dd a { display: inline-block; margin-top: 4px; }
+.caso .detalhe-tecnico { margin-top: 4px; font-size: 0.8rem; color: var(--suave); }
+.caso .detalhe-tecnico summary { cursor: pointer; }
+.caso .detalhe-tecnico code { display: block; margin-top: 2px; overflow-wrap: anywhere; }

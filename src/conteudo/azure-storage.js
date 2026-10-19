@@ -64,12 +64,30 @@ export const azureStorage = {
       titulo: 'PVC com Azure Disk',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Crie um <b>PersistentVolumeClaim</b> chamado <code>azure-disk-pvc</code> usando a StorageClass <code>managed-csi</code>.</p>
-        <ul>
-          <li>Modo de acesso: <code>ReadWriteOnce</code></li>
-          <li>Tamanho solicitado: <code>10Gi</code></li>
-          <li>StorageClassName: <code>managed-csi</code></li>
-        </ul>`,
+      resumo: `
+        <p>Na Azure, discos de bloco são <b>Azure Disks</b>, criados pelo driver CSI a partir da StorageClass <code>managed-csi</code> (que já vem no AKS).</p>
+        <ol>
+          <li>Crie o PVC <code>azure-disk-pvc</code>.</li>
+          <li><code>accessModes: [ReadWriteOnce]</code> (um disco se liga a um nó por vez).</li>
+          <li><code>storageClassName: managed-csi</code> e <code>10Gi</code> em <code>resources.requests.storage</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> quando um Pod usar o PVC, o driver cria um Azure Disk de 10 GiB e o anexa ao nó do Pod.</p>`,
+      inicial: `apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-disk-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName:      # TODO: managed-csi
+  resources:
+    requests:
+      storage:           # TODO: 10Gi
+`,
+      dica: [
+        "É um PVC como o da lição \"Workloads com estado\", com a StorageClass da Azure.",
+        "storageClassName: managed-csi e storage: 10Gi.",
+      ],
       solucao: `apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -84,10 +102,12 @@ spec:
       testes: [
         {
           descricao: 'O PersistentVolumeClaim azure-disk-pvc existe',
+          dica: "Preencha os TODO: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'PersistentVolumeClaim', nome: 'azure-disk-pvc' }],
         },
         {
           descricao: 'O PVC está configurado com StorageClass Azure',
+          dica: "Em spec: storageClassName: managed-csi.",
           regras: [{ tipo: 'pvc-existe', nome: 'azure-disk-pvc', storageClass: 'managed-csi' }],
         },
       ],
@@ -98,12 +118,45 @@ spec:
       titulo: 'Pod com Azure Files compartilhado',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie um <b>Pod</b> chamado <code>app-azure-files</code> que monte um volume Azure Files.</p>
-        <ul>
-          <li>Imagem: <code>nginx:1.25</code></li>
-          <li>Monte o volume no caminho <code>/mnt/azure</code></li>
-          <li>Use um PVC chamado <code>azure-files-pvc</code> como fonte do volume</li>
-        </ul>`,
+      resumo: `
+        <p>O PVC <code>azure-files-pvc</code> (um compartilhamento do <b>Azure Files</b>, que vários Pods podem usar ao mesmo tempo) já
+        existe no cluster. Monte-o num Pod.</p>
+        <ol>
+          <li>No Pod <code>app-azure-files</code> (container <code>app</code>, imagem <code>nginx:1.25</code>), declare o volume <code>azure-share</code>.</li>
+          <li>O tipo do volume é <code>persistentVolumeClaim</code>, com <code>claimName: azure-files-pvc</code>.</li>
+          <li>Monte <code>azure-share</code> em <code>/mnt/azure</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o compartilhamento é montado por rede (SMB ou NFS). Outros Pods, até em outros nós, podem montar o mesmo PVC.</p>`,
+      inicial: `apiVersion: v1
+kind: Pod
+metadata:
+  name: app-azure-files
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25
+      volumeMounts:
+        - name: azure-share
+          mountPath:     # TODO: /mnt/azure
+  volumes:
+    - name: azure-share
+      # TODO: persistentVolumeClaim com claimName: azure-files-pvc
+`,
+      existentes: `apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-files-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: azurefile-csi
+  resources:
+    requests:
+      storage: 5Gi`,
+      dica: [
+        "Volume em duas partes: declarar (volumes) e montar (volumeMounts).",
+        "persistentVolumeClaim:\n  claimName: azure-files-pvc",
+      ],
       solucao: `apiVersion: v1
 kind: Pod
 metadata:
@@ -122,10 +175,12 @@ spec:
       testes: [
         {
           descricao: 'O Pod app-azure-files existe',
+          dica: "Preencha os TODO: um volume sem tipo impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'Pod', nome: 'app-azure-files' }],
         },
         {
           descricao: 'O volume Azure Files está montado no container',
+          dica: "volumeMounts com name: azure-share e mountPath: /mnt/azure.",
           regras: [{ tipo: 'volume-montado', pod: 'app-azure-files', container: 'app', mountPath: '/mnt/azure' }],
         },
       ],

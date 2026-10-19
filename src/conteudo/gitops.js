@@ -62,13 +62,32 @@ export const gitops = {
       titulo: 'Configuração de Application ArgoCD',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Como o simulador não suporta CRDs customizados (como <code>Application</code> do ArgoCD), vamos usar um <b>ConfigMap</b> como proxy didático para representar a configuração de uma Application.</p>
-        <p>Crie um ConfigMap chamado <code>argocd-app-config</code> com as seguintes chaves:</p>
-        <ul>
-          <li><code>sourceRepo</code>: <code>https://github.com/exemplo/k8s-manifests.git</code></li>
-          <li><code>sourcePath</code>: <code>apps/minha-app</code></li>
-          <li><code>destinationNamespace</code>: <code>producao</code></li>
-        </ul>`,
+      resumo: `
+        <p>Uma <b>Application</b> do Argo CD responde três perguntas: <i>de onde</i> vêm os manifestos (repositório e pasta) e
+        <i>para onde</i> vão (o namespace de destino).</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>No ConfigMap <code>argocd-app-config</code>, a chave <code>sourceRepo</code> vale <code>https://github.com/exemplo/k8s-manifests.git</code>.</li>
+          <li>A chave <code>sourcePath</code> vale <code>apps/minha-app</code> (a pasta dentro do repositório).</li>
+          <li>A chave <code>destinationNamespace</code> vale <code>producao</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> com a Application de verdade, o Argo CD clonaria o repositório, leria a pasta <code>apps/minha-app</code>
+        e aplicaria os manifestos no namespace <code>producao</code>, conferindo de novo a cada poucos minutos.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-app-config
+data:
+  sourceRepo:            # TODO: https://github.com/exemplo/k8s-manifests.git
+  sourcePath:            # TODO: apps/minha-app
+  destinationNamespace:  # TODO: producao
+`,
+      dica: [
+        "Cada TODO vira o valor da chave, na mesma linha: sourceRepo: https://...",
+        "Os valores não precisam de aspas: são textos simples.",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -80,14 +99,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap argocd-app-config existe',
+          dica: "Mantenha metadata.name: argocd-app-config e preencha os valores.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'argocd-app-config' }],
         },
         {
           descricao: 'Contém a chave sourceRepo com o repositório correto',
+          dica: "sourceRepo: https://github.com/exemplo/k8s-manifests.git (sem espaços no meio).",
           regras: [{ tipo: 'configmap-contem', nome: 'argocd-app-config', chave: 'sourceRepo', valor: 'https://github.com/exemplo/k8s-manifests.git' }],
         },
         {
           descricao: 'Contém a chave destinationNamespace apontando para producao',
+          dica: "destinationNamespace: producao.",
           regras: [{ tipo: 'configmap-contem', nome: 'argocd-app-config', chave: 'destinationNamespace', valor: 'producao' }],
         },
       ],
@@ -98,14 +120,52 @@ data:
       titulo: 'Sync Policy automatizada',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Neste exercício, crie um <b>Deployment</b> representando a aplicação gerenciada por GitOps e um <b>ConfigMap</b> representando a política de sincronização automática.</p>
-        <p>1. Crie um Deployment chamado <code>app-gitops</code> com imagem <code>nginx:1.25</code> e 2 réplicas.</p>
-        <p>2. Crie um ConfigMap chamado <code>sync-policy</code> com as chaves:</p>
-        <ul>
-          <li><code>syncPolicy</code>: <code>automated</code></li>
-          <li><code>prune</code>: <code>true</code></li>
-          <li><code>selfHeal</code>: <code>true</code></li>
-        </ul>`,
+      resumo: `
+        <p>A <b>política de sincronização</b> diz o que o Argo CD faz sozinho: aplicar o que mudou no Git (<code>automated</code>),
+        apagar do cluster o que saiu do Git (<code>prune</code>) e desfazer mudanças manuais (<code>selfHeal</code>).</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>Complete o Deployment <code>app-gitops</code> (a aplicação gerenciada) com <code>replicas: 2</code> e a imagem <code>nginx:1.25</code>.</li>
+          <li>No ConfigMap <code>sync-policy</code>: <code>syncPolicy: automated</code>.</li>
+          <li><code>prune: "true"</code> e <code>selfHeal: "true"</code>, com aspas (os valores de um ConfigMap são sempre texto).</li>
+        </ol>
+        <p><b>No cluster:</b> com <code>selfHeal</code>, se alguém rodar <code>kubectl scale --replicas=5</code> à mão, o Argo CD volta
+        para as 2 réplicas do Git em minutos.</p>`,
+      inicial: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-gitops
+spec:
+  replicas:            # TODO: 2
+  selector:
+    matchLabels:
+      app: app-gitops
+  template:
+    metadata:
+      labels:
+        app: app-gitops
+    spec:
+      containers:
+        - name: nginx
+          image:       # TODO: nginx:1.25
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-policy
+data:
+  syncPolicy:            # TODO: automated
+  prune:                 # TODO: "true" (com aspas)
+  selfHeal:              # TODO: "true" (com aspas)
+`,
+      dica: [
+        "O Deployment é o de sempre: preencha replicas e image.",
+        "Num ConfigMap, true sem aspas vira booleano e o Kubernetes recusa: escreva \"true\".",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -137,14 +197,17 @@ data:
       testes: [
         {
           descricao: 'O Deployment app-gitops existe',
+          dica: "Preencha replicas e image do Deployment app-gitops.",
           regras: [{ tipo: 'recurso-existe', kind: 'Deployment', nome: 'app-gitops' }],
         },
         {
           descricao: 'O ConfigMap sync-policy contém syncPolicy=automated',
+          dica: "No ConfigMap sync-policy, syncPolicy: automated.",
           regras: [{ tipo: 'configmap-contem', nome: 'sync-policy', chave: 'syncPolicy', valor: 'automated' }],
         },
         {
           descricao: 'O ConfigMap sync-policy contém selfHeal=true',
+          dica: "selfHeal: \"true\", com aspas.",
           regras: [{ tipo: 'configmap-contem', nome: 'sync-policy', chave: 'selfHeal', valor: 'true' }],
         },
       ],
@@ -155,13 +218,32 @@ data:
       titulo: 'Flux Kustomization proxy',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>O Flux CD usa o recurso <b>Kustomization</b> para aplicar manifests renderizados via Kustomize. Como o simulador não suporta CRDs, use um <b>ConfigMap</b> como proxy didático.</p>
-        <p>Crie um ConfigMap chamado <code>flux-kustomization-config</code> com as chaves:</p>
-        <ul>
-          <li><code>sourceRef</code>: <code>flux-system</code></li>
-          <li><code>path</code>: <code>./clusters/producao</code></li>
-          <li><code>prune</code>: <code>true</code></li>
-        </ul>`,
+      resumo: `
+        <p>No Flux, a <b>Kustomization</b> diz qual pasta de um repositório (a fonte) aplicar no cluster, e se deve apagar o que
+        sair do Git (<code>prune</code>).</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>No ConfigMap <code>flux-kustomization-config</code>, <code>sourceRef: flux-system</code> (o GitRepository de onde ler).</li>
+          <li><code>path: ./clusters/producao</code> (a pasta).</li>
+          <li><code>prune: "true"</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o kustomize-controller do Flux roda o equivalente a <code>kubectl apply -k ./clusters/producao</code>
+        a cada intervalo e apaga o que tiver sido removido da pasta.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flux-kustomization-config
+data:
+  sourceRef:             # TODO: flux-system
+  path:                  # TODO: ./clusters/producao
+  prune:                 # TODO: "true" (com aspas)
+`,
+      dica: [
+        "Preencha cada TODO com o valor do passo correspondente.",
+        "O ponto e a barra fazem parte do caminho: ./clusters/producao.",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -173,14 +255,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap flux-kustomization-config existe',
+          dica: "Mantenha metadata.name: flux-kustomization-config e preencha os valores.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'flux-kustomization-config' }],
         },
         {
           descricao: 'Contém a chave path apontando para ./clusters/producao',
+          dica: "path: ./clusters/producao",
           regras: [{ tipo: 'configmap-contem', nome: 'flux-kustomization-config', chave: 'path', valor: './clusters/producao' }],
         },
         {
           descricao: 'Contém a chave prune com valor true',
+          dica: "prune: \"true\", com aspas.",
           regras: [{ tipo: 'configmap-contem', nome: 'flux-kustomization-config', chave: 'prune', valor: 'true' }],
         },
       ],
@@ -191,18 +276,50 @@ data:
       titulo: 'HelmRelease proxy',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>No Flux, o <b>HelmRelease</b> gerencia a instalação e atualização de Helm charts. Use um <b>Deployment</b> como proxy para representar a aplicação instalada via HelmRelease.</p>
-        <p>Crie um Deployment chamado <code>helm-app-release</code> com:</p>
-        <ul>
-          <li>Imagem: <code>nginx:1.25</code></li>
-          <li>Réplicas: <code>3</code></li>
-          <li>Porta: <code>80</code></li>
-        </ul>
-        <p>E um ConfigMap chamado <code>helmrelease-config</code> com:</p>
-        <ul>
-          <li><code>chartName</code>: <code>nginx-chart</code></li>
-          <li><code>version</code>: <code>1.2.0</code></li>
-        </ul>`,
+      resumo: `
+        <p>No Flux, o <b>HelmRelease</b> instala um chart do Helm numa versão fixa. O resultado no cluster é um Deployment comum.</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>Complete o Deployment <code>helm-app-release</code> (o que o chart instalaria): <code>replicas: 3</code>, imagem <code>nginx:1.25</code>, porta 80.</li>
+          <li>No ConfigMap <code>helmrelease-config</code>: <code>chartName: nginx-chart</code>.</li>
+          <li><code>version: "1.2.0"</code>, com aspas (sem elas, o YAML poderia ler como número).</li>
+        </ol>
+        <p><b>No cluster:</b> o helm-controller baixaria o chart <code>nginx-chart</code> na versão 1.2.0, renderizaria os templates e
+        aplicaria o Deployment. Mudar a versão no Git dispara um upgrade.</p>`,
+      inicial: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-app-release
+spec:
+  replicas:            # TODO: 3
+  selector:
+    matchLabels:
+      app: helm-app-release
+  template:
+    metadata:
+      labels:
+        app: helm-app-release
+    spec:
+      containers:
+        - name: nginx
+          image:       # TODO: nginx:1.25
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helmrelease-config
+data:
+  chartName:             # TODO: nginx-chart
+  version:               # TODO: "1.2.0" (com aspas)
+`,
+      dica: [
+        "O Deployment é o de sempre: preencha replicas e image.",
+        "version: \"1.2.0\" com aspas, chartName: nginx-chart.",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -233,14 +350,17 @@ data:
       testes: [
         {
           descricao: 'O Deployment helm-app-release existe com 3 réplicas',
+          dica: "No Deployment helm-app-release, replicas: 3.",
           regras: [{ tipo: 'deployment-replicas', nome: 'helm-app-release', replicas: 3 }],
         },
         {
           descricao: 'O ConfigMap helmrelease-config contém chartName=nginx-chart',
+          dica: "No ConfigMap helmrelease-config, chartName: nginx-chart.",
           regras: [{ tipo: 'configmap-contem', nome: 'helmrelease-config', chave: 'chartName', valor: 'nginx-chart' }],
         },
         {
           descricao: 'O container expõe a porta 80',
+          dica: "Mantenha containerPort: 80 no container nginx.",
           regras: [{ tipo: 'container-porta', pod: 'helm-app-release', container: 'nginx', porta: 80 }],
         },
       ],
@@ -251,12 +371,35 @@ data:
       titulo: 'App of Apps pattern',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>O padrão <b>App of Apps</b> no ArgoCD usa uma Application raiz que gerencia outras Applications. Use ConfigMaps como proxies para representar cada Application filha.</p>
-        <p>Crie dois ConfigMaps:</p>
-        <ul>
-          <li><code>app-frontend</code> com chave <code>targetRevision</code> = <code>main</code></li>
-          <li><code>app-backend</code> com chave <code>targetRevision</code> = <code>v2.1.0</code></li>
-        </ul>`,
+      resumo: `
+        <p>No padrão <b>App of Apps</b>, uma Application "mãe" aponta para uma pasta cheia de Applications "filhas": instalar a mãe
+        instala o ambiente inteiro. Cada filha pode seguir uma versão diferente do Git (<code>targetRevision</code>: um branch ou uma tag).</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>No ConfigMap <code>app-frontend</code>, <code>targetRevision: main</code> (segue o branch principal).</li>
+          <li>Depois do <code>---</code>, no ConfigMap <code>app-backend</code>, <code>targetRevision: v2.1.0</code> (fica preso na tag).</li>
+        </ol>
+        <p><b>No cluster:</b> o frontend atualiza a cada commit no <code>main</code>; o backend só muda quando alguém trocar a tag no Git.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-frontend
+data:
+  targetRevision:        # TODO: main
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-backend
+data:
+  targetRevision:        # TODO: v2.1.0
+`,
+      dica: [
+        "São dois ConfigMaps, cada um com uma chave.",
+        "targetRevision: main no frontend e targetRevision: v2.1.0 no backend.",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -273,14 +416,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap app-frontend existe',
+          dica: "Mantenha metadata.name: app-frontend no primeiro ConfigMap.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'app-frontend' }],
         },
         {
           descricao: 'O ConfigMap app-backend contém targetRevision=v2.1.0',
+          dica: "No app-backend, targetRevision: v2.1.0.",
           regras: [{ tipo: 'configmap-contem', nome: 'app-backend', chave: 'targetRevision', valor: 'v2.1.0' }],
         },
         {
           descricao: 'O ConfigMap app-frontend contém targetRevision=main',
+          dica: "No app-frontend, targetRevision: main.",
           regras: [{ tipo: 'configmap-contem', nome: 'app-frontend', chave: 'targetRevision', valor: 'main' }],
         },
       ],
@@ -291,13 +437,42 @@ data:
       titulo: 'GitOps com múltiplos ambientes',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Em GitOps, cada ambiente (dev, staging, prod) tem seus próprios manifests ou overlays. Use ConfigMaps para representar as configurações de cada ambiente.</p>
-        <p>Crie três ConfigMaps:</p>
-        <ul>
-          <li><code>env-dev</code> com <code>replicas</code> = <code>1</code></li>
-          <li><code>env-staging</code> com <code>replicas</code> = <code>2</code></li>
-          <li><code>env-prod</code> com <code>replicas</code> = <code>4</code></li>
-        </ul>`,
+      resumo: `
+        <p>Em GitOps, cada ambiente tem a própria configuração no Git, e cada um cresce num ritmo: dev pequeno, produção grande.</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>No ConfigMap <code>env-dev</code>, <code>replicas: "1"</code>.</li>
+          <li>No <code>env-staging</code>, <code>replicas: "2"</code>.</li>
+          <li>No <code>env-prod</code>, <code>replicas: "4"</code> (os três com aspas: valores de ConfigMap são texto).</li>
+        </ol>
+        <p><b>No cluster:</b> uma Application por ambiente aplicaria a configuração certa em cada namespace (ou cluster).</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-dev
+data:
+  replicas:              # TODO: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-staging
+data:
+  replicas:              # TODO: "2"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-prod
+data:
+  replicas:              # TODO: "4"
+`,
+      dica: [
+        "Três ConfigMaps quase iguais: muda só o nome e o número.",
+        "Sem aspas, 1 vira número e o ConfigMap é recusado: escreva \"1\".",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -321,14 +496,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap env-prod existe',
+          dica: "Mantenha o terceiro ConfigMap com metadata.name: env-prod.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'env-prod' }],
         },
         {
           descricao: 'O ConfigMap env-dev contém replicas=1',
+          dica: "No env-dev, replicas: \"1\".",
           regras: [{ tipo: 'configmap-contem', nome: 'env-dev', chave: 'replicas', valor: '1' }],
         },
         {
           descricao: 'O ConfigMap env-staging contém replicas=2',
+          dica: "No env-staging, replicas: \"2\".",
           regras: [{ tipo: 'configmap-contem', nome: 'env-staging', chave: 'replicas', valor: '2' }],
         },
       ],
@@ -339,9 +517,48 @@ data:
       titulo: 'Drift detection proxy',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>O GitOps detecta <i>drift</i> quando o estado real do cluster diverge do manifesto no Git. Use um <b>Deployment</b> para representar o estado desejado reconciliado.</p>
-        <p>Crie um Deployment chamado <code>drift-guard-app</code> com imagem <code>nginx:1.25</code> e 2 réplicas.</p>
-        <p>Crie também um ConfigMap chamado <code>drift-config</code> com a chave <code>selfHeal</code> = <code>true</code>.</p>`,
+      resumo: `
+        <p>O <b>drift</b> é a diferença entre o Git e o cluster. Com <code>selfHeal</code>, o Argo CD não só avisa: ele desfaz a diferença.</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>Complete o Deployment <code>drift-guard-app</code> (o estado do Git): <code>replicas: 2</code> e a imagem <code>nginx:1.25</code>.</li>
+          <li>No ConfigMap <code>drift-config</code>, <code>selfHeal: "true"</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> se alguém mudar a imagem à mão, o Argo CD mostra <code>OutOfSync</code> e, com selfHeal, aplica de novo
+        o que está no Git. Experimente o botão <b>🔎 Drift</b> depois do apply: mude as réplicas no editor e compare.</p>`,
+      inicial: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drift-guard-app
+spec:
+  replicas:            # TODO: 2
+  selector:
+    matchLabels:
+      app: drift-guard-app
+  template:
+    metadata:
+      labels:
+        app: drift-guard-app
+    spec:
+      containers:
+        - name: nginx
+          image:       # TODO: nginx:1.25
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drift-config
+data:
+  selfHeal:              # TODO: "true" (com aspas)
+`,
+      dica: [
+        "Preencha replicas e image do Deployment.",
+        "selfHeal: \"true\", com aspas.",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -371,10 +588,12 @@ data:
       testes: [
         {
           descricao: 'O Deployment drift-guard-app existe com 2 réplicas',
+          dica: "No Deployment drift-guard-app, replicas: 2.",
           regras: [{ tipo: 'deployment-replicas', nome: 'drift-guard-app', replicas: 2 }],
         },
         {
           descricao: 'O ConfigMap drift-config contém selfHeal=true',
+          dica: "No ConfigMap drift-config, selfHeal: \"true\".",
           regras: [{ tipo: 'configmap-contem', nome: 'drift-config', chave: 'selfHeal', valor: 'true' }],
         },
       ],
@@ -385,9 +604,49 @@ data:
       titulo: 'Rollback via Git proxy',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>No GitOps, rollback é feito revertendo commits no Git — o operador reconcilia automaticamente. Use um <b>Deployment</b> para representar a versão restaurada.</p>
-        <p>Crie um Deployment chamado <code>rollback-app</code> com imagem <code>nginx:1.24</code> (versão anterior) e 2 réplicas.</p>
-        <p>Crie um ConfigMap chamado <code>rollback-metadata</code> com a chave <code>previousCommit</code> = <code>abc1234</code>.</p>`,
+      resumo: `
+        <p>Em GitOps, o rollback não é um comando no cluster: é um <code>git revert</code>. O Git volta para a versão anterior e a
+        ferramenta aplica.</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>Complete o Deployment <code>rollback-app</code> com <code>replicas: 2</code> e a imagem <b>anterior</b>, <code>nginx:1.24</code>.</li>
+          <li>No ConfigMap <code>rollback-metadata</code>, guarde de qual commit veio a versão: <code>previousCommit: abc1234</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> depois do revert, o Argo CD vê a imagem 1.24 no Git, marca a aplicação como OutOfSync e faz o rolling
+        update de volta.</p>`,
+      inicial: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rollback-app
+spec:
+  replicas:            # TODO: 2
+  selector:
+    matchLabels:
+      app: rollback-app
+  template:
+    metadata:
+      labels:
+        app: rollback-app
+    spec:
+      containers:
+        - name: nginx
+          image:       # TODO: nginx:1.24 (a versão anterior)
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rollback-metadata
+data:
+  previousCommit:        # TODO: abc1234
+`,
+      dica: [
+        "A imagem do rollback é a versão anterior: nginx:1.24.",
+        "previousCommit: abc1234",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -417,10 +676,12 @@ data:
       testes: [
         {
           descricao: 'O Deployment rollback-app usa a imagem nginx:1.24',
+          dica: "No container nginx, image: nginx:1.24.",
           regras: [{ tipo: 'container-imagem', pod: 'rollback-app', container: 'nginx', imagem: 'nginx:1.24' }],
         },
         {
           descricao: 'O ConfigMap rollback-metadata contém previousCommit=abc1234',
+          dica: "No ConfigMap rollback-metadata, previousCommit: abc1234.",
           regras: [{ tipo: 'configmap-contem', nome: 'rollback-metadata', chave: 'previousCommit', valor: 'abc1234' }],
         },
       ],
@@ -431,13 +692,31 @@ data:
       titulo: 'PR-based workflow proxy',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>No fluxo PR-based, mudanças passam por revisão antes de merge na branch principal. Use um <b>ConfigMap</b> para representar a configuração aprovada via PR.</p>
-        <p>Crie um ConfigMap chamado <code>pr-approved-config</code> com as chaves:</p>
-        <ul>
-          <li><code>approvedBy</code>: <code>tech-lead</code></li>
-          <li><code>prNumber</code>: <code>142</code></li>
-          <li><code>branch</code>: <code>main</code></li>
-        </ul>`,
+      resumo: `
+        <p>No fluxo por <b>pull request</b>, ninguém aplica nada direto: a mudança vira um PR, alguém revisa e, depois do merge no
+        branch principal, a ferramenta de GitOps aplica.</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>No ConfigMap <code>pr-approved-config</code>, <code>approvedBy: tech-lead</code>.</li>
+          <li><code>prNumber: "142"</code> (com aspas).</li>
+          <li><code>branch: main</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> só o que chegou ao <code>main</code> é aplicado. O histórico do Git registra quem aprovou cada mudança.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pr-approved-config
+data:
+  approvedBy:            # TODO: tech-lead
+  prNumber:              # TODO: "142" (com aspas)
+  branch:                # TODO: main
+`,
+      dica: [
+        "Preencha cada TODO com o valor do passo.",
+        "prNumber: \"142\" com aspas; os outros sem.",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -449,14 +728,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap pr-approved-config existe',
+          dica: "Mantenha metadata.name: pr-approved-config e preencha os valores.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'pr-approved-config' }],
         },
         {
           descricao: 'Contém a chave approvedBy com valor tech-lead',
+          dica: "approvedBy: tech-lead",
           regras: [{ tipo: 'configmap-contem', nome: 'pr-approved-config', chave: 'approvedBy', valor: 'tech-lead' }],
         },
         {
           descricao: 'Contém a chave branch com valor main',
+          dica: "branch: main",
           regras: [{ tipo: 'configmap-contem', nome: 'pr-approved-config', chave: 'branch', valor: 'main' }],
         },
       ],
@@ -467,13 +749,32 @@ data:
       titulo: 'ArgoCD sync options proxy',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>As opções de sincronização do ArgoCD controlam comportamentos como prune, createNamespace e applyOutOfSyncOnly. Use um <b>ConfigMap</b> para representar essas opções.</p>
-        <p>Crie um ConfigMap chamado <code>argocd-sync-options</code> com as chaves:</p>
-        <ul>
-          <li><code>createNamespace</code>: <code>true</code></li>
-          <li><code>prunePropagationPolicy</code>: <code>foreground</code></li>
-          <li><code>applyOutOfSyncOnly</code>: <code>false</code></li>
-        </ul>`,
+      resumo: `
+        <p>As <b>opções de sincronização</b> do Argo CD ajustam detalhes: criar o namespace se não existir, a ordem em que se apaga
+        e se deve aplicar só o que está diferente.</p>
+        <p class="etapa-info">📝 <b>Como este exercício funciona:</b> as ferramentas de GitOps leem recursos próprios
+        (como <code>Application</code> do Argo CD). Aqui, um <b>ConfigMap</b> faz o papel desse recurso: as chaves do ConfigMap são
+        os campos que você escreveria nele. No fim do tópico você escreve os recursos de verdade.</p>
+        <ol>
+          <li>No ConfigMap <code>argocd-sync-options</code>, <code>createNamespace: "true"</code>.</li>
+          <li><code>prunePropagationPolicy: foreground</code> (apaga primeiro os filhos, depois o dono).</li>
+          <li><code>applyOutOfSyncOnly: "false"</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> na primeira sincronização, o Argo CD cria o namespace de destino; ao remover algo, espera os Pods sumirem
+        antes de apagar o Deployment.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-sync-options
+data:
+  createNamespace:       # TODO: "true" (com aspas)
+  prunePropagationPolicy: # TODO: foreground
+  applyOutOfSyncOnly:    # TODO: "false" (com aspas)
+`,
+      dica: [
+        "true e false entre aspas; foreground sem aspas.",
+        "createNamespace: \"true\" / prunePropagationPolicy: foreground / applyOutOfSyncOnly: \"false\"",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -485,14 +786,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap argocd-sync-options existe',
+          dica: "Mantenha metadata.name: argocd-sync-options e preencha os valores.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'argocd-sync-options' }],
         },
         {
           descricao: 'Contém createNamespace=true',
+          dica: "createNamespace: \"true\", com aspas.",
           regras: [{ tipo: 'configmap-contem', nome: 'argocd-sync-options', chave: 'createNamespace', valor: 'true' }],
         },
         {
           descricao: 'Contém prunePropagationPolicy=foreground',
+          dica: "prunePropagationPolicy: foreground",
           regras: [{ tipo: 'configmap-contem', nome: 'argocd-sync-options', chave: 'prunePropagationPolicy', valor: 'foreground' }],
         },
       ],
@@ -541,34 +845,52 @@ data:
       titulo: 'Renderização de Helm Chart simulada',
       dificuldade: 'medio',
       xp: 20,
-      resumo: `<p>Neste exercício, você vai simular a renderização de um Helm Chart. O chart <code>nginx-app</code> tem o seguinte template (comentado) e dois conjuntos de values.</p>
-        <p><b>Template do Chart (referência — não escreva isto):</b></p>
-        <pre># templates/deployment.yaml
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: {{ .Release.Name }}
-# spec:
-#   replicas: {{ .Values.replicas }}
-#   selector:
-#     matchLabels:
-#       app: {{ .Release.Name }}
-#   template:
-#     metadata:
-#       labels:
-#         app: {{ .Release.Name }}
-#     spec:
-#       containers:
-#         - name: nginx
-#           image: "{{ .Values.image }}"
-#           ports:
-#             - containerPort: 80</pre>
-        <p><b>Sua tarefa:</b> escreva o YAML final expandido que resultaria de <b>duas instalações</b> deste chart:</p>
-        <ul>
-          <li>Release <code>nginx-dev</code> com <code>replicas: 1</code> e <code>image: nginx:1.25</code></li>
-          <li>Release <code>nginx-prod</code> com <code>replicas: 3</code> e <code>image: nginx:1.25</code></li>
-        </ul>
-        <p>Escreva ambos os Deployments separados por <code>---</code> no editor. Como o simulador não roda Helm de verdade, estamos testando se você entende o resultado da renderização.</p>`,
+      resumo: `
+        <p>Um <b>chart</b> do Helm é um modelo com lacunas (<code>{{ .Values.replicas }}</code>). Instalar o chart com valores diferentes
+        gera manifestos diferentes. Você vai fazer o papel do Helm: escrever o resultado de duas instalações.</p>
+        <p><b>O template do chart</b> (só referência, não escreva isto):</p>
+        <pre class="trecho" tabindex="0">metadata:
+  name: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicas }}
+  ...
+      labels:
+        app: {{ .Release.Name }}
+      ...
+          image: "{{ .Values.image }}"</pre>
+        <ol>
+          <li>Release <code>nginx-dev</code>: troque <code>.Release.Name</code> por <code>nginx-dev</code>, <code>replicas</code> por 1 e a imagem por <code>nginx:1.25</code>.</li>
+          <li>Depois do <code>---</code>, release <code>nginx-prod</code>: o mesmo, com <code>replicas: 3</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> com o Helm de verdade, <code>helm install nginx-dev ./nginx-app --set replicas=1</code> geraria exatamente o
+        primeiro Deployment. <code>helm template</code> mostra o resultado sem instalar.</p>`,
+      inicial: `# O resultado da release nginx-dev (troque cada lacuna pelo valor)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:                # TODO: .Release.Name = nginx-dev
+spec:
+  replicas:            # TODO: .Values.replicas = 1
+  selector:
+    matchLabels:
+      app:             # TODO: .Release.Name
+  template:
+    metadata:
+      labels:
+        app:           # TODO: .Release.Name
+    spec:
+      containers:
+        - name: nginx
+          image:       # TODO: .Values.image = nginx:1.25
+          ports:
+            - containerPort: 80
+---
+# TODO: o resultado da release nginx-prod (o mesmo, com o nome nginx-prod e 3 réplicas)
+`,
+      dica: [
+        "Onde o template tem {{ .Release.Name }}, escreva o nome da release; o resto fica igual.",
+        "Para a nginx-prod, copie o primeiro Deployment, troque nginx-dev por nginx-prod (3 vezes) e as réplicas para 3.",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -611,14 +933,17 @@ spec:
       testes: [
         {
           descricao: 'O Deployment nginx-dev existe com 1 réplica',
+          dica: "Na release nginx-dev: metadata.name e as labels nginx-dev, replicas: 1.",
           regras: [{ tipo: 'deployment-replicas', nome: 'nginx-dev', replicas: 1 }],
         },
         {
           descricao: 'O Deployment nginx-prod existe com 3 réplicas',
+          dica: "Depois do ---, um Deployment nginx-prod com replicas: 3.",
           regras: [{ tipo: 'deployment-replicas', nome: 'nginx-prod', replicas: 3 }],
         },
         {
           descricao: 'Ambos usam a imagem nginx:1.25',
+          dica: "image: nginx:1.25 nos dois.",
           regras: [{ tipo: 'container-imagem', pod: 'nginx-prod', container: 'nginx', imagem: 'nginx:1.25' }],
         },
       ],
@@ -629,33 +954,46 @@ spec:
       titulo: 'Kustomize: base e overlays simulados',
       dificuldade: 'medio',
       xp: 20,
-      resumo: `<p>Neste exercício, você vai simular o resultado do <code>kustomize build</code> para dois ambientes usando o padrão base/overlay.</p>
-        <p><b>Base (referência — representa base/deployment.yaml):</b></p>
-        <pre># apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: minha-app
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       app: minha-app
-#   template:
-#     metadata:
-#       labels:
-#         app: minha-app
-#     spec:
-#       containers:
-#         - name: app
-#           image: node:18-alpine
-#           ports:
-#             - containerPort: 3000</pre>
-        <p><b>Sua tarefa:</b> escreva o YAML final que resultaria de dois overlays:</p>
-        <ul>
-          <li><b>Overlay dev</b>: mantém 1 réplica, adiciona label <code>env: dev</code> no metadata do Deployment.</li>
-          <li><b>Overlay prod</b>: muda para 4 réplicas, adiciona label <code>env: prod</code> no metadata do Deployment.</li>
-        </ul>
-        <p>Escreva ambos os Deployments separados por <code>---</code>. Os nomes devem ser <code>minha-app-dev</code> e <code>minha-app-prod</code> respectivamente.</p>`,
+      resumo: `
+        <p>O Kustomize não usa lacunas: ele parte de uma <b>base</b> e aplica <b>remendos</b> (overlays) por ambiente. Você vai fazer o
+        papel do <code>kustomize build</code> e escrever o resultado de dois overlays.</p>
+        <p><b>A base</b> (só referência): o Deployment <code>minha-app</code> com 1 réplica, label <code>app: minha-app</code> e o
+        container <code>app</code> na imagem <code>node:18-alpine</code>, porta 3000.</p>
+        <ol>
+          <li>Overlay dev: o nome vira <code>minha-app-dev</code>, continua com 1 réplica e ganha a label <code>env: dev</code> no
+            <code>metadata</code> do Deployment.</li>
+          <li>Depois do <code>---</code>, overlay prod: nome <code>minha-app-prod</code>, <code>replicas: 4</code> e a label <code>env: prod</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> <code>kubectl apply -k overlays/prod</code> geraria o segundo Deployment. A base fica igual para todos; só o
+        que muda está no overlay.</p>`,
+      inicial: `# O resultado do overlay dev (a base com os remendos)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:                # TODO: minha-app-dev
+  # TODO: labels com env: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minha-app
+  template:
+    metadata:
+      labels:
+        app: minha-app
+    spec:
+      containers:
+        - name: app
+          image: node:18-alpine
+          ports:
+            - containerPort: 3000
+---
+# TODO: o resultado do overlay prod (nome minha-app-prod, 4 réplicas, label env: prod)
+`,
+      dica: [
+        "A label env vai no metadata do Deployment (não no template).",
+        "Para o prod, copie o dev e mude o nome, as réplicas e o valor de env.",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -702,14 +1040,17 @@ spec:
       testes: [
         {
           descricao: 'O Deployment minha-app-dev existe com 1 réplica',
+          dica: "No primeiro Deployment: name: minha-app-dev e replicas: 1.",
           regras: [{ tipo: 'deployment-replicas', nome: 'minha-app-dev', replicas: 1 }],
         },
         {
           descricao: 'O Deployment minha-app-prod existe com 4 réplicas',
+          dica: "Depois do ---, o Deployment minha-app-prod com replicas: 4.",
           regras: [{ tipo: 'deployment-replicas', nome: 'minha-app-prod', replicas: 4 }],
         },
         {
           descricao: 'O Deployment minha-app-prod usa a imagem node:18-alpine',
+          dica: "Mantenha image: node:18-alpine no container app.",
           regras: [{ tipo: 'container-imagem', pod: 'minha-app-prod', container: 'app', imagem: 'node:18-alpine' }],
         },
       ],
@@ -768,18 +1109,47 @@ patchesStrategicMerge:
       titulo: 'Replicas condicionais com Helm',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Imagine que você tem um chart Helm com um <code>values.yaml</code> onde define quantas réplicas deseja. O template usa <code>{{ if gt .Values.replicas 0 }}</code> para criar o Deployment apenas quando replicas &gt; 0.</p>
-        <p>Neste exercício, escreva o <b>YAML renderizado</b> (o resultado final) de um Deployment chamado <code>helm-cond-deploy</code> com:</p>
-        <ul>
-          <li>Imagem: <code>nginx:1.25</code></li>
-          <li>Réplicas: <code>3</code> (simulando que <code>.Values.replicas = 3</code> passou na condição)</li>
-          <li>Label: <code>app: helm-cond</code></li>
-        </ul>
-        <p>E um ConfigMap chamado <code>helm-values-proxy</code> representando o values.yaml usado, com:</p>
-        <ul>
-          <li><code>replicas</code>: <code>3</code></li>
-          <li><code>enabled</code>: <code>true</code></li>
-        </ul>`,
+      resumo: `
+        <p>O template de um chart pode ter <b>condições</b>: <code>{{ if gt .Values.replicas 0 }}</code> só cria o Deployment se as réplicas
+        forem maiores que zero. Com <code>replicas: 3</code> nos values, a condição passa e o Deployment sai.</p>
+        <ol>
+          <li>Escreva o Deployment renderizado <code>helm-cond-deploy</code>: <code>replicas: 3</code>, label <code>app: helm-cond</code>, imagem <code>nginx:1.25</code>.</li>
+          <li>Depois do <code>---</code>, o ConfigMap <code>helm-values-proxy</code> faz o papel do <code>values.yaml</code>: <code>replicas: "3"</code>.</li>
+          <li>E <code>enabled: "true"</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> se os values tivessem <code>replicas: 0</code>, o Helm não geraria o Deployment, e o cluster não teria
+        nada para essa aplicação.</p>`,
+      inicial: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helm-cond-deploy
+spec:
+  replicas:            # TODO: 3 (o valor de .Values.replicas)
+  selector:
+    matchLabels:
+      app: helm-cond
+  template:
+    metadata:
+      labels:
+        app: helm-cond
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helm-values-proxy
+data:
+  # TODO: replicas: "3" e enabled: "true" (com aspas)
+`,
+      dica: [
+        "No Deployment só falta o número de réplicas.",
+        "No ConfigMap, os dois valores entre aspas: replicas: \"3\" e enabled: \"true\".",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -810,18 +1180,22 @@ data:
       testes: [
         {
           descricao: 'O Deployment helm-cond-deploy existe',
+          dica: "Preencha o TODO das réplicas: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'Deployment', nome: 'helm-cond-deploy' }],
         },
         {
           descricao: 'O Deployment tem 3 réplicas (condição satisfeita)',
+          dica: "replicas: 3 no Deployment.",
           regras: [{ tipo: 'deployment-replicas', deployment: 'helm-cond-deploy', replicas: 3 }],
         },
         {
           descricao: 'O ConfigMap helm-values-proxy contém replicas=3',
+          dica: "No ConfigMap, replicas: \"3\".",
           regras: [{ tipo: 'configmap-contem', nome: 'helm-values-proxy', chave: 'replicas', valor: '3' }],
         },
         {
           descricao: 'O ConfigMap helm-values-proxy contém enabled=true',
+          dica: "No ConfigMap, enabled: \"true\".",
           regras: [{ tipo: 'configmap-contem', nome: 'helm-values-proxy', chave: 'enabled', valor: 'true' }],
         },
       ],
@@ -832,13 +1206,43 @@ data:
       titulo: 'Kustomize overlay condicional',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>No Kustomize, a "condição" é qual overlay você aplica. Imagine um cenário onde o overlay de <b>staging</b> adiciona um ConfigMap de debug que não existe em produção.</p>
-        <p>Crie o YAML que seria o <b>resultado final do overlay de staging</b>:</p>
-        <ul>
-          <li>Um Deployment chamado <code>kust-base-deploy</code> com imagem <code>nginx:1.25</code>, 2 réplicas e label <code>app: kust-app</code>.</li>
-          <li>Um ConfigMap chamado <code>kust-staging-debug</code> (recurso que só existe no overlay de staging) com a chave <code>debugMode</code> = <code>true</code>.</li>
-        </ul>
-        <p>Isso simula o output de <code>kubectl kustomize overlays/staging</code> — o Deployment da base mais o ConfigMap adicional do overlay.</p>`,
+      resumo: `
+        <p>No Kustomize, a "condição" é <b>qual overlay você aplica</b>. O overlay de staging acrescenta um ConfigMap de depuração que
+        não existe em produção.</p>
+        <ol>
+          <li>Escreva o Deployment da base, <code>kust-base-deploy</code>: <code>replicas: 2</code>, label <code>app: kust-app</code>, imagem <code>nginx:1.25</code>.</li>
+          <li>Depois do <code>---</code>, o ConfigMap que só o overlay de staging traz: <code>kust-staging-debug</code>.</li>
+          <li>Nele, <code>debugMode: "true"</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> <code>kubectl apply -k overlays/staging</code> cria os dois; <code>kubectl apply -k overlays/prod</code> criaria só
+        o Deployment.</p>`,
+      inicial: `# Base: igual em todos os ambientes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kust-base-deploy
+spec:
+  replicas:            # TODO: 2
+  selector:
+    matchLabels:
+      app: kust-app
+  template:
+    metadata:
+      labels:
+        app: kust-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25
+          ports:
+            - containerPort: 80
+---
+# TODO: o ConfigMap kust-staging-debug (só do overlay de staging) com debugMode: "true"
+`,
+      dica: [
+        "O ConfigMap é um documento completo: apiVersion, kind, metadata.name e data.",
+        "data:\n  debugMode: \"true\"",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -868,18 +1272,22 @@ data:
       testes: [
         {
           descricao: 'O Deployment kust-base-deploy existe',
+          dica: "Preencha as réplicas do Deployment kust-base-deploy.",
           regras: [{ tipo: 'recurso-existe', kind: 'Deployment', nome: 'kust-base-deploy' }],
         },
         {
           descricao: 'O Deployment tem 2 réplicas',
+          dica: "replicas: 2.",
           regras: [{ tipo: 'deployment-replicas', deployment: 'kust-base-deploy', replicas: 2 }],
         },
         {
           descricao: 'O ConfigMap kust-staging-debug existe (recurso condicional do overlay)',
+          dica: "Depois do ---, um ConfigMap com metadata.name: kust-staging-debug.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'kust-staging-debug' }],
         },
         {
           descricao: 'O ConfigMap kust-staging-debug contém debugMode=true',
+          dica: "Em data do ConfigMap, debugMode: \"true\".",
           regras: [{ tipo: 'configmap-contem', nome: 'kust-staging-debug', chave: 'debugMode', valor: 'true' }],
         },
       ],
