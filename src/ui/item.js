@@ -5,7 +5,7 @@ import { minutosDoItem } from '../cargaHoraria.js';
 import { buscarItem, modulos, vizinhos, DIFICULDADES } from '../conteudo/trilha.js';
 import { linkItem, linkCompartilhado } from '../compartilhar.js';
 import { statusDe, marcar, lerRascunho, gravarRascunho, apagarRascunho, lerHistorico, gravarHistorico } from '../progresso.js';
-import { criarEditor } from './editor.js';
+import { EditorArquivos, normalizarArquivos, formaDeGuardar } from './editor.js';
 import { iniciarLeitura } from './acessibilidade.js';
 import { aplicarChecklist } from './neuro.js';
 import { criarTerminal } from './terminal.js';
@@ -21,6 +21,7 @@ import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
 import { renderArquitetura } from './arquitetura.js';
+import { termosDoTexto } from '../conteudo/glossario.js';
 
 const semPressao = () => document.documentElement.classList.contains('a11y-sem-pressao');
 const esperar = () => new Promise((r) => setTimeout(r, 0));
@@ -80,7 +81,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     rotulo: $('prompt-terminal'),
     historico: lerHistorico(),
     aoMudarHistorico: gravarHistorico,
-    completar: completarKubectl,
+    completar: (texto) => completarKubectl(texto, Object.keys(editorInstance.arquivos)),
   });
   const CLASSE = { info: 'comentario' };
   const pasta = () => `k8s/${estado.item?.id ?? 'livre'}`;
@@ -96,7 +97,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
 
   /** Roda uma linha digitada no prompt. */
   async function rodarLinha(texto) {
-    const { linhas, acao } = interpretar(texto, obterEstado());
+    const { linhas, acao } = interpretar(texto, obterEstado(), editorInstance.arquivos);
     if (linhas.length) terminal.mostrar(linhas, { animar: false, pasta: pasta() });
     if (acao === 'clear') terminal.limpar();
     else if (acao === 'apply') await executarApply({ digitado: true, falar: true });
@@ -141,32 +142,27 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   }
   el.pular.onclick = () => terminal.pular();
 
-  // Editor CodeMirror (YAML)
-  let editorInstance = null;
+  // Editor CodeMirror (YAML), com abas de arquivos: o apply junta todos os manifestos.
   let salvarTimer;
+  const editorInstance = new EditorArquivos({
+    abas: $('abas-arquivos'),
+    editor: $('editor'),
+    aoExecutar: () => executarApply(),
+    aoEnviar: () => enviar(),
+    aoMudar: (arquivos) => {
+      clearTimeout(salvarTimer);
+      const item = estado.item;
+      if (item) salvarTimer = setTimeout(() => gravarRascunho(item.id, formaDeGuardar(arquivos)), 300);
+    },
+  });
 
   function obterCodigo() {
-    return editorInstance ? editorInstance.getValue() : '';
+    return editorInstance.getValue();
   }
 
+  /** Um texto (um arquivo só) ou um objeto { arquivo: conteúdo }. */
   function definirCodigo(codigo) {
-    if (editorInstance) editorInstance.setValue(codigo);
-  }
-
-  function iniciarEditor() {
-    if (editorInstance) editorInstance.destroy();
-    editorInstance = criarEditor($('editor'), {
-      linguagem: 'yaml',
-      inicial: '',
-      aoExecutar: () => executarApply(),
-      aoEnviar: () => enviar(),
-      onChange: (codigo) => {
-        clearTimeout(salvarTimer);
-        if (estado.item) {
-          salvarTimer = setTimeout(() => gravarRascunho(estado.item.id, codigo), 300);
-        }
-      },
-    });
+    editorInstance.carregar(codigo);
   }
 
   // 🔊 Ouvir
@@ -245,7 +241,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
         Você pode praticar aqui, mas siga a trilha na ordem para aproveitar melhor.</div>` : '';
 
     if (item.tipo === 'licao' || item.tipo === 'livre') {
-      el.enunciado.innerHTML = avisoBloqueio + (item.resumo || '') ;
+      el.enunciado.innerHTML = avisoBloqueio + (item.resumo || '') + glossario(item, item.titulo, item.resumo);
       aplicarChecklist(el.enunciado, item.id);
       return;
     }
@@ -258,9 +254,29 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       </ol>
       ${avisoDaSolucao(item)}
       <section class="secao secao-fazer"><h2>🎯 O que fazer</h2>${item.resumo || ''}</section>
+      ${glossario(item, item.titulo, item.resumo, item.dica)}
       ${comoConferir(item.testes)}
       <details><summary>💡 Dica</summary><p>${esc(item.dica || 'Revise a documentação dos recursos usados.')}</p></details>`;
     aplicarChecklist(el.enunciado, item.id);
+  }
+
+  /** 📚 Palavras técnicas do desafio, cada uma com explicação e analogia (src/conteudo/glossario.js). */
+  function glossario(item, ...textos) {
+    const div = document.createElement('div');
+    div.innerHTML = textos.filter(Boolean).join(' ');
+    const termos = termosDoTexto(div.textContent, { modulo: item.modulo });
+    if (!termos.length) return '';
+    return `
+      <section class="secao glossario">
+        <h2>📚 Palavras técnicas</h2>
+        <p class="glossario-ajuda">Toque numa palavra para ver o que ela significa, com uma comparação do dia a dia.</p>
+        ${termos.map((t) => `
+          <details class="termo">
+            <summary><b>${esc(t.termo)}</b><span>${esc(t.definicao)}</span></summary>
+            <p class="analogia"><span aria-hidden="true">🧠</span> <b>Pense assim:</b> ${esc(t.analogia)}</p>
+            ${t.exemplo ? `<pre class="trecho exemplo-termo"><code>${esc(t.exemplo)}</code></pre>` : ''}
+          </details>`).join('')}
+      </section>`;
   }
 
   function comoConferir(testes) {
@@ -341,10 +357,9 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     if (!item) return false;
     estado.item = item;
 
-    iniciarEditor();
-    // Link compartilhado (#/s/...) traz o código de quem compartilhou; senão, o rascunho salvo.
-    const recebido = typeof compartilhado === 'string' ? compartilhado : null;
-    definirCodigo(recebido ?? lerRascunho(id) ?? codigoInicial(item));
+    clearTimeout(salvarTimer);
+    // Link compartilhado (#/s/...) traz os arquivos de quem compartilhou; senão, o rascunho salvo.
+    definirCodigo(normalizarArquivos(compartilhado) ?? normalizarArquivos(lerRascunho(id)) ?? codigoInicial(item));
 
     renderCabecalho();
     renderDescricao();
@@ -674,7 +689,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     executarApply();
   };
   el.compartilhar.onclick = async () => {
-    const link = `${location.origin}${location.pathname}${linkCompartilhado({ item: estado.item.id, arquivos: obterCodigo() })}`;
+    const link = `${location.origin}${location.pathname}${linkCompartilhado({ item: estado.item.id, arquivos: { ...editorInstance.arquivos } })}`;
     try {
       await navigator.clipboard.writeText(link);
       definirStatus('🔗 Link copiado!');
