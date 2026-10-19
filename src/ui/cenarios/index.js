@@ -25,8 +25,8 @@ export function htmlDoCenario(cenario, moduloId, feitos) {
 
   const elementosHtml = estagio.elementos.map((el) => {
     const classes = ['cenario-elemento', `tipo-${el.tipo}`, `status-${el.status?.toLowerCase() ?? 'ativo'}`];
-    let conteudo = '';
-    let titulo = '';
+    let conteudo;
+    let titulo;
 
     switch (el.tipo) {
       case 'no':
