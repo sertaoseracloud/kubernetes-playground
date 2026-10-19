@@ -13,7 +13,7 @@ export const RELEASES = [
     versao: '0.4.0',
     data: '2026-10-19',
     titulo: 'Cenários de volta e as mesmas ferramentas do DivergeTerraform',
-    resumo: 'Os mapas animados voltaram para a trilha, cada desafio explica as palavras técnicas, o editor aceita vários arquivos e há uma aba nova que mostra quem usa quem no seu YAML.',
+    resumo: 'Os mapas animados voltaram para a trilha, o editor aceita vários arquivos e há uma aba nova que mostra quem usa quem no seu YAML.',
     grupos: [
       {
         titulo: '🗺️ Trilha',
@@ -24,10 +24,10 @@ export const RELEASES = [
         ],
       },
       {
-        titulo: '📚 Desafios',
+        titulo: '📘 Desafios e telas',
         itens: [
-          'Seção 📚 Palavras técnicas em cada lição e exercício: Pod, Service, selector, RBAC, IRSA e mais, com uma comparação do dia a dia.',
           'A aba 📘 Docs mostra a apiVersion certa de cada tipo de recurso.',
+          'Ao abrir um exercício, o tutorial e o aviso de privacidade não cobrem mais o editor, e a descrição ficou mais larga em telas médias.',
         ],
       },
       {
