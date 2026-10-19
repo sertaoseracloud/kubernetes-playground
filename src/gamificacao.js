@@ -7,13 +7,15 @@ export const XP = { licao: 5, facil: 10, medio: 20, dificil: 40 };
 export const LIMITE_DESBLOQUEIO = 70;
 
 export const NIVEIS = [
+  // A trilha inteira vale cerca de 2.560 XP: o último nível precisa caber nela
+  // (tests/gamificacao.test.js confere).
   { nome: 'Iniciante', xp: 0 },
-  { nome: 'Aprendiz', xp: 150 },
-  { nome: 'Operador', xp: 400 },
-  { nome: 'Construtor', xp: 800 },
-  { nome: 'Arquiteto de Containers', xp: 1400 },
-  { nome: 'Especialista em Orquestração', xp: 2200 },
-  { nome: 'Mestre do Kubernetes', xp: 3200 },
+  { nome: 'Aprendiz', xp: 120 },
+  { nome: 'Operador', xp: 320 },
+  { nome: 'Construtor', xp: 640 },
+  { nome: 'Arquiteto de Containers', xp: 1100 },
+  { nome: 'Especialista em Orquestração', xp: 1700 },
+  { nome: 'Mestre do Kubernetes', xp: 2400 },
 ];
 
 const xpDoItem = (item) => (item.tipo === 'licao' ? XP.licao : XP[item.dificuldade] ?? 0);
@@ -78,7 +80,9 @@ export function calcularJornada({ modulos, statusDe, dataDe = () => null }) {
     }
   }
 
-  const todosConcluidos = resultado.every((m) => m.concluido);
+  // Módulos extras (sem certificado) não contam para a conclusão total.
+  const certificaveis = resultado.filter((m) => !m.extra);
+  const todosConcluidos = certificaveis.every((m) => m.concluido);
   return {
     xp,
     nivel: nivelPorXp(xp),
@@ -86,7 +90,7 @@ export function calcularJornada({ modulos, statusDe, dataDe = () => null }) {
     proximo,
     final: {
       concluido: todosConcluidos,
-      concluidoEm: todosConcluidos ? maisRecente(resultado.map((m) => m.concluidoEm)) : null,
+      concluidoEm: todosConcluidos ? maisRecente(certificaveis.map((m) => m.concluidoEm)) : null,
     },
   };
 }

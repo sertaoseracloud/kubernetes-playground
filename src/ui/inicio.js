@@ -116,6 +116,7 @@ function no(item, i) {
 }
 
 function trofeu(m, cert) {
+  if (!cert) return ''; // módulo extra: sem certificado, sem troféu
   const rotulo = CERTIFICADOS[m.id].titulo;
   const espera = cert.concluido && !cert.liberado; // módulo pronto, mas falta um certificado anterior
   const texto = cert.liberado ? 'Ver certificado'
@@ -234,8 +235,9 @@ function painelJogador(j) {
 }
 
 function diploma(j) {
-  const total = j.modulos.length;
-  const prontos = j.modulos.filter((m) => m.concluido).length;
+  const certificaveis = j.modulos.filter((m) => !m.extra);
+  const total = certificaveis.length;
+  const prontos = certificaveis.filter((m) => m.concluido).length;
   return `
     <section class="bloco-final" aria-label="Certificado final">
       <button type="button" class="diploma ${j.final.concluido ? 'conquistado' : ''}" data-certificado="final"
@@ -268,7 +270,7 @@ export function renderInicio(el) {
           <span><i class="mini">⭐</i> fácil · <i class="mini">🔥</i> médio · <i class="mini">💎</i> difícil</span>
           <span>O módulo seguinte abre com ${LIMITE_DESBLOQUEIO}% dos exercícios.</span>
         </p>
-        ${j.modulos.map((m, i) => unidade(m, j.modulos[i - 1], m.id === atual, certs[i])).join('')}
+        ${j.modulos.map((m, i) => unidade(m, j.modulos[i - 1], m.id === atual, certs.find((c) => c.id === m.id))).join('')}
         ${diploma(j)}
       </div>
     </div>`;
