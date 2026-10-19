@@ -18,6 +18,8 @@ import { caminhoLegivel, explicarCampo, aplicarYaml, resetarEstado, verificarReg
 // seguir docs/didatica.md.
 const REVISADOS = ['fundamentos', 'avancados', 'aws', 'azure', 'projeto-microservicos', 'projeto-multicloud'];
 const revisado = (i) => REVISADOS.includes(i.modulo) || REVISADOS.includes(i.grupo);
+// Os módulos (ou tópicos) em que todo exercício também tem casos ocultos (rodam só no ⬆ Enviar).
+const COM_OCULTOS = ['aws'];
 
 const texto = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 const revisados = itens.filter(revisado);
@@ -64,6 +66,21 @@ describe('padrão didático do conteúdo', () => {
       }
     }
     expect(faltando).toEqual([]);
+  });
+
+  it('nos módulos novos, todo exercício tem caso oculto (com dica de como corrigir e sem repetir um caso visível)', () => {
+    const comOcultos = exercicios.filter((e) => COM_OCULTOS.includes(e.modulo) || COM_OCULTOS.includes(e.grupo));
+    expect(comOcultos.length).toBeGreaterThan(0);
+    for (const e of comOcultos) {
+      const ocultos = e.testes.filter((t) => t.oculto);
+      expect(ocultos.length, e.id).toBeGreaterThan(0);
+      expect(e.testes.some((t) => !t.oculto), e.id).toBe(true);
+      const visiveis = new Set(e.testes.filter((t) => !t.oculto).flatMap((t) => t.regras.map((r) => JSON.stringify(r))));
+      for (const t of ocultos) {
+        expect(t.dica?.length, e.id).toBeGreaterThan(10);
+        expect(t.regras.every((r) => visiveis.has(JSON.stringify(r))), `${e.id}: o caso oculto só repete casos visíveis`).toBe(false);
+      }
+    }
   });
 
   it('toda lição revisada com exemplo tem comentários no YAML', () => {

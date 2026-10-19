@@ -112,6 +112,11 @@ exercicio({
 Cuidados que costumam ser esquecidos:
 
 - Todo exercício confere **pelo menos duas coisas** (o recurso existe + o campo que é a ideia nova).
+- **Casos ocultos** rodam só no ⬆ Enviar e conferem o resto do que os passos pedem (um valor que veio no
+  esqueleto, um campo que não pode estar lá, outro valor do enunciado), para o código não ficar "decorado"
+  nos casos visíveis. Nos módulos novos, todo exercício tem pelo menos um: escreva-os na propriedade
+  `ocultos` do tópico (`{ idDoExercicio: { dica, regras } }`), que `comOcultos` (de `util.js`) acrescenta.
+  O texto do enunciado não diz o que eles conferem, e a `dica` só aponta onde reler.
 - O `inicial` **não pode passar** nos testes: o caso do campo novo precisa falhar com o esqueleto.
   Atenção ao `# TODO` dentro de um bloco `|` do YAML: lá o comentário vira texto do valor.
 - Prefira `campo(...)` a regras genéricas: quando falha, a mensagem diz em linguagem simples o que
@@ -203,7 +208,7 @@ explica antes.
 - [ ] O enunciado tem `<ol>` com os passos e um parágrafo "No cluster".
 - [ ] `inicial` com `# TODO`, `dica` com 2 ou 3 níveis e `dica` em cada caso de teste.
 - [ ] Os termos novos estão em `glossario.js`.
-- [ ] Módulo novo? Acrescente o id dele em `REVISADOS`, no começo de `tests/didatica.test.js`.
+- [ ] Módulo novo? Acrescente o id dele em `REVISADOS` e em `COM_OCULTOS`, no começo de `tests/didatica.test.js`.
 - [ ] `npm run lint` e `npx vitest run --coverage` passam (os testes aplicam cada `solucao`
       no simulador e conferem os casos; também conferem que o `inicial` não passa).
 - [ ] Se o número de lições mudou, atualize a carga horária em `src/certificados.js` e rode
