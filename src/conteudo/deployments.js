@@ -609,6 +609,17 @@ spec:
     {
       id: 'deploy-datasource-configmap',
       tipo: 'exercicio',
+      // Já existe no cluster antes do apply do aluno (o "data source"): aplicado em cada execução.
+      existentes: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-settings
+data:
+  config.yaml: |
+    server:
+      port: 8080
+  log-level: info
+`,
       titulo: 'Deployment com ConfigMap existente como Volume',
       dificuldade: 'medio',
       xp: 15,

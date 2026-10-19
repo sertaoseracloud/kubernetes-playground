@@ -113,7 +113,7 @@ spec:
         },
         {
           descricao: 'A NetworkPolicy seleciona pods backend e restringe ingress',
-          regras: [{ tipo: 'network-policy', policy: 'restrict-backend', podSelector: 'role=backend', tipo: 'Ingress' }],
+          regras: [{ tipo: 'network-policy', policy: 'restrict-backend', podSelector: 'role=backend', direction: 'Ingress' }],
         },
       ],
     },

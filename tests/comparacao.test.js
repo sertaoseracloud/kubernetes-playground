@@ -8,26 +8,21 @@ describe('módulo comparacao', () => {
     expect(comparacao.titulo).toContain('Kubernetes');
   });
 
-  it('contém lições conceituais e quiz', () => {
-    const licoes = comparacao.itens.filter((i) => i.tipo === 'licao');
-    const exercicios = comparacao.itens.filter((i) => i.tipo === 'exercicio');
+  it('contém lições conceituais e o quiz de revisão (uma lição com as respostas escondidas)', () => {
+    const licoes = comparacao.itens.filter((i) => i.tipo === 'licao' && i.id !== 'comp-quiz');
     expect(licoes.length).toBeGreaterThanOrEqual(7);
-    expect(exercicios.length).toBeGreaterThanOrEqual(1);
+    const quiz = comparacao.itens.find((i) => i.id === 'comp-quiz');
+    // Não há YAML para testar num quiz: antes era um "exercício" impossível de resolver.
+    expect(quiz.tipo).toBe('licao');
+    expect(quiz.resumo).toMatch(/<details><summary>Ver respostas<\/summary>/);
   });
 
-  it('quiz possui regras de teste do tipo quiz-conceitual', () => {
-    const quiz = comparacao.itens.find((i) => i.id === 'comp-quiz');
-    expect(quiz).toBeDefined();
-    expect(quiz.tipo).toBe('exercicio');
-    expect(quiz.testes).toBeDefined();
-    expect(quiz.testes.length).toBeGreaterThanOrEqual(1);
-    const regra = quiz.testes[0].regras.find((r) => r.tipo === 'quiz-conceitual');
-    expect(regra).toBeDefined();
-    expect(regra.modulo).toBe('comparacao');
+  it('é um módulo extra (sem certificado próprio)', () => {
+    expect(comparacao.extra).toBe(true);
   });
 
   it('todas as lições possuem resumo com tabela comparativa', () => {
-    const licoes = comparacao.itens.filter((i) => i.tipo === 'licao');
+    const licoes = comparacao.itens.filter((i) => i.tipo === 'licao' && i.id !== 'comp-quiz');
     for (const licao of licoes) {
       expect(licao.resumo).toContain('<table>');
       expect(licao.resumo).toContain('Terraform');

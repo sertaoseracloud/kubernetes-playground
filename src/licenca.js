@@ -30,7 +30,8 @@ export const CONTEUDO = {
 
 /** Componentes de terceiros que vão junto com o site, com a licença de cada um. */
 export const TERCEIROS = [
-  { nome: 'Editor de código (CodeMirror)', pacotes: ['codemirror', '@codemirror/language', '@codemirror/state', '@codemirror/view', '@lezer/highlight'], licenca: 'MIT' },
+  { nome: 'Editor de código (CodeMirror)', pacotes: ['codemirror', '@codemirror/language', '@codemirror/state', '@codemirror/view', '@codemirror/lang-yaml', '@codemirror/lang-markdown', '@lezer/highlight'], licenca: 'MIT' },
+  { nome: 'Leitura de YAML (js-yaml)', pacotes: ['js-yaml'], licenca: 'MIT' },
   { nome: 'Assinatura digital (@noble/ed25519, @noble/hashes)', pacotes: ['@noble/ed25519', '@noble/hashes'], licenca: 'MIT' },
   { nome: 'Fontes Fira Code e Atkinson Hyperlegible', pacotes: ['@fontsource/fira-code', '@fontsource/atkinson-hyperlegible'], licenca: 'OFL-1.1' },
   { nome: 'QR Code do PIX (qrcode-generator)', pacotes: ['qrcode-generator'], licenca: 'MIT' },

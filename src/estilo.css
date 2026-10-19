@@ -1108,3 +1108,36 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 .diff-item.diff-destruir .diff-marca { color: var(--vermelho); }
 .diff-recurso { color: var(--ciano); white-space: nowrap; }
 .diff-detalhes { color: var(--suave); font-size: 0.85em; word-break: break-word; }
+
+/* Aba 🏛️ Arquitetura: fluxograma feito de uma lista ordenada (lido em ordem pelo leitor de tela). */
+.arquitetura-container { max-width: 46rem; }
+.arquitetura-titulo { font-size: 1.1rem; margin: 0 0 6px; }
+.arquitetura-descricao { color: var(--suave); margin: 0 0 12px; }
+.arquitetura-fluxo { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 22px; counter-reset: etapa; }
+.arquitetura-fluxo li {
+  position: relative; counter-increment: etapa; display: grid; gap: 2px;
+  border: 2px solid var(--roxo); border-radius: var(--raio); padding: 8px 12px 8px 44px;
+  background: var(--fundo-escuro); overflow-wrap: anywhere;
+}
+.arquitetura-fluxo li::before {
+  content: counter(etapa); position: absolute; left: 10px; top: 8px; width: 24px; height: 24px;
+  border-radius: 50%; background: var(--roxo); color: var(--sobre-cor); font-weight: 700;
+  display: grid; place-items: center; font-size: 0.85rem;
+}
+.arquitetura-fluxo li:not(:last-child)::after {
+  content: '↓'; position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
+  color: var(--roxo); font-weight: 700; line-height: 22px;
+}
+.arquitetura-fluxo li span { color: var(--texto); }
+.arquitetura-detalhes pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Erro de YAML na aba Testes (o que o validador encontrou, com a sugestão de campo). */
+.erro-yaml {
+  border-left: 4px solid var(--vermelho); background: var(--fundo-escuro); padding: 8px 12px;
+  margin: 8px 0; font-family: var(--fonte-codigo); overflow-wrap: anywhere;
+}
+
+/* Aba 📘 Docs: os tipos de recurso do exercício. */
+.docs-kinds dt { margin-top: 10px; }
+.docs-kinds dd { margin: 4px 0 0; }
+.docs-kinds dd a { display: inline-block; margin-top: 4px; }

@@ -1,6 +1,6 @@
 // Landing page (#/): apresenta o projeto e leva para a trilha (#/trilha).
 // Os números e os módulos vêm do conteúdo da trilha, então nunca ficam desatualizados.
-import { modulos, itens, problemas } from '../conteudo/trilha.js';
+import { modulos, itens, problemas, contarProjetos } from '../conteudo/trilha.js';
 import { CERTIFICADOS, EMISSOR } from '../certificados.js';
 import { svgBadge } from '../badges.js';
 import { secaoInstrutor } from './instrutor.js';
@@ -14,7 +14,7 @@ const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playground';
 
 /** Números do topo: tudo calculado a partir do conteúdo. */
 export function numerosDaTrilha() {
-  const projetos = modulos.find((m) => m.grupos)?.grupos.length ?? 0;
+  const projetos = contarProjetos(modulos);
   return {
     exercicios: problemas.length,
     licoes: itens.filter((i) => i.tipo === 'licao').length,
@@ -106,7 +106,7 @@ export function renderLanding(el) {
                 <span class="modulo-icone" aria-hidden="true">${m.icone || '☸️'}</span>
                 <h3>${esc(m.titulo)}</h3>
                 <p>${esc(m.descricao)}</p>
-                <small>${m.grupos ? `${m.grupos.length} projetos · ${qtd} etapas` : `${qtd} exercícios`}</small>
+                <small>${m.grupos ? `${m.grupos.length} tópicos · ${qtd} exercícios` : `${qtd} exercícios`}</small>
               </li>`;
           }).join('')}
         </ol>

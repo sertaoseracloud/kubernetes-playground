@@ -4,7 +4,8 @@
 
 export const comparacao = {
   id: 'comparacao',
-  titulo: '⚖️ Terraform vs. Kubernetes',
+  titulo: 'Terraform vs. Kubernetes',
+  extra: true, // módulo extra: sem certificado próprio, fora da conta do certificado final
   descricao: 'Lições comparativas entre Terraform e Kubernetes: quando usar cada ferramenta e como elas se complementam.',
   icone: '⚖️',
   itens: [
@@ -143,10 +144,10 @@ export const comparacao = {
     },
     {
       id: 'comp-quiz',
-      tipo: 'exercicio',
+      tipo: 'licao', // quiz de revisão: as respostas ficam num "Ver respostas" (não há YAML para testar)
       titulo: 'Quiz: Terraform vs Kubernetes',
       dificuldade: 'medio',
-      xp: 10,
+      xp: 5,
       resumo: `<p>Responda às perguntas abaixo para consolidar seu entendimento sobre quando usar Terraform, Kubernetes ou ambos.</p>
         <p><b>1.</b> Você precisa provisionar uma VPC, subnets e um cluster EKS na AWS. Qual ferramenta usa?</p>
         <ul><li>a) Apenas Kubernetes</li><li>b) Apenas Terraform</li><li>c) Ambos: Terraform para a infra, K8s para os workloads</li></ul>
@@ -155,21 +156,14 @@ export const comparacao = {
         <p><b>3.</b> Qual ferramenta do ecossistema K8s equivale ao OPA/Sentinel do Terraform?</p>
         <ul><li>a) ArgoCD</li><li>b) Gatekeeper</li><li>c) Kustomize</li></ul>
         <p><b>4.</b> Workspaces do Terraform são equivalentes a namespaces do Kubernetes?</p>
-        <ul><li>a) Sim, ambos isolam ambientes</li><li>b) Não — workspaces isolam state; namespaces isolam recursos no cluster</li><li>c) Sim, mas apenas no Terraform Cloud</li></ul>
+        <ul><li>a) Sim, ambos isolam ambientes</li><li>b) Não: workspaces isolam state; namespaces isolam recursos no cluster</li><li>c) Sim, mas apenas no Terraform Cloud</li></ul>
         <p><b>5.</b> O que o Kustomize oferece no mundo Kubernetes similar ao Terragrunt no Terraform?</p>
-        <ul><li>a) Provisionamento de infraestrutura</li><li>b) Composição DRY com overlays por ambiente</li><li>c) Locking de estado distribuído</li></ul>`,
-      solucao: `Respostas corretas:
-1. c) Ambos: Terraform para a infra, K8s para os workloads
-2. b) No etcd do control plane
-3. b) Gatekeeper
-4. b) Não — workspaces isolam state; namespaces isolam recursos no cluster
-5. b) Composição DRY com overlays por ambiente`,
-      testes: [
-        {
-          descricao: 'O aluno respondeu ao quiz (verificação conceitual)',
-          regras: [{ tipo: 'quiz-conceitual', modulo: 'comparacao' }],
-        },
-      ],
+        <ul><li>a) Provisionamento de infraestrutura</li><li>b) Composição DRY com overlays por ambiente</li><li>c) Locking de estado distribuído</li></ul>
+        <details><summary>Ver respostas</summary>
+          <ol><li>c) Ambos: Terraform para a infra, K8s para os workloads</li><li>b) No etcd do control plane</li>
+          <li>b) Gatekeeper</li><li>b) Não: workspaces isolam state; namespaces isolam recursos no cluster</li>
+          <li>b) Composição DRY com overlays por ambiente</li></ol>
+        </details>`,
     },
   ],
 };
