@@ -1014,7 +1014,7 @@ export function lerCampo(obj, caminho) {
     if (i === partes.length) return atual;
     if (atual == null) return undefined;
     const [, indice, chave, todos, filtroK, filtroV, nome] = partes[i];
-    if (todos) return Array.isArray(atual) ? atual.map((x) => ler(x, i + 1)).filter((v) => v !== undefined) : undefined;
+    if (todos) return Array.isArray(atual) ? atual.map((x) => ler(x, i + 1)).filter((v) => v !== undefined).flat(Infinity) : undefined;
     if (indice !== undefined) return Array.isArray(atual) ? ler(atual[Number(indice)], i + 1) : undefined;
     if (filtroK !== undefined) return Array.isArray(atual) ? ler(atual.find((x) => String(lerCampo(x, filtroK)) === filtroV), i + 1) : undefined;
     return ler(atual[chave ?? nome], i + 1);
@@ -1027,6 +1027,7 @@ function condicaoDoCampo(regra) {
   if (regra.ausente) return 'não está definido';
   if (regra.valor !== undefined) return `é ${ehObjeto(regra.valor) ? estavel(regra.valor) : regra.valor}`;
   if (regra.contem !== undefined) return `contém ${estavel(regra.contem)}`;
+  if (regra.naoContem !== undefined) return `não contém ${estavel(regra.naoContem)}`;
   if (regra.minimo !== undefined) return `é pelo menos ${regra.minimo}`;
   if (regra.maximo !== undefined) return `é no máximo ${regra.maximo}`;
   return 'está definido';
@@ -1037,6 +1038,7 @@ function campoConfere(regra, obtido) {
   if (regra.ausente) return obtido === undefined || obtido === null;
   if (regra.valor !== undefined) return obtido !== undefined && igual(obtido, regra.valor);
   if (regra.contem !== undefined) return contem(obtido, regra.contem);
+  if (regra.naoContem !== undefined) return obtido !== undefined && !contem(obtido, regra.naoContem);
   if (regra.minimo !== undefined || regra.maximo !== undefined) {
     const medida = Array.isArray(obtido) ? obtido.length : Number(obtido);
     return obtido !== undefined && !Number.isNaN(medida)

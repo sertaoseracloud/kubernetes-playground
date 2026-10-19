@@ -245,6 +245,16 @@ describe('regra campo', () => {
     expect(verificarRegra({ tipo: 'campo', kind: 'Role', nome: 'web', caminho: 'rules' }).ok).toBe(false);
   });
 
+  it('naoContem e [*] achatado (todos os verbos de todas as regras)', () => {
+    aplicarYaml('apiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata:\n  name: r\nrules:\n  - apiGroups: [""]\n    resources: ["pods"]\n    verbs: ["get", "list"]\n  - apiGroups: ["apps"]\n    resources: ["deployments"]\n    verbs: ["get"]');
+    const ok = (regra) => verificarRegra({ tipo: 'campo', kind: 'Role', nome: 'r', caminho: 'rules[*].verbs', ...regra }).ok;
+    expect(ok({ contem: 'list' })).toBe(true);
+    expect(ok({ naoContem: 'delete' })).toBe(true);
+    expect(ok({ naoContem: 'get' })).toBe(false);
+    expect(ok({ caminho: 'rules[*].resources', naoContem: '*' })).toBe(true);
+    expect(descreverRegra({ tipo: 'campo', kind: 'Role', nome: 'r', caminho: 'rules[*].verbs', naoContem: 'delete' })).toBe('Em Role "r", rules[*].verbs não contém "delete"');
+  });
+
   it('tem descrição em português', () => {
     expect(descreverRegra({ tipo: 'campo', kind: 'Deployment', nome: 'web', caminho: 'spec.replicas', valor: 3 })).toBe('Em Deployment "web", spec.replicas é 3');
     expect(descreverRegra({ tipo: 'campo', kind: 'Role', nome: 'r', caminho: 'rules[0].verbs', contem: 'get' })).toBe('Em Role "r", rules[0].verbs contém "get"');
