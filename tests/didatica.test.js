@@ -19,7 +19,7 @@ import { caminhoLegivel, explicarCampo, aplicarYaml, resetarEstado, verificarReg
 const REVISADOS = ['fundamentos', 'avancados', 'aws', 'azure', 'projeto-microservicos', 'projeto-multicloud'];
 const revisado = (i) => REVISADOS.includes(i.modulo) || REVISADOS.includes(i.grupo);
 // Os módulos (ou tópicos) em que todo exercício também tem casos ocultos (rodam só no ⬆ Enviar).
-const COM_OCULTOS = ['aws'];
+const COM_OCULTOS = ['aws', 'azure'];
 
 const texto = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 const revisados = itens.filter(revisado);
