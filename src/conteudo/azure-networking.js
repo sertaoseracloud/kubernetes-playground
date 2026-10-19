@@ -56,13 +56,39 @@ export const azureNetworking = {
       titulo: 'Ingress com anotações AGIC',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie um <b>Ingress</b> chamado <code>app-agic-ingress</code> configurado com anotações do Application Gateway Ingress Controller.</p>
-        <ul>
-          <li>Hostname: <code>app.exemplo.com</code></li>
-          <li>Service backend: <code>app-service</code> na porta <code>80</code></li>
-          <li>Anotação <code>kubernetes.io/ingress.class</code> com valor <code>azure/application-gateway</code></li>
-          <li>Anotação <code>appgw-ingress.k8s.io/request-timeout</code> com valor <code>60</code></li>
-        </ul>`,
+      resumo: `
+        <p>Na Azure, o <b>AGIC</b> transforma um Ingress em regras do <b>Application Gateway</b>. Como o ALB da AWS, as escolhas vão em annotations.</p>
+        <ol>
+          <li>No Ingress <code>app-agic-ingress</code>, a annotation <code>kubernetes.io/ingress.class: azure/application-gateway</code>.</li>
+          <li>A annotation <code>appgw-ingress.k8s.io/request-timeout: "60"</code> (com aspas: annotations são texto).</li>
+          <li>A regra do host <code>app.exemplo.com</code> leva <code>/</code> ao Service <code>app-service</code> na porta 80.</li>
+        </ol>
+        <p><b>No cluster:</b> o AGIC configura o Application Gateway com um listener para <code>app.exemplo.com</code>, os IPs dos Pods
+        como destino e 60 segundos de tempo limite.</p>`,
+      inicial: `apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-agic-ingress
+  annotations:
+    # TODO: kubernetes.io/ingress.class: azure/application-gateway
+    # TODO: appgw-ingress.k8s.io/request-timeout: "60"
+spec:
+  rules:
+    - host:              # TODO: app.exemplo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name:    # TODO: app-service
+                port:
+                  number: 80
+`,
+      dica: [
+        "As duas annotations ficam em metadata.annotations, uma por linha.",
+        "request-timeout: \"60\" com aspas; sem elas, 60 vira número e a annotation é recusada.",
+      ],
       solucao: `apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -85,10 +111,12 @@ spec:
       testes: [
         {
           descricao: 'O Ingress app-agic-ingress existe',
+          dica: "Preencha os TODO: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'Ingress', nome: 'app-agic-ingress' }],
         },
         {
           descricao: 'O Ingress tem anotação AGIC configurada',
+          dica: "Em metadata.annotations: kubernetes.io/ingress.class: azure/application-gateway.",
           regras: [{ tipo: 'agic-anotacao', ingress: 'app-agic-ingress' }],
         },
       ],
@@ -99,12 +127,38 @@ spec:
       titulo: 'NetworkPolicy com labels Azure',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie uma <b>NetworkPolicy</b> chamada <code>restrict-azure-app</code> que restrinja o tráfego de entrada para pods com label <code>app: azure-web</code>.</p>
-        <ul>
-          <li>Aplique no namespace <code>default</code></li>
-          <li>Permita tráfego de entrada apenas de pods com label <code>role: frontend</code></li>
-          <li>Porta permitida: <code>8080</code> (TCP)</li>
-        </ul>`,
+      resumo: `
+        <p>No AKS, as NetworkPolicies são aplicadas pelo Azure CNI (com Cilium) ou pelo Calico. A regra é a mesma de qualquer cluster.</p>
+        <ol>
+          <li>A NetworkPolicy <code>restrict-azure-app</code> (namespace <code>default</code>) seleciona os Pods com <code>app: azure-web</code>.</li>
+          <li><code>policyTypes: [Ingress]</code>.</li>
+          <li>Em <code>ingress[0].from</code>, só os Pods com <code>role: frontend</code>, na porta <code>8080/TCP</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> os Pods <code>azure-web</code> só recebem conexões do frontend na 8080; o resto é descartado.</p>`,
+      inicial: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-azure-app
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app:               # TODO: azure-web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role:      # TODO: frontend
+      ports:
+        - protocol: TCP
+          port:          # TODO: 8080
+`,
+      dica: [
+        "O podSelector de cima é QUEM é protegido; o de dentro do from é QUEM pode entrar.",
+        "app: azure-web em cima; role: frontend no from; port: 8080.",
+      ],
       solucao: `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -127,11 +181,13 @@ spec:
       testes: [
         {
           descricao: 'A NetworkPolicy restrict-azure-app existe',
+          dica: "Preencha os TODO: um campo vazio impede o apply.",
           regras: [{ tipo: 'recurso-existe', kind: 'NetworkPolicy', nome: 'restrict-azure-app' }],
         },
         {
           descricao: 'A NetworkPolicy restringe tráfego corretamente',
-          regras: [{ tipo: 'network-policy', nome: 'restrict-azure-app', podSelector: 'azure-web' }],
+          dica: "podSelector com app: azure-web e, em from, role: frontend na porta 8080.",
+          regras: [{ tipo: 'network-policy', nome: 'restrict-azure-app', podSelector: 'azure-web' }, { tipo: 'campo', kind: 'NetworkPolicy', nome: 'restrict-azure-app', caminho: 'spec.podSelector.matchLabels.app', valor: 'azure-web' }, { tipo: 'campo', kind: 'NetworkPolicy', nome: 'restrict-azure-app', caminho: 'spec.ingress[0].from[0].podSelector.matchLabels.role', valor: 'frontend' }, { tipo: 'campo', kind: 'NetworkPolicy', nome: 'restrict-azure-app', caminho: 'spec.ingress[0].ports[0].port', valor: 8080 }],
         },
       ],
     },
