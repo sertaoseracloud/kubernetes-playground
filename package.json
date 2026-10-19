@@ -1,6 +1,6 @@
 {
   "name": "kubernetes-playground",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "DivergeKubernetes: Kubernetes no navegador, com acessibilidade para pessoas cegas, surdas e neurodivergentes",
   "scripts": {
     "dev": "vite",

@@ -10,6 +10,24 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.7.0',
+    data: '2026-10-19',
+    titulo: 'Oito projetos novos, de ponta a ponta',
+    resumo: 'Um módulo novo com oito projetos completos, cada um com cinco etapas que partem do que a anterior deixou no cluster. O projeto Multi-Cloud também ganhou as duas etapas que faltavam.',
+    grupos: [
+      {
+        titulo: '🏗️ Projetos práticos',
+        itens: [
+          'Blog com banco de dados, pipeline de dados em lote, segurança em camadas, lançamento de versão sem susto, uma API que avisa antes de cair, entrega com GitOps, loja na AWS e loja na Azure.',
+          'Cada projeto começa com uma lição que mostra o desenho do que você vai construir.',
+          'Cada etapa diz o que já está no cluster e o que falta, e tem casos ocultos que rodam quando você clica em ⬆ Enviar.',
+          'O projeto Multi-Cloud agora tem 5 etapas: a entrada no EKS e no AKS fecham o projeto. O certificado dele passou a valer 4 horas, e o da trilha completa, 128 horas.',
+          'O módulo de projetos práticos é extra, como a comparação com o Terraform: ele não muda os certificados que você já tem.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.6.0',
     data: '2026-10-19',
     titulo: 'Kubernetes na Azure de ponta a ponta',
