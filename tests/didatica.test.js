@@ -16,7 +16,7 @@ import { caminhoLegivel, explicarCampo, aplicarYaml, resetarEstado, verificarReg
 
 // Os módulos (ou tópicos de um módulo) já revisados no padrão. Módulo novo entra aqui quando
 // seguir docs/didatica.md.
-const REVISADOS = ['fundamentos'];
+const REVISADOS = ['fundamentos', 'avancados'];
 const revisado = (i) => REVISADOS.includes(i.modulo) || REVISADOS.includes(i.grupo);
 
 const texto = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
