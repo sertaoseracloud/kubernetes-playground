@@ -10,6 +10,38 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.4.0',
+    data: '2026-10-19',
+    titulo: 'Cenários de volta e as mesmas ferramentas do DivergeTerraform',
+    resumo: 'Os mapas animados voltaram para a trilha, cada desafio explica as palavras técnicas, o editor aceita vários arquivos e há uma aba nova que mostra quem usa quem no seu YAML.',
+    grupos: [
+      {
+        titulo: '🗺️ Trilha',
+        itens: [
+          'Cada módulo ganhou um mapa em pixel art atrás do caminho: porto de contêineres, cidade-cluster, nuvens da AWS, céu da Azure, cidade à noite, arquipélago e o canteiro de obras do Terraform.',
+          'A cada exercício resolvido, a vila do mapa ganha uma casa, um filho ou um filhote. Nada novo é guardado no navegador: a vila sai do seu progresso.',
+          'Com "reduzir animações" ou no alto contraste, os personagens ficam parados. O mapa é só decoração: o leitor de tela não lê.',
+        ],
+      },
+      {
+        titulo: '📚 Desafios',
+        itens: [
+          'Seção 📚 Palavras técnicas em cada lição e exercício: Pod, Service, selector, RBAC, IRSA e mais, com uma comparação do dia a dia.',
+          'A aba 📘 Docs mostra a apiVersion certa de cada tipo de recurso.',
+        ],
+      },
+      {
+        titulo: '⌨️ Editor e terminal',
+        itens: [
+          'O editor tem abas de arquivos: o botão + cria service.yaml ou base/deployment.yaml, e o apply usa todos juntos.',
+          'Nova aba 🕸️ Grafo: um desenho de quem usa quem no seu YAML (o Service escolhe os Pods, o Deployment lê o ConfigMap), com a mesma lista em texto.',
+          'O terminal entende ls e cat, para ver os arquivos do editor.',
+          'O botão 🔗 Compartilhar volta a funcionar: o link abre o exercício com o seu código.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.2.1',
     data: '2026-10-19',
     titulo: 'Ajuste na publicação',
