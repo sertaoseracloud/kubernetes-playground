@@ -10,6 +10,30 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.6.0',
+    data: '2026-10-19',
+    titulo: 'Kubernetes na Azure de ponta a ponta',
+    resumo: 'O módulo da Azure passou de 6 para 60 exercícios, na mesma ordem do módulo da AWS: identidade, máquinas, rede, discos, observabilidade e segredos, e custo.',
+    grupos: [
+      {
+        titulo: '🔵 Módulo da Azure',
+        itens: [
+          'Seis tópicos e nove lições novas, cada uma com uma comparação do dia a dia e um exemplo comentado que abre no editor.',
+          'Exercícios com os recursos de verdade da Azure: permissões por grupos do Entra ID, Pods com identidade sem senha, grupos de máquinas, máquinas Spot, escala por fila com o KEDA, regras de rede por nome de site, Application Gateway, NGINX gerenciado, discos e fotos de backup, pastas compartilhadas, logs, métricas e o Key Vault.',
+          'Todos os exercícios do módulo têm casos ocultos, que rodam quando você clica em ⬆ Enviar.',
+          'O certificado da Azure passou a valer 32 horas, e o da trilha completa, 127 horas. Os certificados já emitidos continuam válidos.',
+        ],
+      },
+      {
+        titulo: '🧪 Correção',
+        itens: [
+          'O cluster simulado recusa um grupo de máquinas que a Azure recusaria (por exemplo, um grupo do sistema em máquinas Spot), com a mensagem do que corrigir.',
+          'O glossário ganhou as palavras novas da Azure, sempre com uma comparação simples.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.5.0',
     data: '2026-10-19',
     titulo: 'Kubernetes na AWS de ponta a ponta',

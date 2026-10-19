@@ -40,10 +40,10 @@ export const CERTIFICADOS = {
   },
   azure: {
     titulo: 'Kubernetes no Azure (AKS)',
-    cargaHoraria: 6,
-    resumo: 'concluiu o módulo Kubernetes no Azure, dominando AKS, networking e storage Azure',
+    cargaHoraria: 32,
+    resumo: 'concluiu o módulo Kubernetes no Azure, dominando AKS, identidade com Entra ID, node pools e KEDA, rede, storage, observabilidade, Key Vault e custo',
     hashtags: ['Kubernetes', 'Azure', 'AKS', 'Cloud'],
-    conteudos: ['AKS e Entra ID', 'Networking Azure (CNI, AGIC)', 'Storage Azure (Disk, Files)'],
+    conteudos: ['AKS e identidade (Entra ID, RBAC, Workload Identity)', 'Nós e escala (node pools, Spot, KEDA, NAP)', 'Rede (Azure CNI com Cilium, AGIC, App Routing, Load Balancer)', 'Storage (Azure Disk, snapshots, Azure Files)', 'Observabilidade e segredos (Container Insights, Managed Prometheus, Key Vault)', 'Custo e operação (upgrades, Spot, requests)'],
   },
   'projeto-microservicos': {
     titulo: 'Projeto: Microserviços em Kubernetes',
@@ -61,7 +61,7 @@ export const CERTIFICADOS = {
   },
   final: {
     titulo: 'Especialista Kubernetes: Trilha Completa',
-    cargaHoraria: 101,
+    cargaHoraria: 127,
     resumo: 'concluiu a trilha completa de Kubernetes, dos fundamentos ao multi-cloud',
     hashtags: ['Kubernetes', 'K8s', 'AWS', 'Azure', 'DevOps', 'Cloud Native'],
     conteudos: ['Fundamentos', 'Recursos Avançados', 'AWS (EKS)', 'Azure (AKS)', 'Projetos Práticos'],
