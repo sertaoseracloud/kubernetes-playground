@@ -682,9 +682,10 @@ export function verificarRegra(regra) {
     }
     case 'service-tipo': {
       const svc = estado.services.find((s) => s.nome === regra.nome);
-      if (!svc) return { ok: false, detalhe: `Service "${regra.nome}" não encontrado.`, mensagem: `Service tipo ${regra.tipo}`, categoria: 'Networking', obtido: '(nenhum)' };
-      if (svc.tipo !== regra.tipo) return { ok: false, detalhe: `Tipo esperado "${regra.tipo}", obtido "${svc.tipo}".`, mensagem: `Service tipo ${regra.tipo}`, categoria: 'Networking', obtido: svc.tipo };
-      return { ok: true, detalhe: `Service é do tipo ${regra.tipo}.`, mensagem: `Service tipo ${regra.tipo}`, categoria: 'Networking', obtido: svc.tipo };
+      const tipoEsperado = regra.valorEsperado ?? regra.tipo;
+      if (!svc) return { ok: false, detalhe: `Service "${regra.nome}" não encontrado.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: '(nenhum)' };
+      if (svc.tipo !== tipoEsperado) return { ok: false, detalhe: `Tipo esperado "${tipoEsperado}", obtido "${svc.tipo}".`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: svc.tipo };
+      return { ok: true, detalhe: `Service é do tipo ${tipoEsperado}.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: svc.tipo };
     }
     case 'service-selector': {
       const svc = estado.services.find((s) => s.nome === regra.nome);
@@ -936,7 +937,7 @@ export function descreverRegra(regra) {
     case 'deployment-replicas': return `O Deployment "${regra.deployment}" tem ${regra.valor} réplicas`;
     case 'configmap-contem': return `O ConfigMap "${regra.nome}" contém a chave "${regra.chave}"${regra.valor != null ? ` com valor "${regra.valor}"` : ''}`;
     case 'secret-contem': return `O Secret "${regra.nome}" contém a chave "${regra.chave}"`;
-    case 'service-tipo': return `O Service "${regra.nome}" é do tipo ${regra.tipo}`;
+    case 'service-tipo': return `O Service "${regra.nome}" é do tipo ${regra.valorEsperado ?? regra.tipo}`;
     case 'service-selector': return `O Service "${regra.nome}" seleciona pods com ${regra.chave}=${regra.valor}`;
     case 'ingress-existe': return `O Ingress "${regra.nome}" existe${regra.host ? ` e roteia ${regra.host}` : ''}`;
     case 'hpa-configurado': return `HPA "${regra.nome}" configurado para ${regra.target}${regra.min != null ? ` (${regra.min}-${regra.max} réplicas)` : ''}`;

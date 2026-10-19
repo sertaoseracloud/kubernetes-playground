@@ -414,11 +414,11 @@ metadata:
 kind: Pod
 metadata:
   name: typo-pod
-  nme: typo-pod
 spec:
   containers:
     - name: c
-      image: img`;
+      image: img
+      imge: nginx`;
     const resultado = aplicarYaml(yaml, CHAVE);
     expect(resultado.ok).toBe(false);
     expect(resultado.mensagem).toContain('Did you mean');
@@ -635,12 +635,7 @@ spec:
   });
 
   it('service-tipo: valida tipo ClusterIP', () => {
-    const regra = { tipo: 'service-tipo', nome: 'test-svc' };
-    regra.tipo = 'ClusterIP'; // verificarRegra usa regra.tipo como valor esperado após dispatch
-    // Nota: o case 'service-tipo' em simulador.js compara svc.tipo !== regra.tipo,
-    // onde regra.tipo foi sobrescrito pelo valor do tipo de service após o switch.
-    // Na prática, o dispatch já ocorreu com 'service-tipo', então regra.tipo agora é 'ClusterIP'.
-    const r = verificarRegra(regra);
+    const r = verificarRegra({ tipo: 'service-tipo', nome: 'test-svc', valorEsperado: 'ClusterIP' });
     expect(r.ok).toBe(true);
   });
 
