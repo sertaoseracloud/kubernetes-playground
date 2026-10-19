@@ -1,6 +1,6 @@
 // Tela do certificado: o documento (pronto para imprimir/salvar em PDF) e os
 // botões para compartilhar no LinkedIn. Adaptado do terraform-playground.
-import { CERTIFICADOS, EMISSOR, certificadoXml, decodificarCertificado, linkLinkedInPerfil, linkLinkedInPublicar, linkPublico, textoPublicacao, linkCertificado } from '../certificados.js';
+import { CERTIFICADOS, EMISSOR, certificadoXml, decodificarCertificado, linkLinkedInPerfil, linkPublico } from '../certificados.js';
 import { svgBadge } from '../badges.js';
 import { textoHoras } from '../cargaHoraria.js';
 import { esc, dataPorExtenso } from './util.js';

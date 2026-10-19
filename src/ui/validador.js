@@ -7,10 +7,6 @@ import {
 import { svgBadge } from '../badges.js';
 import { textoHoras } from '../cargaHoraria.js';
 import { esc, $, dataPorExtenso } from './util.js';
-import { modulos } from '../conteudo/trilha.js';
-import { lerNome, restaurarItens } from '../progresso.js';
-import { pedirNome } from './inicio.js';
-import { anunciar } from './anuncios.js';
 
 const MAX_XML = 512 * 1024;
 const dataCurta = (data) => new Date(`${data}T12:00:00`).toLocaleDateString('pt-BR');
@@ -226,7 +222,7 @@ function mostrar(saida, html) {
   saida.firstElementChild?.scrollIntoView?.({ block: 'nearest', behavior: reduzir ? 'auto' : 'smooth' });
 }
 
-export function renderValidador(el, codigoInicial = '', { aoRestaurar = () => {} } = {}) {
+export function renderValidador(el, codigoInicial = '', { aoRestaurar: _aoRestaurar = () => {} } = {}) {
   el.innerHTML = htmlPagina(Boolean(codigoInicial));
   ligarAbas(el);
 

@@ -132,7 +132,6 @@ function hashNome(nome) {
 function gerarClusterIP(nome) {
   const h = hashNome(nome);
   const b2 = (h >> 8) & 0xff;
-  const b3 = (h >> 16) & 0xff;
   const b4 = (h & 0xfe) | 2; // evita .0 e .1
   return `10.96.${b2}.${b4}`;
 }
@@ -812,10 +811,10 @@ export function verificarRegra(regra) {
  */
 export function detectarDrift(yamlTexto) {
   const drifts = [];
-  let documentos = [];
+  let documentos;
   try {
     documentos = yaml.loadAll(yamlTexto).filter(Boolean);
-  } catch {
+  } catch (_e) {
     return { drifts: [], temDrift: false };
   }
 

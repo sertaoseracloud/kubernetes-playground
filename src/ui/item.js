@@ -11,7 +11,7 @@ import { aplicarChecklist } from './neuro.js';
 import { criarTerminal } from './terminal.js';
 import { jornadaAtual } from './inicio.js';
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
-import { esc } from './util.js';
+import { $, esc } from './util.js';
 import yaml from 'js-yaml';
 import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';

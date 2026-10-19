@@ -1,9 +1,7 @@
 // Terminal simulado para Kubernetes Playground.
 // Exibe saída de comandos kubectl e permite interação básica.
-import { $ } from './util.js';
-
 export function criarTerminal(container, opcoes = {}) {
-  const { aoMudar, campo, rotulo, historico = [], aoMudarHistorico, completar } = opcoes;
+  const { aoMudar, campo, historico = [], aoMudarHistorico, completar } = opcoes;
   let animando = false;
   let indiceHistorico = -1;
 
