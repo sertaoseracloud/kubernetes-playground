@@ -16,7 +16,7 @@ import { solucaoLiberada, minutosQueFaltam, criarCronometro } from './solucao.js
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
 import { interpretar, completarKubectl, kindsDoYaml, explicarKind } from '../k8s/comandos.js';
-import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado } from '../k8s/simulador.js';
+import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado, API_VERSIONS } from '../k8s/simulador.js';
 import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
@@ -306,9 +306,9 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     el.abaDocs.hidden = !kinds.length;
     if (!kinds.length) return;
     el.docs.innerHTML = `
-      <p>Os tipos de recurso usados aqui. A documentação completa (em inglês) abre em outra aba.</p>
+      <p>Os tipos de recurso usados aqui, com a <code>apiVersion</code> que o cluster serve para cada um. A documentação completa (em inglês) abre em outra aba.</p>
       <dl class="docs-kinds">
-        ${kinds.map((k) => `<dt><code>${esc(k)}</code></dt><dd>${esc(explicarKind(k) ?? 'Recurso nativo do Kubernetes.')}
+        ${kinds.map((k) => `<dt><code>${esc(k)}</code></dt><dd>${API_VERSIONS[k] ? `<code class="doc-api">apiVersion: ${esc(API_VERSIONS[k].join(' ou '))}</code> ` : ''}${esc(explicarKind(k) ?? 'Recurso nativo do Kubernetes.')}
           <a href="https://kubernetes.io/search/?q=${encodeURIComponent(k)}" target="_blank" rel="noopener noreferrer">Documentação de ${esc(k)}</a></dd>`).join('')}
       </dl>
       <p class="caso-exemplo">Dica: no terminal, <code>kubectl explain ${esc(kinds[0].toLowerCase())}</code> também explica o tipo.</p>`;

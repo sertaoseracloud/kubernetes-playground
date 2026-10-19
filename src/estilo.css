@@ -1144,3 +1144,4 @@ h1[tabindex="-1"]:focus, h2[tabindex="-1"]:focus { outline: none; }
 .docs-kinds dt { margin-top: 10px; }
 .docs-kinds dd { margin: 4px 0 0; }
 .docs-kinds dd a { display: inline-block; margin-top: 4px; }
+.docs-kinds dd .doc-api { display: block; width: fit-content; margin-bottom: 4px; }
