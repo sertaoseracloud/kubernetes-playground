@@ -1,5 +1,10 @@
 // Validador de certificados (#/validar e #/validar/<código>).
-// Adaptado do terraform-playground para Kubernetes.
+// Três jeitos de conferir, em abas:
+//   1. Link ou código: certificado, badge do LinkedIn ou só o código. Recalcula a cadeia inteira.
+//   2. Impresso ou PDF: nome, certificado, data, selo e selo anterior digitados.
+//   3. Arquivo XML: o arquivo baixado na página do certificado (pega edição feita à mão).
+// Quem abre um link de validação vê o resultado primeiro; as abas ficam para validar outro.
+// A conferência acontece no navegador de quem valida; nada é enviado a servidor.
 import {
   CERTIFICADOS, EMISSOR, ORDEM, anteriores, decodificarCertificado, extrairCodigo, validarImpresso, linkCertificado,
   lerCertificadoXml, cadeiaCoerente, conferirAssinaturas, mensagemAssinada, SITE,
@@ -7,10 +12,19 @@ import {
 import { svgBadge } from '../badges.js';
 import { textoHoras } from '../cargaHoraria.js';
 import { esc, $, dataPorExtenso } from './util.js';
+import { modulos } from '../conteudo/trilha.js';
+import { lerNome, restaurarItens } from '../progresso.js';
+import { planoDeRestauracao, situacaoDoNome, itensDoPlano } from '../restaurar.js';
+import { pedirNome } from './inicio.js';
+import { anunciar } from './anuncios.js';
 
+/** Maior XML aceito: o de um certificado tem poucos KB. */
 const MAX_XML = 512 * 1024;
+
 const dataCurta = (data) => new Date(`${data}T12:00:00`).toLocaleDateString('pt-BR');
 
+// Cada situação tem cor e ícone próprios: "não consegui ler" (âmbar) não é o mesmo que
+// "foi alterado" (vermelho).
 const ICONE = { valido: '✅', invalido: '⚠️', antigo: 'ℹ️', ilegivel: '🤔' };
 const SITUACAO = {
   confere: { situacao: 'valido', titulo: 'Certificado válido', texto: 'Este certificado foi emitido pela Sertão será cloud e não foi alterado.' },
@@ -18,6 +32,7 @@ const SITUACAO = {
   ausente: { situacao: 'antigo', titulo: 'Link de versão antiga', texto: 'Este link é de uma versão antiga do site e não pode ser conferido. Peça ao aluno um link atualizado.' },
 };
 
+/** Caixa de resultado: ícone (ou o badge), título, explicação e o corpo. */
 function caixa({ situacao, titulo, texto, figura = '', corpo = '' }) {
   return `
     <div class="resultado-validacao ${situacao}">
@@ -32,6 +47,7 @@ function caixa({ situacao, titulo, texto, figura = '', corpo = '' }) {
     </div>`;
 }
 
+/** Os certificados da trilha até este, como uma linha do tempo (o último é o validado). */
 function linhaDaCadeia(blocos) {
   return `
     <h3>Certificados da trilha</h3>
@@ -45,6 +61,7 @@ function linhaDaCadeia(blocos) {
     </ol>`;
 }
 
+/** Resultado da validação por link (ou código), em HTML. `titulo` troca o título do caso válido. */
 export function resultadoDoLink(texto, { titulo } = {}) {
   const codigo = extrairCodigo(texto);
   if (!codigo) {
@@ -81,6 +98,10 @@ export function resultadoDoLink(texto, { titulo } = {}) {
   });
 }
 
+/**
+ * Resultado da validação de um XML: valida o código do link (com a chave, aqui no site)
+ * e confere se os campos do arquivo batem com ele, para pegar XML editado à mão.
+ */
 export function resultadoDoXml(texto) {
   const lido = lerCertificadoXml(texto);
   if (lido.erro) return caixa({ situacao: 'ilegivel', titulo: 'XML inválido', texto: esc(lido.erro) });
@@ -96,6 +117,8 @@ export function resultadoDoXml(texto) {
     !cadeiaCoerente(xml.blocos) && 'cadeia (um "anterior" não bate com o selo do bloco de antes)',
     xml.blocos.length !== cert.cadeia.length + 1 && 'número de blocos da cadeia',
   ].filter(Boolean);
+  // Assinaturas: chave do arquivo = chave publicada, e cada bloco assinado sobre a mensagem
+  // que o certificado emitido gera (não sobre o texto do arquivo, que pode ter sido editado).
   const elos = [...cert.cadeia, { modulo: cert.modulo, data: cert.data, anterior: cert.anterior }];
   const { chaveConfere, todas } = conferirAssinaturas({
     ...xml,
@@ -114,6 +137,7 @@ export function resultadoDoXml(texto) {
   return resultadoDoLink(lido.codigo, { titulo: 'XML e certificado válidos' });
 }
 
+/** Resultado da validação de um certificado impresso, em HTML. */
 export function resultadoDoImpresso(dados) {
   const { valido, motivo, incompleto } = validarImpresso(dados);
   if (incompleto) return caixa({ situacao: 'ilegivel', titulo: 'Faltam dados', texto: esc(motivo) });
@@ -121,6 +145,86 @@ export function resultadoDoImpresso(dados) {
     ? '<p class="nota-validacao">Para conferir também os certificados anteriores da trilha, use a aba "Link ou código".</p>'
     : '';
   return caixa({ situacao: valido ? 'valido' : 'invalido', titulo: valido ? 'Selo confere' : 'Não confere', texto: esc(motivo), corpo: nota });
+}
+
+const contar = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+/**
+ * Bloco "Restaurar o progresso" de um certificado válido. O progresso só volta se o nome
+ * salvo neste navegador for igual ao do certificado (acentos e maiúsculas contam).
+ */
+export function blocoRestaurar(cert, codigo, nomeSalvo = lerNome()) {
+  const situacao = situacaoDoNome(cert, nomeSalvo);
+  let corpo;
+  if (situacao === 'sem-nome') {
+    corpo = `
+      <p>Este certificado pode trazer o seu progresso de volta para este navegador. Antes, salve aqui o seu nome
+        <b>exatamente como está no certificado</b>, com os mesmos acentos e maiúsculas.</p>
+      <p><button type="button" class="btn btn-roxo btn-pequeno" data-nome-restaurar>✏️ Salvar o meu nome</button></p>`;
+  } else if (situacao === 'nome-diferente') {
+    corpo = `
+      <p>O progresso só volta quando o nome salvo neste navegador é igual ao do certificado, com os mesmos acentos e maiúsculas.</p>
+      <dl class="dados-validacao">
+        <div class="largo"><dt>No certificado</dt><dd>${esc(cert.nome)}</dd></div>
+        <div class="largo"><dt>Neste navegador</dt><dd>${esc(String(nomeSalvo).trim())}</dd></div>
+      </dl>
+      <p><button type="button" class="btn btn-roxo btn-pequeno" data-nome-restaurar>✏️ Trocar o nome deste navegador</button></p>`;
+  } else {
+    const plano = planoDeRestauracao(cert, modulos);
+    corpo = `
+      <p>Estes módulos voltam como concluídos, nas datas do certificado. Nada do que já está neste navegador é apagado.</p>
+      <ul class="lista-restaurar">
+        ${plano.map((b) => `<li><b>${esc(b.titulo)}</b> · ${contar(b.exercicios, 'exercício', 'exercícios')} e ${contar(b.licoes, 'lição', 'lições')} · concluído em ${dataCurta(b.data)}</li>`).join('')}
+      </ul>
+      <p><button type="button" class="btn btn-verde" data-restaurar>↩️ Restaurar o meu progresso neste navegador</button></p>`;
+  }
+  return `
+    <section class="restaurar-progresso" data-codigo="${esc(codigo)}">
+      <h3 tabindex="-1">↩️ Restaurar o progresso neste navegador</h3>
+      ${corpo}
+    </section>`;
+}
+
+/** Resultado do link com o bloco de restaurar (só quando o selo confere). */
+function resultadoComRestauracao(texto) {
+  const codigo = extrairCodigo(texto);
+  const cert = codigo && decodificarCertificado(codigo);
+  return resultadoDoLink(texto) + (cert?.selo === 'confere' ? blocoRestaurar(cert, codigo) : '');
+}
+
+/** Cliques do bloco: salvar o nome (e redesenhar) ou restaurar. */
+function ligarRestauracao(el, aoRestaurar) {
+  el.onclick = async (e) => {
+    const bloco = e.target.closest('.restaurar-progresso');
+    if (!bloco) return;
+    const { codigo } = bloco.dataset;
+    const cert = decodificarCertificado(codigo);
+    const redesenhar = () => {
+      const novo = document.createRange().createContextualFragment(blocoRestaurar(cert, codigo)).firstElementChild;
+      bloco.replaceWith(novo);
+      novo.querySelector('h3').focus();
+    };
+    if (e.target.closest('[data-nome-restaurar]')) {
+      await pedirNome();
+      redesenhar();
+      return;
+    }
+    if (!e.target.closest('[data-restaurar]')) return;
+    if (situacaoDoNome(cert, lerNome()) !== 'pode') { redesenhar(); return; } // o nome mudou noutra aba
+    const plano = planoDeRestauracao(cert, modulos);
+    const ok = restaurarItens(itensDoPlano(plano));
+    const texto = ok
+      ? `Pronto: ${contar(plano.length, 'módulo voltou', 'módulos voltaram')} para este navegador, com as datas do certificado.`
+      : 'Este navegador não deixou o site guardar o progresso (aba anônima ou dados bloqueados). Tente numa janela normal.';
+    bloco.innerHTML = `
+      <h3 tabindex="-1">↩️ Restaurar o progresso neste navegador</h3>
+      <p>${ok ? '✅' : '⚠️'} ${esc(texto)}</p>
+      ${ok ? '<p><a class="btn btn-roxo btn-pequeno" href="#/trilha">Ir para a trilha</a></p>' : ''}`;
+    // Foco no próximo passo: o link da trilha; se não deu certo, o título do aviso.
+    (bloco.querySelector('a') ?? bloco.querySelector('h3')).focus();
+    anunciar(texto);
+    if (ok) aoRestaurar();
+  };
 }
 
 const METODOS = [
@@ -194,6 +298,7 @@ function htmlPagina(temResultadoInicial) {
     </article>`;
 }
 
+/** Abas acessíveis: clique, setas, Home e End (padrão WAI-ARIA de abas). */
 function ligarAbas(raiz) {
   const abas = [...raiz.querySelectorAll('[role="tab"]')];
   const selecionar = (aba, focar = false) => {
@@ -216,28 +321,33 @@ function ligarAbas(raiz) {
   });
 }
 
+/** Mostra o resultado e o traz para a tela (no celular ele pode ficar abaixo da dobra). */
 function mostrar(saida, html) {
   saida.innerHTML = html;
   const reduzir = document.documentElement.classList.contains('a11y-sem-movimento');
   saida.firstElementChild?.scrollIntoView?.({ block: 'nearest', behavior: reduzir ? 'auto' : 'smooth' });
 }
 
-export function renderValidador(el, codigoInicial = '', { aoRestaurar: _aoRestaurar = () => {} } = {}) {
+export function renderValidador(el, codigoInicial = '', { aoRestaurar = () => {} } = {}) {
   el.innerHTML = htmlPagina(Boolean(codigoInicial));
   ligarAbas(el);
+  ligarRestauracao(el, aoRestaurar);
 
+  // 1. Link ou código. Mudou o texto? O resultado antigo some (não vale para o texto novo).
   const campoLink = $('campo-link');
   const saidaLink = $('saida-link');
   campoLink.oninput = () => { saidaLink.innerHTML = ''; };
   $('form-link').onsubmit = (e) => {
     e.preventDefault();
-    mostrar(saidaLink, resultadoDoLink(campoLink.value));
+    mostrar(saidaLink, resultadoComRestauracao(campoLink.value));
   };
 
+  // 2. Impresso ou PDF.
   const form = $('form-impresso');
   const saidaImpresso = $('saida-impresso');
   const rotuloAnterior = $('rotulo-anterior');
   const atualizarAnterior = () => {
+    // O primeiro da cadeia não tem "Anterior".
     rotuloAnterior.hidden = anteriores(form.modulo.value).length === 0;
   };
   form.modulo.onchange = atualizarAnterior;
@@ -256,6 +366,7 @@ export function renderValidador(el, codigoInicial = '', { aoRestaurar: _aoRestau
     mostrar(saidaImpresso, resultadoDoImpresso(Object.fromEntries(new FormData(form))));
   };
 
+  // 3. Arquivo XML.
   const campoXml = $('campo-xml');
   const saidaXml = $('saida-xml');
   campoXml.oninput = () => { saidaXml.innerHTML = ''; };
@@ -278,5 +389,5 @@ export function renderValidador(el, codigoInicial = '', { aoRestaurar: _aoRestau
     mostrar(saidaXml, resultadoDoXml(campoXml.value));
   };
 
-  if (codigoInicial) $('resultado-inicial').innerHTML = resultadoDoLink(codigoInicial);
+  if (codigoInicial) $('resultado-inicial').innerHTML = resultadoComRestauracao(codigoInicial);
 }
