@@ -63,14 +63,48 @@ export const azureAks = {
       titulo: 'Deployment com identidade gerenciada',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie um <b>Deployment</b> chamado <code>app-azure-identity</code> configurado com Workload Identity do Azure.</p>
-        <ul>
-          <li>Imagem: <code>mcr.microsoft.com/azure-cli:latest</code></li>
-          <li>O ServiceAccount deve ter a anotação <code>azure.workload.identity/client-id</code> com valor <code>00000000-0000-0000-0000-000000000000</code></li>
-          <li>O Pod deve ter a label <code>azure.workload.identity/use: "true"</code></li>
-          <li>1 réplica</li>
-        </ul>
-        <p>Nota: neste exercício, crie apenas o Deployment. O ServiceAccount seria criado separadamente em produção.</p>`,
+      resumo: `
+        <p>Com <b>Workload Identity</b>, um Pod no AKS usa uma identidade do Microsoft Entra ID sem senha no cluster. Duas peças: a
+        ServiceAccount com a annotation do <code>client-id</code> (já existe no cluster, <code>app-sa</code>) e o Pod marcado para usá-la.</p>
+        <ol>
+          <li>Rode <code>kubectl describe sa app-sa</code> e veja a annotation <code>azure.workload.identity/client-id</code>.</li>
+          <li>No Deployment <code>app-azure-identity</code> (1 réplica), use <code>serviceAccountName: app-sa</code> no spec do Pod.</li>
+          <li>Nas labels do Pod (em <code>template.metadata.labels</code>), acrescente <code>azure.workload.identity/use: "true"</code> (com aspas).</li>
+          <li>O container <code>app</code> usa a imagem <code>mcr.microsoft.com/azure-cli:latest</code> e o comando <code>["sleep", "infinity"]</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o webhook do Workload Identity vê a label e injeta no Pod o token e as variáveis <code>AZURE_CLIENT_ID</code>
+        e <code>AZURE_TENANT_ID</code>. O Azure CLI e os SDKs usam isso para obter um token da Azure.</p>`,
+      inicial: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-azure-identity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-azure-identity
+  template:
+    metadata:
+      labels:
+        app: app-azure-identity
+        # TODO: azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName:  # TODO: app-sa
+      containers:
+        - name: app
+          image: mcr.microsoft.com/azure-cli:latest
+          command: ["sleep", "infinity"]
+`,
+      existentes: `apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-sa
+  annotations:
+    azure.workload.identity/client-id: 00000000-0000-0000-0000-000000000000`,
+      dica: [
+        "A label vai no molde do Pod (template.metadata.labels), não no metadata do Deployment.",
+        "O valor da label é texto: \"true\" com aspas.",
+      ],
       solucao: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -94,11 +128,17 @@ spec:
       testes: [
         {
           descricao: 'O Deployment app-azure-identity existe',
+          dica: "Preencha serviceAccountName: app-sa (um campo vazio impede o apply).",
           regras: [{ tipo: 'recurso-existe', kind: 'Deployment', nome: 'app-azure-identity' }],
         },
         {
           descricao: 'O Deployment tem label de workload identity do Azure',
-          regras: [{ tipo: 'azure-identity', deployment: 'app-azure-identity' }],
+          dica: "Em template.metadata.labels: azure.workload.identity/use: \"true\".",
+          regras: [
+            { tipo: 'azure-identity', deployment: 'app-azure-identity' },
+            { tipo: 'campo', kind: 'Deployment', nome: 'app-azure-identity', caminho: 'spec.template.metadata.labels["azure.workload.identity/use"]', valor: 'true' },
+            { tipo: 'campo', kind: 'Deployment', nome: 'app-azure-identity', caminho: 'spec.template.spec.serviceAccountName', valor: 'app-sa' },
+          ],
         },
       ],
     },
@@ -108,12 +148,28 @@ spec:
       titulo: 'ConfigMap de integração Azure AD',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Crie um <b>ConfigMap</b> chamado <code>aad-integration-config</code> representando a configuração de integração com Azure AD.</p>
-        <ul>
-          <li>Chave <code>tenant-id</code> com valor <code>00000000-0000-0000-0000-000000000000</code></li>
-          <li>Chave <code>client-id</code> com valor <code>11111111-1111-1111-1111-111111111111</code></li>
-          <li>Chave <code>server-app-id</code> com valor <code>22222222-2222-2222-2222-222222222222</code></li>
-        </ul>`,
+      resumo: `
+        <p>Aplicações que fazem login pelo Microsoft Entra ID (antigo Azure AD) precisam de três identificadores: o do diretório
+        (tenant), o do cliente e o da aplicação servidora. Eles não são segredos e podem ficar num ConfigMap.</p>
+        <ol>
+          <li>No ConfigMap <code>aad-integration-config</code>, <code>tenant-id: "00000000-0000-0000-0000-000000000000"</code>.</li>
+          <li><code>client-id: "11111111-1111-1111-1111-111111111111"</code>.</li>
+          <li><code>server-app-id: "22222222-2222-2222-2222-222222222222"</code> (os três entre aspas).</li>
+        </ol>
+        <p><b>No cluster:</b> a aplicação lê os identificadores como variáveis ou arquivos. A senha do cliente, se houver, iria num Secret.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aad-integration-config
+data:
+  # TODO: tenant-id: "00000000-0000-0000-0000-000000000000"
+  # TODO: client-id: "11111111-1111-1111-1111-111111111111"
+  # TODO: server-app-id: "22222222-2222-2222-2222-222222222222"
+`,
+      dica: [
+        "Tire o \"# TODO:\" da frente de cada linha, mantendo os 2 espaços.",
+        "Use aspas nos identificadores: são textos.",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -125,14 +181,17 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap aad-integration-config existe',
+          dica: "Mantenha metadata.name: aad-integration-config.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'aad-integration-config' }],
         },
         {
           descricao: 'O ConfigMap contém a chave tenant-id',
+          dica: "Em data: tenant-id com o valor de zeros, entre aspas.",
           regras: [{ tipo: 'configmap-contem', nome: 'aad-integration-config', chave: 'tenant-id', valor: '00000000-0000-0000-0000-000000000000' }],
         },
         {
           descricao: 'O ConfigMap contém a chave client-id',
+          dica: "Em data: client-id com o valor de uns, entre aspas.",
           regras: [{ tipo: 'configmap-contem', nome: 'aad-integration-config', chave: 'client-id', valor: '11111111-1111-1111-1111-111111111111' }],
         },
       ],

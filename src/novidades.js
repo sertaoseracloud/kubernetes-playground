@@ -42,6 +42,40 @@ export const RELEASES = [
     ],
   },
   {
+    versao: '0.3.0',
+    data: '2026-10-19',
+    titulo: 'Trilha feita para quem está começando',
+    resumo: 'Todos os exercícios foram reescritos para quem nunca usou Kubernetes: lição antes de cada assunto novo, passos numerados, um modelo pronto no editor e dicas que dizem o que corrigir.',
+    grupos: [
+      {
+        titulo: '🗺️ Trilha e exercícios',
+        itens: [
+          '17 lições novas nos Fundamentos, antes de cada assunto novo: YAML em 5 minutos, a anatomia de um manifesto, Namespaces, labels, variáveis de ambiente, CPU e memória, e mais.',
+          'Toda lição traz uma comparação com o dia a dia e um exemplo comentado linha a linha, que já abre no editor para você testar.',
+          'O editor de cada exercício abre com um modelo e comentários "# TODO" mostrando onde escrever cada valor.',
+          'O enunciado virou uma lista de passos, e termina explicando o que acontece no cluster depois do apply.',
+          'Exercícios que diziam que algo "já existe no cluster" agora começam com esse recurso de verdade.',
+          'Nenhum exercício foi removido e o seu progresso continua salvo.',
+        ],
+      },
+      {
+        titulo: '💡 Ajuda na hora certa',
+        itens: [
+          'Dicas em até três níveis, abertas uma de cada vez: da mais leve até quase a resposta.',
+          'Quando um teste falha, aparece "🔧 Como corrigir" com o que mudar no YAML, também lido pelo leitor de tela.',
+          'Mensagens de erro em linguagem simples, com o detalhe técnico guardado num botão à parte.',
+          'Palavras técnicas explicadas no primeiro uso, com uma comparação do dia a dia.',
+        ],
+      },
+      {
+        titulo: '🎓 Certificados',
+        itens: [
+          'A carga horária de Fundamentos passa para 32 horas (eram 30), por causa das lições novas; a da trilha completa, para 73 horas.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.2.1',
     data: '2026-10-19',
     titulo: 'Ajuste na publicação',

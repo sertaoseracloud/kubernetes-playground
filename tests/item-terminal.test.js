@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { criarTelaItem, ESQUELETO } from '../src/ui/item.js';
+import { criarTelaItem, codigoInicial } from '../src/ui/item.js';
 import { problemas, LIVRE } from '../src/conteudo/trilha.js';
 import { statusDe } from '../src/progresso.js';
 import { interpretar, completarKubectl, tipoPorNome, kindsDoYaml, explicarKind } from '../src/k8s/comandos.js';
@@ -57,7 +57,8 @@ describe('terminal na tela do exercício', () => {
     expect(tela.editor().getValue()).toBe(LIVRE.inicial);
     tela.abrir(PRIMEIRO.id);
     await ate(noPrompt(PRIMEIRO.id));
-    expect(tela.editor().getValue()).toBe(ESQUELETO);
+    expect(tela.editor().getValue()).toBe(codigoInicial(PRIMEIRO));
+    expect(tela.editor().getValue()).toContain('# TODO');
     expect(tela.editor().getValue()).not.toBe(PRIMEIRO.solucao);
     expect(falas).toEqual([]); // abrir não fala nada: só o que a pessoa pede
     // A aba 📘 Docs mostra os kinds do exercício, com link que abre em outra aba de forma segura.

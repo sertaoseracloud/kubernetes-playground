@@ -1,637 +1,498 @@
-// Glossário: cada termo técnico com uma explicação simples, uma analogia do dia a
-// dia e, quando ajuda, um exemplo curto. A descrição de cada desafio mostra os termos
-// que aparecem no texto dele (até MAX_TERMOS, na ordem em que aparecem), para não
-// sobrecarregar. O formato é o mesmo do glossário do DivergeTerraform.
+// Glossário: cada termo técnico com uma explicação simples, uma analogia do dia a dia e,
+// quando ajuda, um exemplo curto de YAML. A descrição de cada lição e exercício mostra os
+// termos que aparecem no texto dele (até MAX_TERMOS), para o iniciante nunca ficar com uma
+// palavra sem explicação no primeiro uso.
 //
-// `padroes` são regex (sem flags; usamos 'iu'), testadas no texto visível do desafio.
+// `padroes` são regex (sem flags; usamos 'iu'), testadas no texto visível do item.
 // Bordas de palavra são tratadas em `termosDoTexto`, porque \b não entende acentos.
-// A ordem importa: os termos são agrupados por nível (fundamentos → avançados → AWS →
-// Azure → projetos → comparação).
+// `nivel` é o módulo em que o termo passa a importar: num exercício de AWS, "IRSA" vale
+// mais do que "Pod", que o aluno já viu nos Fundamentos.
 
-export const MAX_TERMOS = 6;
+export const MAX_TERMOS = 8;
+
+const NIVEIS = ['fundamentos', 'avancados', 'aws', 'azure'];
 
 export const GLOSSARIO = [
   // ---------- Fundamentos: o cluster ----------
   {
-    id: 'kubernetes', termo: 'Kubernetes (K8s)', padroes: ['kubernetes', 'k8s'],
-    definicao: 'Sistema que roda e cuida de contêineres em várias máquinas: você descreve o que quer e ele mantém assim.',
-    analogia: 'O nome quer dizer "timoneiro" em grego: quem pilota o navio cheio de contêineres e corrige o rumo sozinho.',
+    id: 'kubernetes', termo: 'Kubernetes (K8s)', nivel: 'fundamentos', padroes: ['kubernetes', 'k8s'],
+    definicao: 'Um sistema que roda e cuida de containers em várias máquinas: decide onde cada um roda, reinicia o que cai e conecta tudo.',
+    analogia: 'Um gerente de restaurante: você diz quantos pratos de cada tipo quer, e ele distribui o trabalho entre os cozinheiros e substitui quem faltar.',
   },
   {
-    id: 'conteiner', termo: 'Contêiner', padroes: ['cont[eê]ineres?', 'containers?'],
-    definicao: 'Um programa empacotado com tudo de que precisa para rodar (bibliotecas, configurações), igual em qualquer máquina.',
-    analogia: 'Uma marmita fechada: leva a comida e os talheres, e chega igual em qualquer mesa.',
+    id: 'cluster', termo: 'Cluster', nivel: 'fundamentos', padroes: ['clusters?'],
+    definicao: 'O conjunto de máquinas (nós) que o Kubernetes administra como se fossem uma só.',
+    analogia: 'Um condomínio: vários prédios (nós), uma administração (control plane) e regras comuns para todos.',
   },
   {
-    id: 'imagem', termo: 'Imagem', padroes: ['imagens?', 'images?'],
-    definicao: 'O "molde" de onde sai o contêiner, com nome e versão (a tag), guardado num registro como o Docker Hub.',
-    analogia: 'A forma de bolo: de uma forma saem quantos bolos iguais você quiser.',
+    id: 'no', termo: 'Nó (node)', nivel: 'fundamentos', padroes: ['nó', 'nodes?', 'worker nodes?'],
+    definicao: 'Uma máquina (física ou virtual) do cluster onde os Pods rodam de verdade.',
+    analogia: 'Um fogão da cozinha: é onde as panelas (Pods) ficam no fogo.',
+  },
+  {
+    id: 'control-plane', termo: 'Control plane', nivel: 'fundamentos', padroes: ['control plane', 'plano de controle'],
+    definicao: 'O "cérebro" do cluster: API Server, etcd, Scheduler e controladores. Ele decide; os nós executam.',
+    analogia: 'A torre de controle do aeroporto: não voa nenhum avião, mas diz quem decola, quando e por qual pista.',
+  },
+  {
+    id: 'api-server', termo: 'API Server', nivel: 'fundamentos', padroes: ['api server', 'kube-apiserver'],
+    definicao: 'A porta de entrada do cluster: todo kubectl apply passa por ele, que valida e grava o pedido.',
+    analogia: 'O balcão de atendimento: ninguém entra na cozinha; os pedidos são entregues no balcão.',
+  },
+  {
+    id: 'etcd', termo: 'etcd', nivel: 'fundamentos', padroes: ['etcd'],
+    definicao: 'O banco de dados do cluster: guarda o estado desejado de todos os recursos.',
+    analogia: 'O caderno de pedidos do restaurante: se não está anotado, ninguém vai preparar.',
+  },
+  {
+    id: 'scheduler', termo: 'Scheduler', nivel: 'fundamentos', padroes: ['scheduler', 'kube-scheduler', 'escalonador'],
+    definicao: 'Escolhe em qual nó cada Pod novo vai rodar, olhando CPU, memória e regras de afinidade.',
+    analogia: 'O recepcionista que escolhe a mesa de cada grupo que chega, conforme o tamanho do grupo e as mesas livres.',
+  },
+  {
+    id: 'kubelet', termo: 'kubelet', nivel: 'fundamentos', padroes: ['kubelet'],
+    definicao: 'O agente que roda em cada nó: recebe a lista de Pods daquele nó e liga, vigia e reinicia os containers.',
+    analogia: 'O chefe de cada fogão: confere se as panelas certas estão no fogo e troca a que queimou.',
+  },
+  {
+    id: 'kubectl', termo: 'kubectl', nivel: 'fundamentos', padroes: ['kubectl'],
+    definicao: 'A ferramenta de linha de comando para falar com o cluster: aplicar YAML, listar, descrever e apagar recursos.',
+    analogia: 'O controle remoto da TV: você aperta botões (comandos) e a TV (cluster) obedece.',
+    exemplo: 'kubectl apply -f pod.yaml\nkubectl get pods\nkubectl describe pod nginx-demo',
+  },
+  {
+    id: 'container', termo: 'Container', nivel: 'fundamentos', padroes: ['containers?', 'contêineres?'],
+    definicao: 'Um programa empacotado com tudo de que precisa para rodar (bibliotecas, configurações), isolado dos outros.',
+    analogia: 'Uma marmita fechada: leva a comida e os talheres juntos, e funciona igual em qualquer mesa.',
+  },
+  {
+    id: 'imagem', termo: 'Imagem', nivel: 'fundamentos', padroes: ['imagem', 'imagens', 'image'],
+    definicao: 'O "molde" de onde o container é criado, com nome e versão (tag), como nginx:1.25.',
+    analogia: 'A receita impressa: cada container é um prato feito a partir dela. A tag (1.25) é a edição da receita.',
     exemplo: 'image: nginx:1.25',
   },
   {
-    id: 'cluster', termo: 'Cluster', padroes: ['clusters?'],
-    definicao: 'O conjunto de máquinas (os nós) e do plano de controle que o Kubernetes administra como se fossem uma só.',
-    analogia: 'Um condomínio: vários prédios (nós) com uma administração (plano de controle) que decide quem mora onde.',
+    id: 'yaml', termo: 'YAML', nivel: 'fundamentos', padroes: ['yaml'],
+    definicao: 'O formato de texto dos manifestos: chave: valor, com a indentação (espaços) mostrando o que está dentro de quê.',
+    analogia: 'Um índice de livro: os itens recuados são subitens do item de cima.',
+    exemplo: 'metadata:\n  name: nginx-demo   # "name" está dentro de "metadata"',
   },
   {
-    id: 'no', termo: 'Nó (node)', padroes: ['n[óo]s? do cluster', 'nodes?', 'n[óo]s worker', 'n[óo] worker'],
-    definicao: 'Uma máquina, virtual ou física, onde os Pods rodam. Cada nó tem o kubelet, que conversa com o plano de controle.',
-    analogia: 'Um prédio do condomínio: é onde as famílias (os Pods) moram de verdade.',
+    id: 'manifesto', termo: 'Manifesto', nivel: 'fundamentos', padroes: ['manifestos?'],
+    definicao: 'Um arquivo YAML que descreve um recurso do jeito que você quer que ele exista.',
+    analogia: 'Uma ficha de pedido preenchida: diz o que você quer, não como a cozinha vai fazer.',
   },
   {
-    id: 'plano-de-controle', termo: 'Plano de controle (control plane)', padroes: ['plano de controle', 'control plane', 'api server', 'kube-apiserver', 'etcd', 'scheduler', 'agendador'],
-    definicao: 'O "cérebro" do cluster: a API, o banco etcd, o scheduler que escolhe o nó de cada Pod e os controladores.',
-    analogia: 'A administração do condomínio: recebe os pedidos, guarda o cadastro e decide em qual prédio cada família fica.',
+    id: 'apiversion', termo: 'apiVersion', nivel: 'fundamentos', padroes: ['apiversion'],
+    definicao: 'A versão da API que define o recurso. Pod, Service e ConfigMap usam v1; Deployment usa apps/v1.',
+    analogia: 'A edição do formulário: o cartório só aceita a ficha no modelo certo.',
+    exemplo: 'apiVersion: v1        # Pod, Service, ConfigMap\napiVersion: apps/v1   # Deployment',
   },
   {
-    id: 'kubectl', termo: 'kubectl', padroes: ['kubectl'],
-    definicao: 'A linha de comando para falar com o cluster: aplicar manifestos, listar, descrever e apagar recursos.',
-    analogia: 'O controle remoto do cluster.',
-    exemplo: 'kubectl apply -f manifest.yaml\nkubectl get pods',
+    id: 'kind', termo: 'kind', nivel: 'fundamentos', padroes: ['kind'],
+    definicao: 'O tipo do recurso que o manifesto descreve: Pod, Service, Deployment, ConfigMap...',
+    analogia: 'O título do formulário: "Pedido de matrícula" é diferente de "Pedido de transferência".',
+    exemplo: 'kind: Pod',
   },
   {
-    id: 'yaml', termo: 'YAML', padroes: ['yaml', 'yml'],
-    definicao: 'Formato de texto dos manifestos: pares chave: valor, com o recuo (espaços, nunca Tab) mostrando o que fica dentro de quê.',
-    analogia: 'Uma lista de compras com tópicos e subtópicos: o recuo mostra o que é parte de quê.',
-    exemplo: 'metadata:\n  name: web\n  labels:\n    app: web',
+    id: 'metadata', termo: 'metadata', nivel: 'fundamentos', padroes: ['metadata'],
+    definicao: 'Os dados de identificação do recurso: name (obrigatório), namespace, labels e annotations.',
+    analogia: 'A etiqueta de uma caixa de mudança: nome, cômodo e observações.',
+    exemplo: 'metadata:\n  name: nginx-demo\n  labels:\n    app: web',
   },
   {
-    id: 'manifesto', termo: 'Manifesto', padroes: ['manifestos?', 'manifest'],
-    definicao: 'O arquivo YAML que descreve um ou mais recursos (separados por ---): o estado que você quer no cluster.',
-    analogia: 'O pedido por escrito que você entrega na cozinha: diz o prato, o tamanho e os detalhes.',
+    id: 'spec', termo: 'spec', nivel: 'fundamentos', padroes: ['spec'],
+    definicao: 'A especificação: o estado desejado do recurso. Num Pod, a lista de containers; num Service, as portas e o selector.',
+    analogia: 'O corpo do pedido: "2 pizzas grandes, uma sem cebola". É o que você quer de fato.',
   },
   {
-    id: 'apiversion-kind', termo: 'apiVersion e kind', padroes: ['apiversion', 'kind'],
-    definicao: 'As duas primeiras linhas de todo manifesto: kind diz o tipo do recurso (Pod, Service...) e apiVersion, a versão da API que o atende.',
-    analogia: 'O nome do formulário e a edição dele: "Formulário de matrícula, versão 2024".',
-    exemplo: 'apiVersion: apps/v1\nkind: Deployment',
+    id: 'pod', termo: 'Pod', nivel: 'fundamentos', padroes: ['pods?'],
+    definicao: 'A menor unidade do Kubernetes: um ou mais containers que nascem, rodam e morrem juntos, com o mesmo IP.',
+    analogia: 'Uma vagem de ervilhas (pod, em inglês): as ervilhas (containers) ficam juntas na mesma casca.',
+    exemplo: 'kind: Pod\nspec:\n  containers:\n    - name: nginx\n      image: nginx:1.25',
   },
   {
-    id: 'metadata', termo: 'metadata', padroes: ['metadata', 'metadados'],
-    definicao: 'A parte do manifesto com o nome do recurso, o namespace, os labels e as annotations.',
-    analogia: 'A etiqueta da caixa: diz o nome e para quem é, não o que tem dentro.',
+    id: 'containerport', termo: 'containerPort', nivel: 'fundamentos', padroes: ['containerport'],
+    definicao: 'A porta em que o programa dentro do container escuta (o nginx escuta na 80). Serve de documentação e de alvo para o Service.',
+    analogia: 'O número do apartamento: o prédio (Pod) tem um endereço, e a porta diz em qual apartamento bater.',
+    exemplo: 'ports:\n  - containerPort: 80',
   },
   {
-    id: 'spec', termo: 'spec', padroes: ['spec'],
-    definicao: 'A parte do manifesto que descreve o que você quer: contêineres, portas, réplicas.',
-    analogia: 'A receita dentro da caixa: os ingredientes e o modo de preparo.',
+    id: 'namespace', termo: 'Namespace', nivel: 'fundamentos', padroes: ['namespaces?'],
+    definicao: 'Uma divisão lógica do cluster: separa recursos de times ou ambientes (dev, produção). Nomes só precisam ser únicos dentro do namespace.',
+    analogia: 'As pastas do computador: pode haver um "relatorio.txt" na pasta Trabalho e outro na pasta Pessoal.',
+    exemplo: 'metadata:\n  name: nginx-dev\n  namespace: dev-env',
   },
   {
-    id: 'estado-desejado', termo: 'Estado desejado', padroes: ['estado desejado', 'estado real', 'declarativ[oa]', 'reconcilia[çc][ãa]o'],
-    definicao: 'Você declara como quer o cluster; os controladores comparam com o que está rodando e corrigem a diferença o tempo todo.',
-    analogia: 'Um termostato: você escolhe 22 °C e ele liga ou desliga o ar até chegar lá, e continua de olho.',
+    id: 'label', termo: 'Label', nivel: 'fundamentos', padroes: ['labels?', 'rótulos?'],
+    definicao: 'Um par chave: valor colado no recurso para identificá-lo e agrupá-lo, como app: api ou env: production.',
+    analogia: 'As etiquetas coloridas de pastas: "azul = financeiro". Depois você procura "todas as azuis".',
+    exemplo: 'metadata:\n  labels:\n    app: api\n    env: production',
   },
   {
-    id: 'pod', termo: 'Pod', padroes: ['pods?'],
-    definicao: 'A menor unidade do Kubernetes: um ou mais contêineres que rodam juntos, no mesmo nó, com o mesmo IP.',
-    analogia: 'Uma casa: quem mora nela (os contêineres) divide o endereço e a cozinha (a rede e os volumes).',
-    exemplo: 'apiVersion: v1\nkind: Pod\nmetadata:\n  name: web',
+    id: 'selector', termo: 'Selector', nivel: 'fundamentos', padroes: ['selectors?', 'seletor(es)?', 'matchlabels'],
+    definicao: 'Um filtro de labels: "todos os Pods com app: api". É assim que Service e Deployment encontram os seus Pods.',
+    analogia: 'O filtro de uma loja online: "mostrar só tamanho M, cor azul".',
+    exemplo: 'selector:\n  app: api',
   },
   {
-    id: 'namespace', termo: 'Namespace', padroes: ['namespaces?'],
-    definicao: 'Uma "pasta" do cluster que separa recursos, permissões e cotas por time ou ambiente.',
-    analogia: 'Os andares de uma escola: cada turma tem a sua sala, e dois alunos podem ter o mesmo nome em salas diferentes.',
+    id: 'annotation', termo: 'Annotation', nivel: 'fundamentos', padroes: ['annotations?', 'anotaç(ão|ões)'],
+    definicao: 'Uma anotação chave: valor para guardar informação extra (autor, descrição, configuração de ferramenta). Não serve para filtrar.',
+    analogia: 'Um post-it colado na pasta: dá contexto, mas ninguém organiza o arquivo pelos post-its.',
+    exemplo: 'metadata:\n  annotations:\n    description: "Servidor web de teste"',
   },
   {
-    id: 'label', termo: 'Label (rótulo)', padroes: ['labels?', 'r[óo]tulos?'],
-    definicao: 'Pares chave: valor presos a um recurso (app: web) que servem para encontrar e agrupar recursos.',
-    analogia: 'Etiquetas coloridas nas pastas do arquivo: "financeiro", "2024".',
-    exemplo: 'labels:\n  app: web\n  tier: frontend',
+    id: 'requests-limits', termo: 'requests e limits', nivel: 'fundamentos', padroes: ['requests', 'limits'],
+    definicao: 'requests é o mínimo de CPU e memória reservado para o container; limits é o máximo que ele pode usar.',
+    analogia: 'Reserva de mesa (requests: garantido) e lotação máxima (limits: daqui não passa).',
+    exemplo: 'resources:\n  requests: { cpu: "100m", memory: "128Mi" }\n  limits:   { cpu: "250m", memory: "256Mi" }',
   },
   {
-    id: 'selector', termo: 'Selector (seletor)', padroes: ['selectors?', 'seletor(es)?', 'matchlabels'],
-    definicao: 'A regra que escolhe recursos pelos labels: um Service manda tráfego para os Pods que batem com o selector dele.',
-    analogia: 'Chamar na escola "todo mundo de camiseta azul": só quem tem a etiqueta certa responde.',
-    exemplo: 'selector:\n  app: web',
+    id: 'env', termo: 'Variável de ambiente', nivel: 'fundamentos', padroes: ['variáve(l|is) de ambiente'],
+    definicao: 'Um valor (nome=valor) que o programa lê ao iniciar, como APP_MODE=production. Muda o comportamento sem mudar a imagem.',
+    analogia: 'O bilhete deixado para quem vai cuidar da casa: "regue as plantas às 18h".',
+    exemplo: 'env:\n  - name: APP_MODE\n    value: "production"',
   },
   {
-    id: 'annotation', termo: 'Annotation (anotação)', padroes: ['annotations?', 'anota[çc][õo]es', 'anota[çc][ãa]o'],
-    definicao: 'Informações extras de um recurso, que não servem para selecionar: quem é o dono, um link, configurações de um controlador.',
-    analogia: 'Um post-it colado na pasta: ajuda quem lê, mas não muda onde a pasta fica.',
+    id: 'configmap', termo: 'ConfigMap', nivel: 'fundamentos', padroes: ['configmaps?'],
+    definicao: 'Um recurso que guarda configurações (chave: valor) fora da imagem, para os Pods lerem como variável ou arquivo.',
+    analogia: 'O quadro de avisos da empresa: muda o aviso e todo mundo lê a versão nova, sem reimprimir os crachás.',
+    exemplo: 'kind: ConfigMap\ndata:\n  DATABASE_HOST: db.exemplo.com',
   },
   {
-    id: 'requests-limits', termo: 'Requests e limits', padroes: ['requests?', 'limits?', 'limites de (cpu|mem[óo]ria)'],
-    definicao: 'Request é quanto de CPU e memória o contêiner reserva; limit é o máximo que ele pode usar.',
-    analogia: 'Reservar uma mesa para 4 (request) num salão que deixa a mesa crescer até 6 (limit).',
-    exemplo: 'resources:\n  requests:\n    cpu: 100m\n  limits:\n    memory: 256Mi',
+    id: 'secret', termo: 'Secret', nivel: 'fundamentos', padroes: ['secrets?'],
+    definicao: 'Parecido com o ConfigMap, mas para dados sensíveis (senhas, tokens). O acesso pode ser restrito por RBAC.',
+    analogia: 'O cofre do escritório: guarda o que não pode ficar no quadro de avisos.',
   },
   {
-    id: 'variavel-ambiente', termo: 'Variável de ambiente', padroes: ['vari[áa]ve(l|is) de ambiente', 'env'],
-    definicao: 'Um valor que o contêiner lê ao começar (como a URL do banco), definido no manifesto em env.',
-    analogia: 'Um bilhete na porta da geladeira que todo mundo da casa lê antes de sair.',
-    exemplo: 'env:\n  - name: AMBIENTE\n    value: producao',
+    id: 'estado-desejado', termo: 'Estado desejado', nivel: 'fundamentos', padroes: ['estado desejado', 'declarativo'],
+    definicao: 'O que você escreveu no manifesto. O Kubernetes compara com o que existe (estado real) e corrige a diferença.',
+    analogia: 'O termostato do ar-condicionado: você diz 23 °C e ele liga e desliga sozinho até chegar lá.',
   },
   {
-    id: 'configmap', termo: 'ConfigMap', padroes: ['configmaps?'],
-    definicao: 'Configurações em texto (chave e valor) separadas da imagem, que os Pods leem como variáveis ou arquivos.',
-    analogia: 'O cardápio do dia pregado na parede: muda sem precisar reformar a cozinha.',
-    exemplo: 'kind: ConfigMap\ndata:\n  COR: azul',
+    id: 'reconciliacao', termo: 'Reconciliação', nivel: 'fundamentos', padroes: ['reconciliação', 'controladores?'],
+    definicao: 'O ciclo dos controladores: olhar o estado real, comparar com o desejado e agir até ficarem iguais. Nunca para.',
+    analogia: 'O piloto automático do carro: corrige o volante o tempo todo para continuar na faixa.',
   },
   {
-    id: 'init-container', termo: 'Init container', padroes: ['init containers?', 'initcontainers'],
-    definicao: 'Um contêiner que roda e termina antes dos outros do Pod começarem, para preparar algo (esperar o banco, baixar um arquivo).',
-    analogia: 'Quem arruma a sala antes da reunião: quando termina, a reunião pode começar.',
+    id: 'diff', termo: 'Diff', nivel: 'fundamentos', padroes: ['diff'],
+    definicao: 'A prévia do que um apply vai mudar: o que será criado, alterado ou removido. Como o terraform plan.',
+    analogia: 'Conferir o carrinho antes de pagar: você vê o que vai entrar no pedido antes de confirmar.',
+    exemplo: 'kubectl diff -f pod.yaml',
   },
   {
-    id: 'drift', termo: 'Drift (desvio)', padroes: ['drift', 'desvio'],
-    definicao: 'Quando o que está rodando no cluster ficou diferente do que o manifesto diz (alguém mudou na mão, por exemplo).',
-    analogia: 'A planta da casa diz parede branca, mas alguém pintou de verde: a casa "derivou" da planta.',
+    id: 'drift', termo: 'Drift', nivel: 'fundamentos', padroes: ['drift'],
+    definicao: 'Quando o que está rodando no cluster ficou diferente do que está escrito no YAML (alguém mudou à mão, por exemplo).',
+    analogia: 'A planta da casa diz parede branca, mas alguém pintou de azul: a casa "derivou" da planta.',
   },
   {
-    id: 'diff', termo: 'Diff', padroes: ['diff'],
-    definicao: 'A lista do que mudaria se você aplicasse o manifesto agora: o que seria criado (+), alterado (~) ou apagado (-).',
-    analogia: 'Conferir o carrinho antes de pagar: você vê o que entra e o que sai antes de confirmar.',
-    exemplo: 'kubectl diff -f manifest.yaml',
+    id: 'restartpolicy', termo: 'restartPolicy', nivel: 'fundamentos', padroes: ['restartpolicy', 'restart policy'],
+    definicao: 'O que o kubelet faz quando um container termina: Always (sempre reinicia), OnFailure (só se deu erro) ou Never.',
+    analogia: 'A regra do despertador: tocar todo dia, só se você não levantou, ou nunca.',
+    exemplo: 'spec:\n  restartPolicy: OnFailure',
   },
   {
-    id: 'apply', termo: 'kubectl apply', padroes: ['apply', 'aplicar'],
-    definicao: 'Envia o manifesto para o cluster: cria o que não existe e atualiza o que mudou, sem apagar o resto.',
-    analogia: 'Entregar a lista atualizada para o mestre de obras: ele faz só o que falta.',
+    id: 'volume', termo: 'Volume', nivel: 'fundamentos', padroes: ['volumes?', 'volumemounts?'],
+    definicao: 'Um diretório que o Pod disponibiliza para os containers. É declarado em spec.volumes e montado com volumeMounts.',
+    analogia: 'Uma gaveta compartilhada: o Pod tem a gaveta, e cada container decide em que lugar da mesa ela fica (mountPath).',
+    exemplo: 'volumes:\n  - name: dados\n    emptyDir: {}\n# no container:\nvolumeMounts:\n  - name: dados\n    mountPath: /dados',
   },
   {
-    id: 'ciclo-de-vida', termo: 'Ciclo de vida do Pod', padroes: ['ciclo de vida', 'pending', 'running', 'succeeded', 'crashloopbackoff'],
-    definicao: 'As fases de um Pod: Pending (esperando um nó ou a imagem), Running, Succeeded ou Failed.',
-    analogia: 'Um voo: aguardando embarque, em voo, pousou ou foi cancelado.',
+    id: 'emptydir', termo: 'emptyDir', nivel: 'fundamentos', padroes: ['emptydir'],
+    definicao: 'Um volume vazio, criado junto com o Pod e apagado com ele. Serve para os containers do mesmo Pod trocarem arquivos.',
+    analogia: 'Uma lousa da sala de reunião: todos escrevem nela durante a reunião, e ela é apagada no fim.',
   },
   {
-    id: 'volume', termo: 'Volume', padroes: ['volumes?', 'volumemounts?'],
-    definicao: 'Um disco que o Pod monta numa pasta. Alguns somem com o Pod (emptyDir); outros sobrevivem (PersistentVolume).',
-    analogia: 'Uma gaveta da casa: o contêiner guarda coisas ali e os outros moradores também enxergam.',
+    id: 'init-container', termo: 'Init container', nivel: 'fundamentos', padroes: ['initcontainers?', 'init containers?'],
+    definicao: 'Um container que roda e termina antes dos containers principais, para preparar algo (arquivos, espera por um banco).',
+    analogia: 'Quem arruma a mesa antes do jantar: termina o trabalho e sai antes de os convidados chegarem.',
   },
   {
-    id: 'emptydir', termo: 'emptyDir', padroes: ['emptydir'],
-    definicao: 'Um volume vazio, criado junto com o Pod e apagado quando ele sai; serve para os contêineres do Pod trocarem arquivos.',
-    analogia: 'Uma mesa de trabalho compartilhada que é limpa quando o expediente acaba.',
+    id: 'sidecar', termo: 'Sidecar', nivel: 'fundamentos', padroes: ['sidecars?'],
+    definicao: 'Um container auxiliar que roda ao lado do principal no mesmo Pod (coletar logs, fazer proxy).',
+    analogia: 'O sidecar da moto: vai junto, no mesmo passeio, com uma função de apoio.',
   },
   {
-    id: 'hostpath', termo: 'hostPath', padroes: ['hostpath'],
-    definicao: 'Monta uma pasta do próprio nó dentro do Pod. É poderoso e arriscado: use só para agentes do nó (logs, métricas).',
-    analogia: 'Dar a chave do prédio inteiro para um morador: útil para o zelador, perigoso para os outros.',
+    id: 'probe', termo: 'Probe', nivel: 'fundamentos', padroes: ['probes?', 'livenessprobe', 'readinessprobe', 'startupprobe', 'health ?checks?'],
+    definicao: 'Uma checagem periódica do container. liveness: está vivo? (senão, reinicia). readiness: pode receber tráfego? (senão, sai do Service).',
+    analogia: 'O médico medindo o pulso (liveness) e perguntando "já pode voltar ao trabalho?" (readiness).',
+    exemplo: 'livenessProbe:\n  httpGet:\n    path: /\n    port: 80',
   },
   {
-    id: 'downward-api', termo: 'Downward API', padroes: ['downward api'],
-    definicao: 'Entrega ao contêiner dados do próprio Pod (nome, namespace, IP, labels) como variáveis ou arquivos.',
-    analogia: 'O crachá que o funcionário recebe no primeiro dia, com o nome e o setor dele.',
+    id: 'service', termo: 'Service', nivel: 'fundamentos', padroes: ['services?'],
+    definicao: 'Um endereço fixo (nome e IP) que entrega o tráfego aos Pods escolhidos pelo selector, mesmo quando eles são recriados.',
+    analogia: 'O telefone fixo de uma empresa: os atendentes mudam, mas o número continua o mesmo.',
+    exemplo: 'kind: Service\nspec:\n  selector:\n    app: api\n  ports:\n    - port: 80\n      targetPort: 80',
   },
   {
-    id: 'probe', termo: 'Probe (sonda de saúde)', padroes: ['probes?', 'livenessprobe', 'readinessprobe', 'startupprobe', 'liveness', 'readiness', 'health ?checks?'],
-    definicao: 'Testes que o kubelet faz no contêiner: liveness reinicia se travou, readiness só manda tráfego quando está pronto, startup espera a partida lenta.',
-    analogia: 'O médico que mede o pulso: se o coração parou, reanima (liveness); se ainda está acordando, não deixa trabalhar (readiness).',
-    exemplo: 'readinessProbe:\n  httpGet:\n    path: /saude\n    port: 8080',
+    id: 'port-targetport', termo: 'port e targetPort', nivel: 'fundamentos', padroes: ['targetport'],
+    definicao: 'port é a porta em que o Service atende; targetPort é a porta do container para onde ele encaminha.',
+    analogia: 'O ramal da recepção (port) que transfere a ligação para a mesa da pessoa (targetPort).',
   },
   {
-    id: 'sidecar', termo: 'Sidecar', padroes: ['sidecars?', 'multi-container'],
-    definicao: 'Um contêiner ajudante no mesmo Pod do principal: coleta logs, faz proxy, renova certificados.',
-    analogia: 'O sidecar da moto: vai junto, do lado, ajudando na viagem.',
+    id: 'clusterip', termo: 'ClusterIP', nivel: 'fundamentos', padroes: ['clusterip'],
+    definicao: 'O tipo padrão de Service: um IP que só existe dentro do cluster.',
+    analogia: 'O ramal interno da empresa: funciona de mesa para mesa, mas não recebe ligação da rua.',
   },
   {
-    id: 'restart-policy', termo: 'restartPolicy', padroes: ['restart ?policy', 'restartpolicy'],
-    definicao: 'O que fazer quando o contêiner termina: Always (sempre reinicia), OnFailure (só se deu erro) ou Never.',
-    analogia: 'A regra da academia: se a aula acabou, recomeça? Só se alguém se machucou? Nunca?',
+    id: 'nodeport', termo: 'NodePort', nivel: 'fundamentos', padroes: ['nodeport'],
+    definicao: 'Service que abre a mesma porta (30000 a 32767) em todos os nós, para acessar de fora do cluster.',
+    analogia: 'Uma porta lateral numerada em todos os prédios do condomínio.',
   },
   {
-    id: 'affinity', termo: 'Afinidade (affinity)', padroes: ['affinity', 'anti-affinity', 'afinidade', 'nodeselector'],
-    definicao: 'Regras para escolher em que nó o Pod vai: perto de outros Pods (affinity), longe deles (anti-affinity) ou em nós com certo label.',
-    analogia: 'Montar as mesas de uma festa: os amigos juntos, os primos brigados em mesas diferentes.',
+    id: 'loadbalancer', termo: 'LoadBalancer', nivel: 'fundamentos', padroes: ['loadbalancer', 'balanceador( de carga)?'],
+    definicao: 'Service que pede à nuvem um balanceador com IP público, distribuindo o tráfego entre os Pods.',
+    analogia: 'A recepção do shopping que encaminha cada visitante para um caixa livre.',
   },
   {
-    id: 'security-context', termo: 'securityContext', padroes: ['securitycontext', 'runasnonroot', 'contexto de seguran[çc]a'],
-    definicao: 'As travas de segurança do Pod e do contêiner: não rodar como root, disco só de leitura, sem privilégios extras.',
-    analogia: 'Dar ao estagiário só a chave da sala dele, e não a chave mestra.',
+    id: 'dns', termo: 'DNS do cluster', nivel: 'fundamentos', padroes: ['dns', 'coredns'],
+    definicao: 'Todo Service ganha um nome: servico.namespace.svc.cluster.local. Os Pods se acham pelo nome, não pelo IP.',
+    analogia: 'A agenda do celular: você liga para "Maria", não decora o número.',
   },
   {
-    id: 'ephemeral-container', termo: 'Ephemeral container', padroes: ['ephemeral containers?', 'cont[eê]iner ef[êe]mero'],
-    definicao: 'Um contêiner temporário que você coloca num Pod que já está rodando, só para investigar um problema.',
-    analogia: 'O técnico que entra na sala para consertar a impressora e sai logo depois.',
-    exemplo: 'kubectl debug -it web --image=busybox',
+    id: 'ingress', termo: 'Ingress', nivel: 'fundamentos', padroes: ['ingress(es)?'],
+    definicao: 'Regras de entrada HTTP: qual domínio e caminho vão para qual Service. Precisa de um Ingress Controller.',
+    analogia: 'A placa de direção na entrada do hospital: "Pediatria, 2º andar; Raio-X, térreo".',
   },
   {
-    id: 'prestop', termo: 'preStop e desligamento gracioso', padroes: ['prestop', 'desligamento gracioso', 'graceful', 'terminationgraceperiodseconds'],
-    definicao: 'Antes de parar o contêiner, o Kubernetes roda o preStop e espera um tempo, para ele terminar o que estava fazendo.',
-    analogia: 'Avisar "a loja vai fechar em 5 minutos": quem está no caixa termina a compra.',
+    id: 'deployment', termo: 'Deployment', nivel: 'fundamentos', padroes: ['deployments?'],
+    definicao: 'Um controlador que mantém N cópias de um Pod rodando e troca as versões aos poucos (rolling update).',
+    analogia: 'O gerente de turno: garante que sempre há 3 caixas abertos e troca os funcionários sem fechar a loja.',
+    exemplo: 'kind: Deployment\nspec:\n  replicas: 3\n  selector:\n    matchLabels: { app: web }\n  template: ...',
   },
   {
-    id: 'service', termo: 'Service', padroes: ['services?'],
-    definicao: 'Um endereço fixo na frente de um grupo de Pods (que nascem e morrem com IPs novos), escolhidos pelo selector.',
-    analogia: 'O número da central de atendimento: você liga sempre para o mesmo número, e ele passa para quem estiver livre.',
-    exemplo: 'kind: Service\nspec:\n  selector:\n    app: web\n  ports:\n    - port: 80',
+    id: 'replica', termo: 'Réplica', nivel: 'fundamentos', padroes: ['réplicas?', 'replicas'],
+    definicao: 'Uma cópia idêntica do Pod. Mais réplicas: mais capacidade e menos risco se uma cair.',
+    analogia: 'Vários caixas abertos no supermercado: se um para, a fila anda nos outros.',
   },
   {
-    id: 'clusterip', termo: 'ClusterIP', padroes: ['clusterip'],
-    definicao: 'O tipo padrão de Service: um IP que só funciona dentro do cluster.',
-    analogia: 'O ramal interno da empresa: de fora não dá para ligar.',
+    id: 'replicaset', termo: 'ReplicaSet', nivel: 'fundamentos', padroes: ['replicasets?'],
+    definicao: 'O controlador que o Deployment cria para manter o número certo de Pods de uma versão.',
+    analogia: 'O supervisor de uma equipe: conta as pessoas e chama reforço quando falta alguém.',
   },
   {
-    id: 'nodeport', termo: 'NodePort', padroes: ['nodeport'],
-    definicao: 'Um Service que abre a mesma porta (30000 a 32767) em todos os nós, para chegar nele de fora.',
-    analogia: 'Uma porta lateral com o mesmo número em todos os prédios do condomínio.',
+    id: 'template', termo: 'template (do Pod)', nivel: 'fundamentos', padroes: ['template'],
+    definicao: 'Dentro do Deployment, o "molde" dos Pods que ele cria: metadata.labels e spec.containers, como num Pod.',
+    analogia: 'O carimbo: cada Pod novo é uma impressão igual do carimbo.',
   },
   {
-    id: 'loadbalancer', termo: 'LoadBalancer', padroes: ['loadbalancer', 'load balancer', 'balanceador( de carga)?'],
-    definicao: 'Um Service que pede à nuvem um balanceador com IP público e distribui o tráfego entre os Pods.',
-    analogia: 'A recepcionista na entrada do prédio, que manda cada visitante para um atendente livre.',
+    id: 'rolling-update', termo: 'Rolling update', nivel: 'fundamentos', padroes: ['rolling ?updates?', 'rollingupdate'],
+    definicao: 'Trocar a versão aos poucos: sobe um Pod novo, tira um antigo, até todos estarem atualizados, sem parar o serviço.',
+    analogia: 'Trocar os pneus de um ônibus um de cada vez, com o ônibus em uso.',
   },
   {
-    id: 'headless', termo: 'Headless Service', padroes: ['headless'],
-    definicao: 'Um Service sem IP próprio (clusterIP: None): o DNS devolve o IP de cada Pod, um por um.',
-    analogia: 'Uma lista telefônica com o número de cada pessoa, em vez de uma central única.',
+    id: 'rollback', termo: 'Rollback', nivel: 'fundamentos', padroes: ['rollbacks?', 'rollout undo'],
+    definicao: 'Voltar para a versão anterior quando a nova deu problema.',
+    analogia: 'O "desfazer" (Ctrl+Z) do editor de texto.',
   },
   {
-    id: 'externalname', termo: 'ExternalName', padroes: ['externalname'],
-    definicao: 'Um Service que é só um apelido de DNS para um endereço fora do cluster (um banco gerenciado, por exemplo).',
-    analogia: 'Um atalho na agenda do celular que liga para um número de outra cidade.',
+    id: 'hpa', termo: 'HPA', nivel: 'fundamentos', padroes: ['hpa', 'horizontalpodautoscaler', 'autoscal(er|ing)'],
+    definicao: 'HorizontalPodAutoscaler: aumenta ou diminui as réplicas sozinho conforme o uso de CPU ou memória.',
+    analogia: 'O gerente que abre mais caixas quando a fila cresce e fecha quando esvazia.',
   },
   {
-    id: 'porta', termo: 'port, targetPort e containerPort', padroes: ['targetport', 'containerport', 'portas?', 'ports?'],
-    definicao: 'containerPort é onde o programa escuta no contêiner; port é a porta do Service; targetPort diz para qual porta do Pod o Service manda.',
-    analogia: 'O ramal da recepção (port) que transfere para a mesa certa (targetPort) de quem atende (containerPort).',
+    id: 'affinity', termo: 'Afinidade (affinity)', nivel: 'fundamentos', padroes: ['affinity', 'afinidade', 'nodeaffinity'],
+    definicao: 'Regras que dizem em quais nós um Pod prefere (ou precisa) rodar, ou de quais Pods ele quer ficar perto ou longe.',
+    analogia: 'Escolher a mesa no restaurante: "perto da janela" (preferência) ou "precisa ser acessível" (obrigatório).',
   },
   {
-    id: 'endpoint', termo: 'Endpoints e EndpointSlice', padroes: ['endpoints?', 'endpointslices?'],
-    definicao: 'A lista dos IPs e portas dos Pods prontos que estão atrás de um Service, atualizada sozinha.',
-    analogia: 'A escala de quem está de plantão hoje na central de atendimento.',
+    id: 'securitycontext', termo: 'securityContext', nivel: 'fundamentos', padroes: ['securitycontext'],
+    definicao: 'Configurações de segurança do Pod ou container: rodar sem ser root, disco só leitura, sem privilégios extras.',
+    analogia: 'O crachá de visitante: entra no prédio, mas não abre todas as portas.',
   },
   {
-    id: 'dns', termo: 'DNS interno', padroes: ['dns', 'coredns'],
-    definicao: 'Todo Service ganha um nome (web.default.svc.cluster.local) que os Pods usam em vez do IP.',
-    analogia: 'Chamar o colega pelo nome, e não pelo número do crachá.',
-    exemplo: 'curl http://web.default.svc.cluster.local',
+    id: 'pdb', termo: 'PodDisruptionBudget', nivel: 'fundamentos', padroes: ['poddisruptionbudget', 'pdb'],
+    definicao: 'Garante um mínimo de Pods de pé durante manutenções planejadas (como esvaziar um nó).',
+    analogia: 'A regra do hospital: nunca menos de 2 médicos de plantão, nem na troca de turno.',
   },
   {
-    id: 'ingress', termo: 'Ingress', padroes: ['ingress(es)?'],
-    definicao: 'Regras de HTTP(S) que levam o tráfego de fora para os Services, por domínio e caminho (loja.com/api → api).',
-    analogia: 'O porteiro do shopping: "para a praça de alimentação, segundo andar à esquerda".',
-    exemplo: 'rules:\n  - host: loja.com\n    http:\n      paths:\n        - path: /api',
+    id: 'daemonset', termo: 'DaemonSet', nivel: 'fundamentos', padroes: ['daemonsets?'],
+    definicao: 'Roda exatamente um Pod em cada nó (ou nos nós escolhidos): ótimo para agentes de log e monitoramento.',
+    analogia: 'Um extintor em cada andar do prédio.',
   },
   {
-    id: 'deployment', termo: 'Deployment', padroes: ['deployments?', 'deploys?'],
-    definicao: 'Mantém N cópias (réplicas) de um Pod rodando e troca a versão aos poucos, sem parar o serviço.',
-    analogia: 'O gerente de turno: garante que sempre há 3 caixas abertos e troca o pessoal sem fechar a loja.',
-    exemplo: 'kind: Deployment\nspec:\n  replicas: 3',
+    id: 'resourcequota', termo: 'ResourceQuota', nivel: 'fundamentos', padroes: ['resourcequotas?', 'quotas?', 'cotas?'],
+    definicao: 'Um teto de recursos para um namespace inteiro: total de CPU, memória ou número de Pods.',
+    analogia: 'O orçamento mensal de um departamento: cada pessoa gasta, mas o total não passa do teto.',
+  },
+
+  {
+    id: 'priorityclass', termo: 'PriorityClass', nivel: 'fundamentos', padroes: ['priorityclass(es)?', 'priorityclassname'],
+    definicao: 'Um número de importância para Pods. Quando falta espaço, os de prioridade maior são agendados primeiro.',
+    analogia: 'A fila preferencial do banco: quem tem prioridade é atendido antes.',
   },
   {
-    id: 'replicaset', termo: 'ReplicaSet e réplicas', padroes: ['replicasets?', 'r[ée]plicas?', 'replicas'],
-    definicao: 'Réplicas são cópias iguais de um Pod; o ReplicaSet mantém a quantidade certa, e o Deployment cria ReplicaSets por você.',
-    analogia: 'Fotocópias de um documento: se uma rasga, alguém tira outra.',
-  },
-  {
-    id: 'rolling-update', termo: 'Rolling update e rollback', padroes: ['rolling ?update', 'rollback', 'rollout', 'maxsurge', 'maxunavailable', 'revisionhistorylimit'],
-    definicao: 'Rolling update troca os Pods da versão antiga pelos da nova aos poucos; rollback volta para a versão anterior.',
-    analogia: 'Trocar os pneus de um ônibus um de cada vez, com ele ainda rodando, e poder voltar o pneu antigo.',
-    exemplo: 'kubectl rollout undo deployment/web',
-  },
-  {
-    id: 'recreate', termo: 'Estratégia Recreate', padroes: ['recreate'],
-    definicao: 'Apaga todos os Pods antigos antes de criar os novos: fica um tempo fora do ar, mas nunca roda duas versões juntas.',
-    analogia: 'Fechar o restaurante para trocar o cardápio inteiro de uma vez.',
-  },
-  {
-    id: 'canary-blue-green', termo: 'Canary e blue-green', padroes: ['canary', 'can[áa]rio', 'blue-green', 'azul-verde'],
-    definicao: 'Canary manda uma parte pequena do tráfego para a versão nova; blue-green mantém as duas versões e troca o tráfego de uma vez.',
-    analogia: 'Canary: provar o prato antes de servir para todos. Blue-green: duas cozinhas prontas, e você escolhe qual atende.',
-  },
-  {
-    id: 'hpa', termo: 'HPA (escala automática)', padroes: ['hpa', 'horizontalpodautoscaler', 'autoscal(er|ing)', 'escala autom[áa]tica'],
-    definicao: 'Aumenta e diminui o número de réplicas conforme o uso de CPU, memória ou outra métrica.',
-    analogia: 'Abrir mais caixas no supermercado quando a fila cresce e fechar quando esvazia.',
-    exemplo: 'kind: HorizontalPodAutoscaler\nspec:\n  minReplicas: 2\n  maxReplicas: 10',
-  },
-  {
-    id: 'pdb', termo: 'PodDisruptionBudget', padroes: ['poddisruptionbudget', 'pdb', 'disruption budget'],
-    definicao: 'Quantos Pods podem sair ao mesmo tempo numa manutenção (atualizar ou esvaziar um nó), para o serviço não cair.',
-    analogia: 'A regra de que no máximo um salva-vidas sai para o almoço por vez.',
-  },
-  {
-    id: 'topology-spread', termo: 'Topology spread', padroes: ['topology ?spread', 'topologyspreadconstraints', 'topologia', 'topology', 'zonas?'],
-    definicao: 'Espalha os Pods entre zonas ou nós, para uma pane num lugar não derrubar todas as réplicas.',
+    id: 'topology-spread', termo: 'topologySpreadConstraints', nivel: 'fundamentos', padroes: ['topologyspreadconstraints', 'maxskew'],
+    definicao: 'Regras para espalhar as réplicas entre zonas ou nós, para uma queda não derrubar todas.',
     analogia: 'Não guardar todos os ovos na mesma cesta.',
   },
   {
-    id: 'priorityclass', termo: 'PriorityClass', padroes: ['priorityclass', 'prioridade'],
-    definicao: 'A prioridade de um Pod: quando falta espaço, os mais importantes passam na frente e podem tirar os menos importantes.',
-    analogia: 'A fila preferencial do banco.',
+    id: 'headless', termo: 'Headless Service', nivel: 'fundamentos', padroes: ['headless'],
+    definicao: 'Um Service sem IP próprio (clusterIP: None): o DNS responde com o IP de cada Pod.',
+    analogia: 'Uma lista com o telefone de cada atendente, em vez da central única.',
   },
   {
-    id: 'daemonset', termo: 'DaemonSet', padroes: ['daemonsets?'],
-    definicao: 'Roda uma cópia de um Pod em cada nó do cluster; serve para agentes de logs, métricas e rede.',
-    analogia: 'Um extintor em cada andar do prédio: se abrir um andar novo, ganha um extintor também.',
+    id: 'externalname', termo: 'ExternalName', nivel: 'fundamentos', padroes: ['externalname'],
+    definicao: 'Um Service que é só um apelido de DNS para um endereço de fora do cluster.',
+    analogia: 'Um atalho na área de trabalho que aponta para um site.',
+  },
+  {
+    id: 'endpointslice', termo: 'EndpointSlice', nivel: 'fundamentos', padroes: ['endpointslices?', 'endpoints'],
+    definicao: 'A lista de IPs dos Pods prontos que um Service atende, mantida automaticamente a partir do selector.',
+    analogia: 'A lista de chamada da turma, atualizada a cada entrada e saída.',
+  },
+  {
+    id: 'canary', termo: 'Canary e blue-green', nivel: 'fundamentos', padroes: ['canary', 'blue-green'],
+    definicao: 'Jeitos de lançar uma versão nova com segurança: para poucos usuários primeiro (canary) ou com troca total e volta rápida (blue-green).',
+    analogia: 'Provar a comida antes de servir para todos os convidados.',
+  },
+  {
+    id: 'downward-api', termo: 'Downward API', nivel: 'fundamentos', padroes: ['downward api', 'fieldref'],
+    definicao: 'Entrega ao container dados do próprio Pod (nome, namespace, nó) como variável ou arquivo.',
+    analogia: 'O crachá entregue pelo RH: você não escolhe o número, mas pode lê-lo.',
+  },
+  {
+    id: 'prestop', termo: 'preStop', nivel: 'fundamentos', padroes: ['prestop', 'terminationgraceperiodseconds'],
+    definicao: 'Um comando que roda antes de o container ser desligado, para terminar o trabalho em andamento.',
+    analogia: 'Virar a placa para "fechado" e esperar os clientes saírem antes de apagar a luz.',
+  },
+  {
+    id: 'hostpath', termo: 'hostPath', nivel: 'fundamentos', padroes: ['hostpath'],
+    definicao: 'Um volume que monta uma pasta do próprio nó dentro do container. Prende o Pod àquela máquina.',
+    analogia: 'Usar a gaveta da mesa de um colega: só funciona sentado na mesa dele.',
   },
 
   // ---------- Recursos avançados ----------
   {
-    id: 'rbac', termo: 'RBAC', padroes: ['rbac'],
-    definicao: 'Controle de acesso por papéis: quem (usuário, grupo, ServiceAccount) pode fazer o quê (verbos) em quais recursos.',
-    analogia: 'O crachá da empresa: cada cargo abre algumas portas, e só elas.',
+    id: 'rbac', termo: 'RBAC', nivel: 'avancados', padroes: ['rbac'],
+    definicao: 'Controle de acesso por papéis: quem (usuário ou ServiceAccount) pode fazer o quê (verbos) em quais recursos.',
+    analogia: 'Os crachás de um hospital: o enfermeiro abre a farmácia, o visitante não.',
   },
   {
-    id: 'role', termo: 'Role e ClusterRole', padroes: ['roles?', 'clusterroles?'],
-    definicao: 'Uma lista de permissões (get, list, create...) sobre recursos. A Role vale num namespace; a ClusterRole, no cluster todo.',
-    analogia: 'A descrição de um cargo: "pode abrir o caixa e consultar o estoque".',
-    exemplo: 'rules:\n  - apiGroups: [""]\n    resources: ["pods"]\n    verbs: ["get", "list"]',
+    id: 'role', termo: 'Role e RoleBinding', nivel: 'avancados', padroes: ['roles?', 'rolebindings?', 'clusterroles?', 'clusterrolebindings?'],
+    definicao: 'A Role lista permissões (verbos em recursos); o RoleBinding entrega essa Role a alguém. ClusterRole vale para o cluster todo.',
+    analogia: 'A Role é a descrição do cargo; o RoleBinding é a pessoa sendo contratada para esse cargo.',
   },
   {
-    id: 'rolebinding', termo: 'RoleBinding e ClusterRoleBinding', padroes: ['rolebindings?', 'clusterrolebindings?', 'binding'],
-    definicao: 'Entrega uma Role (ou ClusterRole) para usuários, grupos ou ServiceAccounts.',
-    analogia: 'A portaria nomeando a Ana para o cargo de caixa.',
+    id: 'serviceaccount', termo: 'ServiceAccount', nivel: 'avancados', padroes: ['serviceaccounts?', 'service accounts?'],
+    definicao: 'A identidade de um Pod (de um programa, não de uma pessoa) ao falar com a API do Kubernetes ou da nuvem.',
+    analogia: 'O crachá de um robô da fábrica: diz quem ele é e o que pode fazer.',
   },
   {
-    id: 'serviceaccount', termo: 'ServiceAccount', padroes: ['serviceaccounts?', 'service accounts?', 'conta de servi[çc]o'],
-    definicao: 'A identidade de um Pod para falar com a API do Kubernetes (e, com IRSA ou Workload Identity, com a nuvem).',
-    analogia: 'O crachá de um robô da fábrica: ele também precisa de autorização para entrar nas salas.',
+    id: 'statefulset', termo: 'StatefulSet', nivel: 'avancados', padroes: ['statefulsets?'],
+    definicao: 'Como o Deployment, mas cada Pod tem nome fixo (db-0, db-1) e o próprio disco. Para bancos de dados.',
+    analogia: 'Cadeiras numeradas no cinema: cada pessoa volta sempre para a mesma cadeira.',
   },
   {
-    id: 'menor-privilegio', termo: 'Menor privilégio', padroes: ['menor privil[ée]gio', 'least privilege'],
-    definicao: 'Dar só as permissões necessárias para a tarefa, nada a mais.',
-    analogia: 'Emprestar a chave do carro, e não o molho de chaves da casa.',
+    id: 'pvc', termo: 'PersistentVolumeClaim (PVC)', nivel: 'avancados', padroes: ['pvcs?', 'persistentvolumeclaims?', 'persistentvolumes?'],
+    definicao: 'Um pedido de disco persistente: "quero 10 GiB". O cluster entrega um volume que sobrevive ao Pod.',
+    analogia: 'Alugar um guarda-volumes: você pede o tamanho, recebe a chave, e as coisas ficam lá mesmo que você saia.',
   },
   {
-    id: 'limitrange-quota', termo: 'LimitRange e ResourceQuota', padroes: ['limitrange', 'resourcequota', 'resource quota', 'cotas?'],
-    definicao: 'ResourceQuota limita o total de CPU, memória e objetos de um namespace; LimitRange dá valores padrão e máximos a cada contêiner.',
-    analogia: 'O orçamento do departamento (quota) e o limite de cada cartão corporativo (LimitRange).',
+    id: 'storageclass', termo: 'StorageClass', nivel: 'avancados', padroes: ['storageclass(es)?'],
+    definicao: 'O "tipo de disco" que o cluster sabe criar (SSD, HDD, de qual provedor). O PVC escolhe uma StorageClass.',
+    analogia: 'O cardápio de quartos do hotel: standard, luxo, suíte.',
   },
   {
-    id: 'statefulset', termo: 'StatefulSet', padroes: ['statefulsets?'],
-    definicao: 'Como o Deployment, mas cada Pod tem nome fixo (db-0, db-1), ordem de criação e disco próprio. Para bancos e filas.',
-    analogia: 'Cadeiras numeradas no teatro: cada pessoa volta sempre para a mesma cadeira.',
-  },
-  {
-    id: 'pvc', termo: 'PersistentVolumeClaim (PVC)', padroes: ['pvcs?', 'persistentvolumeclaims?', 'persistentvolumes?', 'volume persistente', 'disco persistente'],
-    definicao: 'Um pedido de disco que sobrevive ao Pod. O cluster liga o pedido a um PersistentVolume de verdade.',
-    analogia: 'Alugar um armário no clube: você troca de roupa (de Pod), e as coisas continuam no armário.',
-    exemplo: 'kind: PersistentVolumeClaim\nspec:\n  resources:\n    requests:\n      storage: 10Gi',
-  },
-  {
-    id: 'storageclass', termo: 'StorageClass', padroes: ['storageclass(es)?', 'waitforfirstconsumer'],
-    definicao: 'O "cardápio" de discos: diz qual driver cria o volume e com quais parâmetros (tipo, velocidade, zona).',
-    analogia: 'Os tamanhos de armário que o clube oferece: pequeno, grande, refrigerado.',
-  },
-  {
-    id: 'access-mode', termo: 'Modo de acesso (RWO, RWX)', padroes: ['readwriteonce', 'readwritemany', 'rwo', 'rwx', 'accessmodes?'],
-    definicao: 'ReadWriteOnce: um nó por vez escreve no disco. ReadWriteMany: vários Pods, em vários nós, escrevem ao mesmo tempo.',
-    analogia: 'Um caderno pessoal (RWO) e um quadro branco da sala, que todos podem usar (RWX).',
-  },
-  {
-    id: 'csi', termo: 'Driver CSI', padroes: ['csi'],
-    definicao: 'O plugin que ensina o Kubernetes a criar e montar discos de um fornecedor (EBS, Azure Disk, EFS...).',
-    analogia: 'O adaptador de tomada de cada país: o aparelho é o mesmo, muda o encaixe.',
-  },
-  {
-    id: 'job', termo: 'Job', padroes: ['jobs?'],
-    definicao: 'Roda Pods até a tarefa terminar com sucesso (um backup, uma migração) e para.',
-    analogia: 'Chamar o eletricista para uma tarefa: ele faz o serviço e vai embora.',
-  },
-  {
-    id: 'cronjob', termo: 'CronJob', padroes: ['cronjobs?', 'cron', 'schedule', 'agendad[oa]'],
-    definicao: 'Cria um Job num horário, no formato do cron (minuto hora dia mês dia-da-semana).',
-    analogia: 'O despertador que toca todo dia útil às 7h.',
+    id: 'job', termo: 'Job e CronJob', nivel: 'avancados', padroes: ['jobs?', 'cronjobs?'],
+    definicao: 'O Job roda uma tarefa até terminar (backup, migração). O CronJob cria Jobs num horário (agenda cron).',
+    analogia: 'Job: chamar o eletricista uma vez. CronJob: a faxina toda segunda às 8h.',
     exemplo: 'schedule: "0 3 * * *"   # todo dia às 3h',
   },
   {
-    id: 'networkpolicy', termo: 'NetworkPolicy', padroes: ['networkpolic(y|ies)', 'network ?policy', 'pol[íi]tica de rede'],
-    definicao: 'Firewall entre Pods: diz quem pode falar com quem. Sem nenhuma, todos falam com todos.',
-    analogia: 'A lista de quem pode entrar em cada sala do prédio.',
+    id: 'networkpolicy', termo: 'NetworkPolicy', nivel: 'avancados', padroes: ['networkpolic(y|ies)', 'network polic(y|ies)'],
+    definicao: 'Regras de firewall entre Pods: quem pode falar com quem e em quais portas.',
+    analogia: 'A portaria do condomínio com lista de visitantes autorizados para cada apartamento.',
   },
   {
-    id: 'default-deny', termo: 'Default deny', padroes: ['default ?deny', 'nega tudo', 'negar tudo'],
-    definicao: 'Uma NetworkPolicy que bloqueia todo o tráfego; depois você libera só o necessário.',
-    analogia: 'Trancar todas as portas e entregar chaves só para quem precisa.',
+    id: 'gitops', termo: 'GitOps', nivel: 'avancados', padroes: ['gitops'],
+    definicao: 'O Git é a fonte da verdade: um agente no cluster lê o repositório e aplica sozinho o que estiver lá.',
+    analogia: 'A partitura na estante: a orquestra toca o que está escrito; para mudar a música, muda-se a partitura.',
   },
   {
-    id: 'tls', termo: 'TLS e certificado', padroes: ['tls', 'https', 'certificados? (tls|digital)'],
-    definicao: 'A criptografia do HTTPS: o certificado prova quem é o site e protege o que trafega.',
-    analogia: 'O envelope lacrado com o selo do remetente.',
+    id: 'argocd', termo: 'Argo CD', nivel: 'avancados', padroes: ['argo ?cd'],
+    definicao: 'Ferramenta de GitOps: compara o Git com o cluster, mostra o drift e sincroniza.',
+    analogia: 'Um fiscal de obra que compara a construção com a planta todos os dias.',
   },
   {
-    id: 'secret', termo: 'Secret', padroes: ['secrets?', 'segredos?'],
-    definicao: 'Como o ConfigMap, mas para dados sensíveis (senhas, tokens). Fica em base64, que não é criptografia: proteja com RBAC.',
-    analogia: 'O cofre do escritório: guarda o que não pode ficar pregado na parede.',
-    exemplo: 'kind: Secret\ntype: Opaque\nstringData:\n  senha: troque-me',
+    id: 'flux', termo: 'Flux', nivel: 'avancados', padroes: ['flux'],
+    definicao: 'Outra ferramenta de GitOps, montada com controladores (GitRepository, Kustomization, HelmRelease).',
+    analogia: 'Uma equipe de fiscais, cada um cuidando de uma parte da obra.',
   },
   {
-    id: 'base64', termo: 'base64', padroes: ['base64'],
-    definicao: 'Um jeito de escrever bytes como texto. Qualquer um decodifica: não esconde nada.',
-    analogia: 'Escrever de trás para frente: parece segredo, mas não é.',
-    exemplo: 'echo -n senha | base64',
+    id: 'helm', termo: 'Helm', nivel: 'avancados', padroes: ['helm', 'charts?'],
+    definicao: 'Um gerenciador de pacotes para Kubernetes: um chart é um modelo de manifestos com valores configuráveis.',
+    analogia: 'Um formulário com lacunas: você preenche os valores e sai o documento pronto.',
   },
   {
-    id: 'external-secrets', termo: 'Cofre externo (Vault, External Secrets)', padroes: ['vault', 'external secrets?', 'externalsecret', 'cofres?'],
-    definicao: 'Guardar os segredos num cofre fora do cluster e deixar um operador copiá-los para Secrets quando precisa.',
-    analogia: 'Deixar as joias no cofre do banco e buscar só no dia da festa.',
+    id: 'kustomize', termo: 'Kustomize', nivel: 'avancados', padroes: ['kustomize', 'kustomization', 'overlays?'],
+    definicao: 'Monta variações de manifestos (dev, produção) a partir de uma base, com pequenos "remendos" (overlays).',
+    analogia: 'A mesma roupa com ajustes do alfaiate para cada pessoa.',
   },
   {
-    id: 'gitops', termo: 'GitOps', padroes: ['gitops'],
-    definicao: 'O Git é a fonte da verdade: o cluster é atualizado por um agente que lê o repositório, e não por comandos manuais.',
-    analogia: 'A receita oficial fica no livro: se alguém mudar o prato na cozinha, o chefe refaz pelo livro.',
-  },
-  {
-    id: 'argocd', termo: 'Argo CD', padroes: ['argo ?cd', 'appproject', 'applicationset'],
-    definicao: 'Ferramenta de GitOps que compara o cluster com o Git e sincroniza; cada Application aponta um repositório para um destino.',
-    analogia: 'O fiscal que confere a obra contra a planta todo dia e corrige o que estiver diferente.',
-  },
-  {
-    id: 'flux', termo: 'Flux', padroes: ['flux( ?cd)?', 'gitrepository', 'kustomization'],
-    definicao: 'Outra ferramenta de GitOps: o GitRepository diz o repositório e a Kustomization, a pasta que vai para o cluster.',
-    analogia: 'Um assinante que recebe e aplica cada nova edição do jornal.',
-  },
-  {
-    id: 'sync', termo: 'Sincronização (sync)', padroes: ['sync', 'sincroniza[çc][ãa]o', 'selfheal', 'prune'],
-    definicao: 'Deixar o cluster igual ao Git. Com selfHeal, desfaz mudanças manuais; com prune, apaga o que saiu do Git.',
-    analogia: 'Sincronizar as fotos do celular com a nuvem: o que você apagar lá some aqui também.',
-  },
-  {
-    id: 'helm', termo: 'Helm', padroes: ['helm', 'charts?', 'helmrelease', 'values\\.yaml'],
-    definicao: 'O gerenciador de pacotes do Kubernetes: um chart é um conjunto de manifestos com variáveis (values) para reaproveitar.',
-    analogia: 'Um kit de móveis com manual: você escolhe a cor e o tamanho, e a montagem é sempre a mesma.',
-    exemplo: 'helm install loja ./chart --set replicas=3',
-  },
-  {
-    id: 'kustomize', termo: 'Kustomize', padroes: ['kustomize', 'overlays?'],
-    definicao: 'Monta os manifestos de cada ambiente a partir de uma base comum, com overlays que mudam só o que precisa.',
-    analogia: 'Uma roupa base e os acessórios de cada ocasião: a mesma camisa, gravata no trabalho, boné no fim de semana.',
-  },
-  {
-    id: 'crd', termo: 'CRD (tipo personalizado)', padroes: ['crds?', 'customresourcedefinitions?', 'recursos? personalizados?'],
-    definicao: 'Ensina um tipo novo de recurso à API do Kubernetes (Application, Certificate...), que um operador sabe tratar.',
-    analogia: 'Acrescentar um campo novo no formulário da escola, e um funcionário que sabe o que fazer com ele.',
-  },
-  {
-    id: 'operador', termo: 'Operador', padroes: ['operador(es)?', 'operators?', 'controladores?', 'controllers?'],
-    definicao: 'Um programa que roda no cluster e cuida de um tipo de recurso, fazendo o que uma pessoa faria (criar, corrigir, atualizar).',
-    analogia: 'Um zelador especializado: sabe exatamente como cuidar da piscina, sem ninguém pedir.',
+    id: 'crd', termo: 'CRD', nivel: 'avancados', padroes: ['crds?', 'customresourcedefinitions?', 'operador(es)?', 'operators?'],
+    definicao: 'CustomResourceDefinition: ensina ao Kubernetes um tipo novo de recurso. Um operador é o controlador que cuida dele.',
+    analogia: 'Acrescentar um prato novo ao cardápio e treinar um cozinheiro só para ele.',
   },
 
   // ---------- AWS ----------
   {
-    id: 'aws', termo: 'AWS', padroes: ['aws', 'amazon web services'],
-    definicao: 'A nuvem da Amazon: aluga máquinas, discos, redes e serviços prontos, pagando pelo uso.',
-    analogia: 'Uma imobiliária gigante: você aluga o espaço que precisa, pelo tempo que precisar.',
+    id: 'eks', termo: 'EKS', nivel: 'aws', padroes: ['eks'],
+    definicao: 'Amazon Elastic Kubernetes Service: a AWS cuida do control plane; você cuida dos nós e dos manifestos.',
+    analogia: 'Alugar uma cozinha montada: o prédio e a gerência são do shopping; o cardápio é seu.',
   },
   {
-    id: 'eks', termo: 'EKS', padroes: ['eks'],
-    definicao: 'O Kubernetes gerenciado da AWS: a Amazon cuida do plano de controle e você cuida dos nós e dos Pods.',
-    analogia: 'Um condomínio com administradora contratada: você só se preocupa com o seu apartamento.',
+    id: 'irsa', termo: 'IRSA', nivel: 'aws', padroes: ['irsa', 'role-arn', 'iam'],
+    definicao: 'IAM Roles for Service Accounts: dá a um Pod permissões da AWS (S3, DynamoDB) pela ServiceAccount, sem chave guardada.',
+    analogia: 'Um crachá temporário emitido na portaria, em vez de uma cópia da chave mestra.',
+    exemplo: 'metadata:\n  annotations:\n    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/app',
   },
   {
-    id: 'iam', termo: 'IAM', padroes: ['iam'],
-    definicao: 'O sistema de permissões da AWS: usuários, roles e políticas que dizem quem pode fazer o quê na conta.',
-    analogia: 'A portaria da AWS, que confere o crachá antes de abrir cada porta.',
+    id: 'alb', termo: 'ALB', nivel: 'aws', padroes: ['alb'],
+    definicao: 'Application Load Balancer da AWS. O AWS Load Balancer Controller cria um ALB a partir de um Ingress.',
+    analogia: 'A recepção do prédio comercial que manda cada visitante para o andar certo.',
   },
   {
-    id: 'irsa', termo: 'IRSA', padroes: ['irsa', 'pod identity'],
-    definicao: 'Liga uma ServiceAccount do Kubernetes a uma role do IAM, para o Pod acessar a AWS sem chaves guardadas.',
-    analogia: 'Um crachá do condomínio que também abre a garagem do vizinho, só para quem tem autorização.',
-    exemplo: 'annotations:\n  eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/app',
+    id: 'ebs', termo: 'EBS', nivel: 'aws', padroes: ['ebs', 'gp3'],
+    definicao: 'Disco de bloco da AWS, ligado a um nó por vez (ReadWriteOnce). Usado via CSI driver e StorageClass.',
+    analogia: 'Um HD externo: só um computador usa por vez.',
   },
   {
-    id: 'aws-auth', termo: 'aws-auth', padroes: ['aws-auth'],
-    definicao: 'O ConfigMap que dizia quais usuários e roles do IAM entram no cluster EKS (hoje há também as access entries).',
-    analogia: 'A lista de convidados na portaria.',
+    id: 'efs', termo: 'EFS', nivel: 'aws', padroes: ['efs'],
+    definicao: 'Sistema de arquivos de rede da AWS: vários Pods em vários nós leem e escrevem ao mesmo tempo (ReadWriteMany).',
+    analogia: 'Uma pasta compartilhada na rede do escritório.',
   },
   {
-    id: 'node-group', termo: 'Grupo de nós (node group, node pool)', padroes: ['node ?groups?', 'node ?pools?', 'grupos? de n[óo]s'],
-    definicao: 'Um conjunto de nós iguais (mesmo tamanho de máquina), que a nuvem cria, atualiza e escala junto.',
-    analogia: 'Uma frota de vans do mesmo modelo: manutenção e troca são feitas para todas de uma vez.',
-  },
-  {
-    id: 'addon', termo: 'Add-on', padroes: ['add-ons?', 'addons?'],
-    definicao: 'Componentes extras instalados no cluster (rede, DNS, drivers de disco), muitas vezes gerenciados pela nuvem.',
-    analogia: 'Os acessórios do carro: rádio, alarme, engate.',
-  },
-  {
-    id: 'vpc', termo: 'VPC e sub-rede', padroes: ['vpcs?', 'sub-redes?', 'subnets?'],
-    definicao: 'A rede privada da sua conta na nuvem, dividida em sub-redes (públicas, com saída para a internet, ou privadas).',
-    analogia: 'O terreno cercado do condomínio, com as ruas internas.',
-  },
-  {
-    id: 'cni', termo: 'CNI (rede dos Pods)', padroes: ['cni', 'vpc cni', 'kubenet'],
-    definicao: 'O plugin que dá IP e rede aos Pods. No EKS, o VPC CNI dá a cada Pod um IP da própria VPC.',
-    analogia: 'A companhia telefônica que distribui os ramais.',
-  },
-  {
-    id: 'alb', termo: 'ALB', padroes: ['alb', 'application load balancer', 'aws load balancer controller'],
-    definicao: 'O balanceador HTTP da AWS. O AWS Load Balancer Controller cria um ALB a partir de um Ingress.',
-    analogia: 'A recepção do prédio comercial, que lê o crachá e manda cada visitante para o andar certo.',
-  },
-  {
-    id: 'security-group', termo: 'Security group', padroes: ['security ?groups?', 'grupos? de seguran[çc]a'],
-    definicao: 'O firewall de uma máquina (ou Pod) na AWS: diz quais portas e origens podem entrar.',
-    analogia: 'O segurança da porta com a lista de quem pode entrar.',
-  },
-  {
-    id: 'ebs', termo: 'EBS', padroes: ['ebs', 'gp3'],
-    definicao: 'O disco da AWS que se pluga em uma máquina por vez, numa zona (como ReadWriteOnce).',
-    analogia: 'Um HD externo: liga em um computador de cada vez.',
-  },
-  {
-    id: 'efs', termo: 'EFS', padroes: ['efs'],
-    definicao: 'O sistema de arquivos compartilhado da AWS: vários Pods, em vários nós e zonas, leem e escrevem juntos (RWX).',
-    analogia: 'Uma pasta na rede da empresa que todo mundo abre ao mesmo tempo.',
+    id: 'vpc-cni', termo: 'VPC CNI', nivel: 'aws', padroes: ['vpc cni', 'cni'],
+    definicao: 'O plugin de rede que dá a cada Pod um IP de verdade da VPC.',
+    analogia: 'Cada morador ganha um endereço próprio da rua, em vez de dividir o do prédio.',
   },
 
   // ---------- Azure ----------
   {
-    id: 'azure', termo: 'Azure', padroes: ['azure', 'microsoft azure'],
-    definicao: 'A nuvem da Microsoft, com máquinas, redes, bancos e serviços gerenciados, organizados em grupos de recursos.',
-    analogia: 'Outra imobiliária gigante, com regras e nomes próprios.',
+    id: 'aks', termo: 'AKS', nivel: 'azure', padroes: ['aks'],
+    definicao: 'Azure Kubernetes Service: o Kubernetes gerenciado da Microsoft Azure.',
+    analogia: 'O mesmo aluguel de cozinha montada, agora em outro shopping.',
   },
   {
-    id: 'aks', termo: 'AKS', padroes: ['aks'],
-    definicao: 'O Kubernetes gerenciado da Azure: a Microsoft cuida do plano de controle, e você dos node pools e dos Pods.',
-    analogia: 'O mesmo condomínio com administradora, só que de outra empresa.',
-  },
-  {
-    id: 'entra-id', termo: 'Entra ID (Azure AD)', padroes: ['entra id', 'azure ad', 'aad', 'microsoft entra'],
-    definicao: 'O serviço de identidades da Microsoft: contas de pessoas e de aplicações, que podem entrar no AKS.',
+    id: 'entra', termo: 'Microsoft Entra ID', nivel: 'azure', padroes: ['entra( id)?', 'aad', 'azure ad'],
+    definicao: 'O serviço de identidade da Azure (antigo Azure AD). No AKS, autentica pessoas e, com Workload Identity, Pods.',
     analogia: 'O RH que emite os crachás de todos os funcionários.',
   },
   {
-    id: 'identidade-gerenciada', termo: 'Identidade gerenciada (Workload Identity)', padroes: ['identidades? gerenciadas?', 'managed identity', 'workload identity'],
-    definicao: 'Uma identidade da Azure ligada ao Pod (pela ServiceAccount), para acessar serviços sem senha no código.',
-    analogia: 'Um crachá com digital: não precisa decorar senha nenhuma.',
+    id: 'workload-identity', termo: 'Workload Identity', nivel: 'azure', padroes: ['workload identity', 'identidade gerenciada', 'managed identity'],
+    definicao: 'Dá ao Pod uma identidade da Azure pela ServiceAccount, sem senha guardada no cluster.',
+    analogia: 'O crachá temporário da portaria, versão Azure.',
   },
   {
-    id: 'spot', termo: 'Spot', padroes: ['spot'],
-    definicao: 'Máquinas que sobraram na nuvem, bem mais baratas, mas que podem ser tomadas de volta a qualquer momento.',
-    analogia: 'A passagem de última hora: barata, mas você pode perder o lugar.',
+    id: 'agic', termo: 'AGIC', nivel: 'azure', padroes: ['agic', 'application gateway'],
+    definicao: 'Application Gateway Ingress Controller: transforma um Ingress em regras do Application Gateway da Azure.',
+    analogia: 'A recepção do prédio, agora configurada a partir das placas (Ingress).',
   },
   {
-    id: 'agic', termo: 'AGIC (Application Gateway)', padroes: ['agic', 'application gateway'],
-    definicao: 'O controlador que transforma um Ingress em regras do Application Gateway, o balanceador HTTP da Azure.',
-    analogia: 'O tradutor que passa as regras do porteiro para a recepção do prédio vizinho.',
-  },
-  {
-    id: 'azure-disk-files', termo: 'Azure Disk e Azure Files', padroes: ['azure disk', 'azure files', 'managed-csi', 'azurefile'],
-    definicao: 'Azure Disk é o disco de uma máquina por vez (RWO); Azure Files é a pasta compartilhada por vários Pods (RWX).',
-    analogia: 'O HD externo e a pasta da rede, versão Microsoft.',
-  },
-
-  // ---------- Projetos ----------
-  {
-    id: 'microsservico', termo: 'Microsserviços', padroes: ['micro-?servi[çc]os?', 'microservices?'],
-    definicao: 'Dividir a aplicação em serviços pequenos (frontend, API, banco), cada um com o seu Deployment e o seu Service.',
-    analogia: 'Uma praça de alimentação: cada loja faz uma coisa, e todas atendem juntas.',
-  },
-  {
-    id: 'frontend-backend', termo: 'Frontend e backend', padroes: ['frontend', 'backend'],
-    definicao: 'Frontend é a parte que a pessoa vê (o site); backend é a que guarda e calcula (a API e o banco).',
-    analogia: 'O salão do restaurante e a cozinha.',
-  },
-  {
-    id: 'service-discovery', termo: 'Service discovery', padroes: ['service discovery', 'descoberta de servi[çc]os?'],
-    definicao: 'Como um serviço acha o outro: pelo nome do Service no DNS ou pelas variáveis que o Kubernetes injeta no Pod.',
-    analogia: 'A placa com o mapa das lojas na entrada do shopping.',
-  },
-  {
-    id: 'ambientes', termo: 'Ambientes (dev, homologação, produção)', padroes: ['ambientes', 'produ[çc][ãa]o', 'homologa[çc][ãa]o', 'staging'],
-    definicao: 'Cópias da aplicação para fases diferentes: dev para testar, homologação para conferir e produção para o público.',
-    analogia: 'Ensaio, ensaio geral e estreia de uma peça de teatro.',
-  },
-  {
-    id: 'multicloud', termo: 'Multicloud', padroes: ['multi-?cloud', 'multi-?nuvem', 'cloud-agnostic'],
-    definicao: 'Usar mais de uma nuvem (AWS e Azure, por exemplo) com manifestos que funcionam nas duas.',
-    analogia: 'Ter conta em dois bancos: se um sair do ar, você usa o outro.',
-  },
-  {
-    id: 'ci-cd', termo: 'CI/CD (pipeline)', padroes: ['ci/cd', 'pipelines?', 'integra[çc][ãa]o cont[íi]nua', 'entrega cont[íi]nua'],
-    definicao: 'A esteira automática que testa (CI) e publica (CD) cada mudança, sem passos manuais.',
-    analogia: 'A linha de montagem de uma fábrica: cada etapa confere e passa para a próxima.',
-  },
-
-  // ---------- Comparação com o Terraform ----------
-  {
-    id: 'terraform', termo: 'Terraform', padroes: ['terraform'],
-    definicao: 'Ferramenta de infraestrutura como código que cria a infraestrutura (redes, clusters, bancos); o Kubernetes cuida do que roda dentro do cluster.',
-    analogia: 'O Terraform constrói o prédio; o Kubernetes administra quem mora nele.',
-  },
-  {
-    id: 'iac', termo: 'Infraestrutura como Código (IaC)', padroes: ['infraestrutura como c[óo]digo', 'iac'],
-    definicao: 'Criar servidores, redes e bancos escrevendo código, em vez de clicar num painel.',
-    analogia: 'Uma receita de bolo: qualquer pessoa que seguir a receita chega no mesmo bolo, sempre.',
-  },
-  {
-    id: 'provider', termo: 'Provider (provedor)', padroes: ['providers?', 'provedor(es)?'],
-    definicao: 'No Terraform, o plugin que fala com uma plataforma (aws, azurerm, kubernetes).',
-    analogia: 'Um tradutor: o Terraform fala uma língua só, e cada provider traduz para a plataforma certa.',
-  },
-  {
-    id: 'workspace', termo: 'Workspace', padroes: ['workspaces?'],
-    definicao: 'No Terraform, estados separados do mesmo código (dev, prod). No Kubernetes, o mais parecido é o namespace.',
-    analogia: 'Cadernos diferentes para cada matéria, com a mesma capa.',
-  },
-  {
-    id: 'state-backend', termo: 'Estado e backend remoto', padroes: ['tfstate', 'backend remoto', 'locking'],
-    definicao: 'O Terraform guarda o que criou num arquivo de estado, de preferência remoto e com trava para duas pessoas não aplicarem juntas.',
-    analogia: 'O livro de registro da obra, guardado no escritório, com uma pessoa escrevendo por vez.',
-  },
-  {
-    id: 'imutavel', termo: 'Infraestrutura imutável', padroes: ['imut[áa]ve(l|is)', 'immutable'],
-    definicao: 'Em vez de consertar uma máquina ou um Pod, você troca por um novo, feito da imagem atualizada.',
-    analogia: 'Trocar a lâmpada queimada por uma nova, em vez de tentar consertar o filamento.',
-  },
-  {
-    id: 'policy', termo: 'Política como código (OPA, Sentinel)', padroes: ['opa', 'sentinel', 'gatekeeper', 'kyverno', 'pol[íi]ticas? como c[óo]digo'],
-    definicao: 'Regras escritas em código que barram o que não pode (imagem sem versão, Pod como root) antes de chegar ao cluster.',
-    analogia: 'O fiscal da prefeitura que confere a planta antes de liberar a obra.',
+    id: 'azure-disk', termo: 'Azure Disk e Azure Files', nivel: 'azure', padroes: ['azure disk', 'azure files', 'managed-csi', 'azurefile'],
+    definicao: 'Azure Disk: disco de um nó por vez (ReadWriteOnce). Azure Files: compartilhamento de rede para vários Pods (ReadWriteMany).',
+    analogia: 'O HD externo e a pasta compartilhada, versão Azure.',
   },
 ];
 
@@ -642,32 +503,47 @@ const REGEX = new Map(GLOSSARIO.map((t) => [
   new RegExp(`(?<!${LETRA})(?:${t.padroes.join('|')})(?!${LETRA})`, 'iu'),
 ]));
 
-// Nível de cada termo: o módulo em que ele aparece primeiro (a ordem do glossário).
-const ORDEM_MODULOS = ['fundamentos', 'avancados', 'aws', 'azure', 'projeto-microservicos', 'projeto-multicloud', 'comparacao'];
-const INICIO_DO_NIVEL = { fundamentos: 'kubernetes', avancados: 'rbac', aws: 'aws', azure: 'azure', 'projeto-microservicos': 'microsservico', 'projeto-multicloud': 'multicloud', comparacao: 'terraform' };
-const NIVEL = new Map();
-{
-  let nivel = 0;
-  for (const t of GLOSSARIO) {
-    const novo = Object.entries(INICIO_DO_NIVEL).find(([, id]) => id === t.id);
-    if (novo) nivel = ORDEM_MODULOS.indexOf(novo[0]);
-    NIVEL.set(t.id, nivel);
-  }
+/** Nível do módulo do item: aws-*, azure-* e projeto-* contam como o nível mais alto que usam. */
+function nivelDoModulo(modulo) {
+  if (!modulo) return Infinity;
+  if (modulo.startsWith('projeto') || modulo === 'comparacao') return NIVEIS.length;
+  const i = NIVEIS.indexOf(modulo);
+  return i < 0 ? Infinity : i;
 }
 
 /**
  * Termos do glossário que aparecem no texto, na ordem em que aparecem.
- * Se passarem de `max`, ficam os do nível do módulo (ou o mais próximo dele):
- * num exercício de AWS, "IRSA" importa mais do que "Pod", já visto no começo.
+ * Se passarem de `max`, ficam primeiro os que o aluno ainda não viu (`vistos`: ids dos termos
+ * que já apareceram em itens anteriores da trilha), depois os do nível do módulo.
  */
-export function termosDoTexto(texto, { max = MAX_TERMOS, modulo } = {}) {
-  const nivelItem = modulo ? ORDEM_MODULOS.indexOf(modulo) : Infinity;
-  const prioridade = (t) => Math.min(NIVEL.get(t.id), nivelItem);
+export function termosDoTexto(texto, { max = MAX_TERMOS, modulo, vistos } = {}) {
+  const nivelItem = nivelDoModulo(modulo);
+  const prioridade = (t) => Math.min(NIVEIS.indexOf(t.nivel), nivelItem);
+  const novo = (t) => (vistos?.has(t.id) ? 0 : 1);
   return GLOSSARIO
     .map((t) => ({ termo: t, posicao: texto.search(REGEX.get(t.id)) }))
     .filter((x) => x.posicao >= 0)
-    .sort((a, b) => prioridade(b.termo) - prioridade(a.termo) || a.posicao - b.posicao)
+    .sort((a, b) => novo(b.termo) - novo(a.termo) || prioridade(b.termo) - prioridade(a.termo) || a.posicao - b.posicao)
     .slice(0, max)
     .sort((a, b) => a.posicao - b.posicao)
     .map((x) => x.termo);
+}
+
+/** Texto visível de um item (título, enunciado e, na lição, o exemplo comentado). */
+export const textoDoItem = (item) => `${item.titulo} ${item.resumo ?? ''} ${item.tipo === 'licao' ? item.inicial ?? '' : ''}`
+  .replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+/**
+ * Para cada item da lista (na ordem da trilha), os termos que já apareceram nos itens
+ * anteriores. É o que faz o glossário destacar o termo no primeiro uso.
+ */
+export function termosVistosAntes(lista) {
+  const vistos = new Set();
+  const porItem = new Map();
+  for (const item of lista) {
+    porItem.set(item.id, new Set(vistos));
+    const t = textoDoItem(item);
+    for (const termo of GLOSSARIO) if (REGEX.get(termo.id).test(t)) vistos.add(termo.id);
+  }
+  return porItem;
 }

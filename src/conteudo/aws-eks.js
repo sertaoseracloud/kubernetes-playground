@@ -57,8 +57,28 @@ export const awsEks = {
       titulo: 'ServiceAccount com IRSA',
       dificuldade: 'dificil',
       xp: 20,
-      resumo: `<p>Crie uma ServiceAccount chamada <code>s3-reader</code> no namespace <code>default</code> com a anotação IRSA apontando para a role <code>arn:aws:iam::123456789012:role/S3ReadRole</code>.</p>
-        <p>A anotação deve ser <code>eks.amazonaws.com/role-arn</code>.</p>`,
+      resumo: `
+        <p>Um Pod que lê arquivos do S3 precisa de permissão da AWS. Com <b>IRSA</b>, ela vem da ServiceAccount: uma annotation diz qual
+        <b>role do IAM</b> o Pod pode assumir, sem nenhuma chave de acesso guardada no cluster.</p>
+        <ol>
+          <li>Crie a ServiceAccount <code>s3-reader</code> no namespace <code>default</code>.</li>
+          <li>Em <code>metadata.annotations</code>, a chave <code>eks.amazonaws.com/role-arn</code>.</li>
+          <li>O valor é o ARN da role: <code>arn:aws:iam::123456789012:role/S3ReadRole</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> um webhook do EKS injeta nos Pods dessa ServiceAccount um token e as variáveis
+        <code>AWS_ROLE_ARN</code> e <code>AWS_WEB_IDENTITY_TOKEN_FILE</code>. O SDK da AWS troca o token por credenciais temporárias da role.</p>`,
+      inicial: `apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: s3-reader
+  namespace: default
+  annotations:
+    # TODO: eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/S3ReadRole
+`,
+      dica: [
+        "A annotation é um par chave: valor dentro de metadata.annotations.",
+        "eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/S3ReadRole",
+      ],
       solucao: `apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -69,10 +89,12 @@ metadata:
       testes: [
         {
           descricao: 'A ServiceAccount s3-reader existe',
+          dica: "Mantenha metadata.name: s3-reader e preencha a annotation (annotations vazio impede o apply).",
           regras: [{ tipo: 'recurso-existe', kind: 'ServiceAccount', nome: 's3-reader' }],
         },
         {
           descricao: 'A ServiceAccount tem a anotação IRSA correta',
+          dica: "Em metadata.annotations: eks.amazonaws.com/role-arn com o ARN completo da role S3ReadRole.",
           regras: [{ tipo: 'serviceaccount-anotacao', sa: 's3-reader', anotacao: 'eks.amazonaws.com/role-arn', valor: 'arn:aws:iam::123456789012:role/S3ReadRole' }],
         },
       ],
@@ -83,8 +105,34 @@ metadata:
       titulo: 'ConfigMap aws-auth',
       dificuldade: 'medio',
       xp: 15,
-      resumo: `<p>Crie um ConfigMap chamado <code>aws-auth</code> no namespace <code>kube-system</code> que mapeia a role IAM <code>arn:aws:iam::123456789012:role/NodeRole</code> para o grupo <code>system:nodes</code>.</p>
-        <p>O dado deve conter a chave <code>mapRoles</code> com o mapeamento YAML correspondente.</p>`,
+      resumo: `
+        <p>Nos clusters EKS mais antigos, o ConfigMap <code>aws-auth</code> (no <code>kube-system</code>) diz quais roles do IAM entram no
+        cluster e com quais grupos. Os nós precisam da role deles mapeada, senão não conseguem se registrar. (Nos clusters novos, o
+        mesmo é feito com <b>access entries</b>, pela API do EKS.)</p>
+        <ol>
+          <li>O ConfigMap se chama <code>aws-auth</code> e fica no namespace <code>kube-system</code>.</li>
+          <li>Em <code>data</code>, a chave <code>mapRoles</code> recebe um <b>texto em YAML</b> (por isso o <code>|</code>, que começa um texto de várias linhas).</li>
+          <li>No item da lista: <code>rolearn: arn:aws:iam::123456789012:role/NodeRole</code>, o <code>username</code> dos nós e os grupos
+            <code>system:nodes</code> e <code>system:bootstrappers</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> quando um nó se apresenta com a NodeRole, o EKS o reconhece como <code>system:node:...</code> e ele entra
+        no grupo dos nós.</p>`,
+      inicial: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace:             # TODO: kube-system
+data:
+  mapRoles: |
+    - rolearn:           # TODO: o ARN da NodeRole (passo 3)
+      username: system:node:{{EC2PrivateDNSName}}
+      groups:
+        # TODO: os dois grupos dos nós (passo 3)
+`,
+      dica: [
+        "Depois do |, tudo que estiver recuado é o texto da chave mapRoles.",
+        "groups:\n  - system:nodes\n  - system:bootstrappers",
+      ],
       solucao: `apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -100,11 +148,13 @@ data:
       testes: [
         {
           descricao: 'O ConfigMap aws-auth existe no namespace kube-system',
+          dica: "metadata.namespace: kube-system e metadata.name: aws-auth.",
           regras: [{ tipo: 'recurso-existe', kind: 'ConfigMap', nome: 'aws-auth' }],
         },
         {
           descricao: 'O ConfigMap contém o mapeamento mapRoles',
-          regras: [{ tipo: 'configmap-contem', configmap: 'aws-auth', chave: 'mapRoles', contem: 'rolearn' }],
+          dica: "Em data.mapRoles, o rolearn da NodeRole: arn:aws:iam::123456789012:role/NodeRole.",
+          regras: [{ tipo: 'configmap-contem', configmap: 'aws-auth', chave: 'mapRoles', contem: 'rolearn' }, { tipo: 'configmap-contem', configmap: 'aws-auth', chave: 'mapRoles', contem: 'arn:aws:iam::123456789012:role/NodeRole' }, { tipo: 'configmap-contem', configmap: 'aws-auth', chave: 'mapRoles', contem: 'system:nodes' }],
         },
       ],
     },

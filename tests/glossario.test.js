@@ -18,7 +18,7 @@ describe('glossário', () => {
 
   it('acha termos com acento e na ordem em que aparecem', () => {
     const ids = termosDoTexto('Crie um Pod com uma variável de ambiente, rótulos e um Service na frente.').map((t) => t.id);
-    expect(ids).toEqual(['pod', 'variavel-ambiente', 'label', 'service']);
+    expect(ids).toEqual(['pod', 'env', 'label', 'service']);
   });
 
   it('não confunde palavras parecidas', () => {
