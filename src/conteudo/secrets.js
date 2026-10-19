@@ -1,6 +1,16 @@
-// Módulo avançado: Secrets e Segurança.
-// Lições sobre Secrets, comparação com ConfigMaps e integração com ferramentas externas.
-// Exercícios com validação via recurso-existe, secret-contem, resource-limits e volume-montado.
+// Recursos Avançados: Secrets e Segurança.
+// Segue docs/didatica.md: lição com exemplo comentado antes de cada exercício.
+import { licao, exercicio, teste } from './util.js';
+
+/** O Secret do primeiro exercício: o segundo já o encontra no cluster. */
+const DB_CREDENTIALS = `apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+type: Opaque
+stringData:
+  username: admin
+  password: s3cret0!`;
 
 export const secrets = {
   id: 'secrets',
@@ -8,117 +18,157 @@ export const secrets = {
   descricao: 'Gerenciamento de dados sensíveis com Secrets, boas práticas e integrações externas.',
   icone: '🔐',
   itens: [
-    {
-      id: 'secrets-conceito',
-      tipo: 'licao',
-      titulo: 'Secrets no Kubernetes',
-      dificuldade: 'facil',
-      xp: 5,
-      resumo: `<p><b>Secrets</b> armazenam dados sensíveis como senhas, tokens e certificados. Eles funcionam como ConfigMaps, mas com tratamento especial:</p>
-        <ul>
-          <li>Os valores são codificados em <b>base64</b> no YAML (não é criptografia!).</li>
-          <li>O campo <code>stringData</code> aceita texto puro e o Kubernetes converte para base64 automaticamente.</li>
-          <li>Secrets podem ser montados como volumes ou injetados como variáveis de ambiente.</li>
-        </ul>
-        <p>Tipos comuns de Secret:</p>
-        <dl>
-          <dt><code>Opaque</code></dt><dd>Tipo genérico para pares chave-valor arbitrários.</dd>
-          <dt><code>kubernetes.io/dockerconfigjson</code></dt><dd>Credenciais para puxar imagens de registries privados.</dd>
-          <dt><code>kubernetes.io/tls</code></dt><dd>Certificado TLS e chave privada para Ingress e Services.</dd>
-        </dl>
-        <p>Secrets podem ser marcados como <b>imutáveis</b> (<code>immutable: true</code>), o que melhora performance e previne alterações acidentais.</p>`,
-    },
-    {
-      id: 'secrets-vs-configmaps',
-      tipo: 'licao',
-      titulo: 'ConfigMaps vs Secrets',
-      dificuldade: 'medio',
-      xp: 5,
-      resumo: `<p>A escolha entre ConfigMap e Secret depende da natureza do dado:</p>
-        <table>
-          <thead><tr><th>Aspecto</th><th>ConfigMap</th><th>Secret</th></tr></thead>
-          <tbody>
-            <tr><td>Uso</td><td>Configurações não sensíveis</td><td>Dados sensíveis (senhas, tokens)</td></tr>
-            <tr><td>Armazenamento</td><td>Texto puro</td><td>Base64 (etcd pode criptografar em repouso)</td></tr>
-            <tr><td>RBAC</td><td>Permissões padrão</td><td>Pode ter políticas de acesso restritas</td></tr>
-            <tr><td>Audit</td><td>Não auditado por padrão</td><td>Pode ser auditado via audit policy</td></tr>
-          </tbody>
-        </table>
-        <p><b>Montagem como volume vs env vars</b>:</p>
-        <ul>
-          <li><b>Volume</b>: o arquivo é atualizado automaticamente quando o Secret muda (se não for imutável). Ideal para certificados e configs que mudam.</li>
-          <li><b>Env vars</b>: mais simples, mas o Pod precisa reiniciar para pegar mudanças. Use <code>envFrom</code> para injetar todas as chaves de uma vez.</li>
-          <li><b>subPath</b>: monta apenas uma chave específica do Secret como arquivo, útil quando o container espera um caminho exato.</li>
-        </ul>`,
-    },
-    {
-      id: 'secrets-vault-external',
-      tipo: 'licao',
-      titulo: 'Integração com Vault e External Secrets',
-      dificuldade: 'dificil',
-      xp: 5,
-      resumo: `<p>Em produção, armazenar Secrets diretamente no etcd pode não atender requisitos de segurança. Ferramentas externas resolvem isso:</p>
-        <dl>
-          <dt><b>Sealed Secrets</b></dt><dd>Você criptografa o Secret localmente com uma chave pública. Só o controller no cluster pode descriptografar. O arquivo criptografado pode ir para o Git com segurança.</dd>
-          <dt><b>External Secrets Operator</b></dt><dd>Sincroniza segredos de provedores externos (AWS Secrets Manager, HashiCorp Vault, Azure Key Vault) para Secrets nativos do Kubernetes via CRDs <code>ExternalSecret</code>.</dd>
-          <dt><b>CSI Secret Store Driver</b></dt><dd>Monta segredos de provedores externos diretamente como volumes, sem criar objetos Secret no etcd. Mais seguro porque o dado sensível nunca toca o etcd.</dd>
-        </dl>
-        <p><b>Boas práticas</b>:</p>
-        <ul>
-          <li>Nunca coloque Secrets em variáveis de ambiente de containers que logam tudo.</li>
-          <li>Use RBAC para restringir quem pode ler Secrets em cada namespace.</li>
-          <li>Ative criptografia em repouso no etcd para clusters de produção.</li>
-          <li>Prefira montar como volume em vez de env vars para facilitar rotação.</li>
-          <li>Use <code>immutable: true</code> para Secrets que não devem mudar.</li>
-        </ul>`,
-    },
-    {
+    licao('secrets-conceito', 'Secrets no Kubernetes', 'facil', `
+      <p><b>Secrets</b> guardam dados sensíveis: senhas, tokens, certificados. Funcionam como os ConfigMaps (chave: valor, lidos
+      como variável ou arquivo), mas com cuidados extras: o acesso pode ser restrito por RBAC e o cluster pode criptografá-los
+      no etcd. É o cofre do escritório, ao lado do quadro de avisos.</p>
+      <ul>
+        <li>No campo <code>data</code>, os valores vão em <b>base64</b>. Atenção: base64 <b>não é criptografia</b>, é só outro jeito
+          de escrever o texto; qualquer um decodifica.</li>
+        <li>No campo <code>stringData</code>, você escreve o texto puro e o Kubernetes converte para base64 sozinho. Mais fácil
+          para começar.</li>
+        <li><code>immutable: true</code> impede alterações acidentais (para mudar, cria-se outro Secret).</li>
+      </ul>
+      <p>Tipos comuns (<code>type</code>):</p>
+      <dl>
+        <dt><code>Opaque</code></dt><dd>O genérico, para pares chave: valor quaisquer.</dd>
+        <dt><code>kubernetes.io/dockerconfigjson</code></dt><dd>Credenciais para baixar imagens de registries privados.</dd>
+        <dt><code>kubernetes.io/tls</code></dt><dd>Certificado e chave privada, usados no <code>tls</code> do Ingress.</dd>
+      </dl>
+      <p><b>No cluster:</b> <code>kubectl get secret NOME -o yaml</code> mostra os valores em base64; quem tem permissão de
+      ler Secrets consegue ver as senhas. Por isso o RBAC dos Secrets importa tanto.</p>`,
+    `
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: cofre-api
+      type: Opaque               # o tipo genérico
+      stringData:                # texto puro; o cluster converte para base64
+        token: troque-este-token-de-exemplo
+      # Com "data" em vez de "stringData", o valor já iria em base64:
+      #   data:
+      #     token: dHJvcXVlLWVzdGUtdG9rZW4=
+    `),
+
+    exercicio({
       id: 'secrets-opaque-credenciais',
-      tipo: 'exercicio',
       titulo: 'Secret Opaque com credenciais',
       dificuldade: 'facil',
-      xp: 10,
-      resumo: `<p>Crie um <b>Secret</b> do tipo Opaque chamado <code>db-credentials</code> com as credenciais de acesso ao banco de dados.</p>
-        <ul>
-          <li><code>username</code>: <code>admin</code></li>
-          <li><code>password</code>: <code>s3cret0!</code></li>
-        </ul>
-        <p>Use o campo <code>stringData</code> para informar os valores em texto puro (o Kubernetes converte para base64).</p>`,
-      solucao: `apiVersion: v1
-kind: Secret
-metadata:
-  name: db-credentials
-type: Opaque
-stringData:
-  username: admin
-  password: s3cret0!`,
-      testes: [
-        {
-          descricao: 'O Secret db-credentials existe',
-          regras: [{ tipo: 'recurso-existe', kind: 'Secret', nome: 'db-credentials' }],
-        },
-        {
-          descricao: 'O Secret contém a chave username',
-          regras: [{ tipo: 'secret-contem', nome: 'db-credentials', chave: 'username', valor: 'admin' }],
-        },
-        {
-          descricao: 'O Secret contém a chave password',
-          regras: [{ tipo: 'secret-contem', nome: 'db-credentials', chave: 'password', valor: 's3cret0!' }],
-        },
+      resumo: `
+        <p>Guarde as credenciais do banco de dados num Secret.</p>
+        <ol>
+          <li>Crie o Secret <code>db-credentials</code> com <code>type: Opaque</code>.</li>
+          <li>Em <code>stringData</code>, a chave <code>username</code> com o valor <code>admin</code>.</li>
+          <li>E a chave <code>password</code> com o valor <code>s3cret0!</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o Secret é guardado com os valores em base64. Os Pods que o usarem recebem o texto original.</p>`,
+      inicial: `
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: db-credentials
+        type:                  # TODO: Opaque
+        stringData:
+          # TODO: username: admin
+          # TODO: password: s3cret0!
+      `,
+      dica: [
+        'stringData fica na raiz (o Secret não tem spec), com as chaves 2 espaços para dentro.',
+        'stringData:\n  username: admin\n  password: s3cret0!',
       ],
-    },
-    {
+      solucao: DB_CREDENTIALS,
+      testes: [
+        teste({ descricao: 'O Secret db-credentials existe', dica: 'Preencha o type: um valor vazio impede o apply.' },
+          { tipo: 'recurso-existe', kind: 'Secret', nome: 'db-credentials' }),
+        teste({ descricao: 'O Secret contém a chave username', dica: 'Em stringData, escreva username: admin.' },
+          { tipo: 'secret-contem', nome: 'db-credentials', chave: 'username', valor: 'admin' }),
+        teste({ descricao: 'O Secret contém a chave password', dica: 'Em stringData, escreva password: s3cret0!' },
+          { tipo: 'secret-contem', nome: 'db-credentials', chave: 'password', valor: 's3cret0!' }),
+      ],
+    }),
+
+    licao('secrets-vs-configmaps', 'ConfigMaps vs Secrets', 'medio', `
+      <p>A escolha depende do dado: se vazar e não fizer mal (o nome do banco), ConfigMap; se fizer (a senha do banco), Secret.</p>
+      <table>
+        <thead><tr><th scope="col">Aspecto</th><th scope="col">ConfigMap</th><th scope="col">Secret</th></tr></thead>
+        <tbody>
+          <tr><td>Uso</td><td>Configurações não sensíveis</td><td>Dados sensíveis (senhas, tokens)</td></tr>
+          <tr><td>Armazenamento</td><td>Texto puro</td><td>Base64 (o etcd pode criptografar em repouso)</td></tr>
+          <tr><td>RBAC</td><td>Permissões padrão</td><td>Pode ter acesso bem restrito</td></tr>
+        </tbody>
+      </table>
+      <p>Três jeitos de entregar um Secret ao container:</p>
+      <ul>
+        <li><b>Volume</b> (<code>volumes[].secret.secretName</code>): cada chave vira um arquivo. O arquivo é atualizado quando o
+          Secret muda. Ideal para certificados. Monte com <code>readOnly: true</code>.</li>
+        <li><b>Uma variável</b> (<code>env[].valueFrom.secretKeyRef</code>): igual ao <code>configMapKeyRef</code>.</li>
+        <li><b>Todas as chaves de uma vez</b> (<code>envFrom[].secretRef</code>): cada chave vira uma variável com o mesmo nome. O
+          Pod precisa reiniciar para pegar mudanças.</li>
+      </ul>`,
+    `
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: usa-cofre
+      spec:
+        containers:
+          - name: app
+            image: nginx:1.25
+            envFrom:                 # todas as chaves viram variáveis
+              - secretRef:
+                  name: cofre-api
+            volumeMounts:            # e também como arquivos em /etc/cofre
+              - name: cofre
+                mountPath: /etc/cofre
+                readOnly: true
+        volumes:
+          - name: cofre
+            secret:                  # o tipo do volume
+              secretName: cofre-api
+    `),
+
+    exercicio({
       id: 'secrets-pod-volume',
-      tipo: 'exercicio',
       titulo: 'Pod com Secret montado',
       dificuldade: 'medio',
-      xp: 15,
-      resumo: `<p>Crie um <b>Pod</b> chamado <code>app-com-secret</code> que monte o Secret <code>db-credentials</code> como volume e também use <code>envFrom</code>.</p>
-        <ul>
-          <li>Imagem: <code>nginx:1.25</code></li>
-          <li>Monte o Secret como volume no caminho <code>/etc/secrets</code></li>
-          <li>Defina limits de CPU (<code>200m</code>) e memória (<code>128Mi</code>)</li>
-        </ul>`,
+      existentes: DB_CREDENTIALS,
+      resumo: `
+        <p>O Secret <code>db-credentials</code> já está no cluster. Entregue-o à aplicação como arquivos e como variáveis.</p>
+        <ol>
+          <li>No Pod <code>app-com-secret</code> (container <code>app</code>, imagem <code>nginx:1.25</code>), declare o volume
+            <code>credenciais</code> do tipo <code>secret</code> com <code>secretName: db-credentials</code>.</li>
+          <li>Monte <code>credenciais</code> em <code>/etc/secrets</code> com <code>readOnly: true</code>.</li>
+          <li>Em <code>envFrom</code>, um item <code>secretRef</code> com <code>name: db-credentials</code>.</li>
+          <li>Em <code>resources.limits</code>: <code>cpu: 200m</code> e <code>memory: 128Mi</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o container vê os arquivos <code>/etc/secrets/username</code> e <code>/etc/secrets/password</code> e as
+        variáveis <code>username</code> e <code>password</code>.</p>`,
+      inicial: `
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: app-com-secret
+        spec:
+          containers:
+            - name: app
+              image: nginx:1.25
+              resources:
+                limits:
+                  cpu:         # TODO: 200m
+                  memory:      # TODO: 128Mi
+              volumeMounts:
+                - name: credenciais
+                  mountPath:   # TODO: /etc/secrets
+                  readOnly: true
+              # TODO: envFrom com um item secretRef (name: db-credentials)
+          volumes:
+            - name: credenciais
+              # TODO: secret com secretName: db-credentials
+      `,
+      dica: [
+        'Releia o exemplo da lição "ConfigMaps vs Secrets": ele usa envFrom e o volume secret.',
+        'O tipo do volume é secret (não secretRef): secret:\n  secretName: db-credentials',
+      ],
       solucao: `apiVersion: v1
 kind: Pod
 metadata:
@@ -143,19 +193,31 @@ spec:
       secret:
         secretName: db-credentials`,
       testes: [
-        {
-          descricao: 'O Pod app-com-secret existe',
-          regras: [{ tipo: 'recurso-existe', kind: 'Pod', nome: 'app-com-secret' }],
-        },
-        {
-          descricao: 'O container tem resource limits definidos',
-          regras: [{ tipo: 'resource-limits', pod: 'app-com-secret', container: 'app' }],
-        },
-        {
-          descricao: 'O volume do Secret está montado no container',
-          regras: [{ tipo: 'volume-montado', pod: 'app-com-secret', container: 'app', mountPath: '/etc/secrets' }],
-        },
+        teste({ descricao: 'O Pod app-com-secret existe', dica: 'Preencha os TODO: um volume sem tipo impede o apply.' },
+          { tipo: 'recurso-existe', kind: 'Pod', nome: 'app-com-secret' }),
+        teste({ descricao: 'O container tem resource limits definidos', dica: 'Em resources.limits: cpu: 200m e memory: 128Mi.' },
+          { tipo: 'resource-limits', pod: 'app-com-secret', container: 'app' }),
+        teste({ descricao: 'O volume do Secret está montado no container', dica: 'Volume credenciais com secret.secretName: db-credentials, montado em /etc/secrets.' },
+          { tipo: 'volume-montado', pod: 'app-com-secret', container: 'app', mountPath: '/etc/secrets' },
+          { tipo: 'campo', kind: 'Pod', nome: 'app-com-secret', caminho: 'spec.volumes[name=credenciais].secret.secretName', valor: 'db-credentials' }),
       ],
-    },
+    }),
+
+    licao('secrets-vault-external', 'Integração com Vault e External Secrets', 'dificil', `
+      <p>Em produção, guardar senhas só no etcd (e escrever o YAML do Secret no Git) não basta. Ferramentas externas resolvem:</p>
+      <dl>
+        <dt><b>Sealed Secrets</b></dt><dd>Você tranca o Secret no seu computador com uma chave pública; só o controlador do cluster
+          tem a chave que abre. O arquivo trancado pode ir para o Git sem medo.</dd>
+        <dt><b>External Secrets Operator</b></dt><dd>Busca os segredos num cofre externo (AWS Secrets Manager, HashiCorp Vault, Azure
+          Key Vault) e cria Secrets nativos a partir deles, com o recurso <code>ExternalSecret</code>.</dd>
+        <dt><b>CSI Secret Store Driver</b></dt><dd>Monta os segredos do cofre externo direto como volume, sem criar um Secret no etcd.</dd>
+      </dl>
+      <p><b>Boas práticas</b>:</p>
+      <ul>
+        <li>Restrinja com RBAC quem pode ler Secrets em cada namespace.</li>
+        <li>Ative a criptografia em repouso do etcd nos clusters de produção.</li>
+        <li>Prefira montar como volume a usar variáveis (facilita a troca de senha e evita vazar em logs).</li>
+        <li>Use <code>immutable: true</code> nos Secrets que não devem mudar.</li>
+      </ul>`),
   ],
 };
