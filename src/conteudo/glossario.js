@@ -430,6 +430,16 @@ export const GLOSSARIO = [
     analogia: 'A mesma roupa com ajustes do alfaiate para cada pessoa.',
   },
   {
+    id: 'appproject', termo: 'AppProject e ApplicationSet', nivel: 'avancados', padroes: ['appprojects?', 'applicationsets?'],
+    definicao: 'Do Argo CD: o AppProject limita de onde vêm e para onde vão as Applications; o ApplicationSet gera várias Applications a partir de uma lista.',
+    analogia: 'A cerca do terreno (AppProject) e a fôrma de bolo que faz uma Application por ambiente (ApplicationSet).',
+  },
+  {
+    id: 'prometheus-operator', termo: 'ServiceMonitor e PrometheusRule', nivel: 'avancados', padroes: ['prometheusrules?', 'prometheus operator', 'alertmanager'],
+    definicao: 'Recursos do Prometheus Operator: o ServiceMonitor diz o que coletar; a PrometheusRule define os alertas, que o Alertmanager envia.',
+    analogia: 'A lista de ponteiros do painel e a regra de quando acender a luz de alerta.',
+  },
+  {
     id: 'crd', termo: 'CRD', nivel: 'avancados', padroes: ['crds?', 'customresourcedefinitions?', 'operador(es)?', 'operators?'],
     definicao: 'CustomResourceDefinition: ensina ao Kubernetes um tipo novo de recurso. Um operador é o controlador que cuida dele.',
     analogia: 'Acrescentar um prato novo ao cardápio e treinar um cozinheiro só para ele.',
