@@ -33,10 +33,10 @@ export const CERTIFICADOS = {
   },
   aws: {
     titulo: 'Kubernetes na AWS (EKS)',
-    cargaHoraria: 6,
-    resumo: 'concluiu o módulo Kubernetes na AWS, dominando EKS, networking e storage AWS',
+    cargaHoraria: 34,
+    resumo: 'concluiu o módulo Kubernetes na AWS, dominando EKS, identidade com IAM, nós e Karpenter, rede, storage, observabilidade, segurança e custo',
     hashtags: ['Kubernetes', 'AWS', 'EKS', 'Cloud'],
-    conteudos: ['EKS e IRSA', 'Networking AWS (VPC CNI, ALB)', 'Storage AWS (EBS, EFS)'],
+    conteudos: ['EKS e identidade (access entries, IRSA, Pod Identity)', 'Nós e escala (node groups, Karpenter, Cluster Autoscaler)', 'Rede (VPC CNI, ALB, NLB)', 'Storage (EBS, snapshots, EFS)', 'Observabilidade e segurança (CloudWatch, ADOT, Pod Security, Secrets Manager)', 'Custo e operação (Spot, PDB, requests)'],
   },
   azure: {
     titulo: 'Kubernetes no Azure (AKS)',
@@ -61,7 +61,7 @@ export const CERTIFICADOS = {
   },
   final: {
     titulo: 'Especialista Kubernetes: Trilha Completa',
-    cargaHoraria: 73,
+    cargaHoraria: 101,
     resumo: 'concluiu a trilha completa de Kubernetes, dos fundamentos ao multi-cloud',
     hashtags: ['Kubernetes', 'K8s', 'AWS', 'Azure', 'DevOps', 'Cloud Native'],
     conteudos: ['Fundamentos', 'Recursos Avançados', 'AWS (EKS)', 'Azure (AKS)', 'Projetos Práticos'],

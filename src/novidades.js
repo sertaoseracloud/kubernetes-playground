@@ -10,6 +10,31 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.5.0',
+    data: '2026-10-19',
+    titulo: 'Kubernetes na AWS de ponta a ponta',
+    resumo: 'O módulo da AWS passou de 6 para 60 exercícios: quem entra no cluster, máquinas que aparecem sozinhas, rede, discos, logs, segurança e como gastar menos.',
+    grupos: [
+      {
+        titulo: '🟠 Módulo da AWS',
+        itens: [
+          'Seis tópicos, na ordem em que se aprende: identidade, máquinas, rede, discos, observabilidade e segurança, e custo.',
+          'Dez lições novas, cada uma com uma comparação do dia a dia e um exemplo comentado que abre no editor.',
+          'Exercícios com os recursos de verdade da AWS: permissões das pessoas e dos programas, grupos de máquinas e o Karpenter, balanceadores ALB e NLB, discos EBS com fotos de backup, pastas compartilhadas no EFS, logs no CloudWatch, senhas no Secrets Manager e máquinas Spot.',
+          'O certificado da AWS passou a valer 34 horas, e o da trilha completa, 101 horas. Os certificados já emitidos continuam válidos.',
+        ],
+      },
+      {
+        titulo: '🧪 Correção',
+        itens: [
+          'Cada exercício novo tem casos ocultos, que rodam quando você clica em ⬆ Enviar.',
+          'O cluster simulado recusa o que o cluster de verdade recusaria, como um Pod que não segue as regras de segurança do namespace, e a mensagem diz o que falta.',
+          'O glossário ganhou mais de vinte palavras da AWS e da nuvem, sempre com uma comparação simples.',
+        ],
+      },
+    ],
+  },
+  {
     versao: '0.4.0',
     data: '2026-10-19',
     titulo: 'Cenários de volta e as mesmas ferramentas do DivergeTerraform',
