@@ -316,6 +316,52 @@ export const GLOSSARIO = [
     analogia: 'O orçamento mensal de um departamento: cada pessoa gasta, mas o total não passa do teto.',
   },
 
+  {
+    id: 'priorityclass', termo: 'PriorityClass', nivel: 'fundamentos', padroes: ['priorityclass(es)?', 'priorityclassname'],
+    definicao: 'Um número de importância para Pods. Quando falta espaço, os de prioridade maior são agendados primeiro.',
+    analogia: 'A fila preferencial do banco: quem tem prioridade é atendido antes.',
+  },
+  {
+    id: 'topology-spread', termo: 'topologySpreadConstraints', nivel: 'fundamentos', padroes: ['topologyspreadconstraints', 'maxskew'],
+    definicao: 'Regras para espalhar as réplicas entre zonas ou nós, para uma queda não derrubar todas.',
+    analogia: 'Não guardar todos os ovos na mesma cesta.',
+  },
+  {
+    id: 'headless', termo: 'Headless Service', nivel: 'fundamentos', padroes: ['headless'],
+    definicao: 'Um Service sem IP próprio (clusterIP: None): o DNS responde com o IP de cada Pod.',
+    analogia: 'Uma lista com o telefone de cada atendente, em vez da central única.',
+  },
+  {
+    id: 'externalname', termo: 'ExternalName', nivel: 'fundamentos', padroes: ['externalname'],
+    definicao: 'Um Service que é só um apelido de DNS para um endereço de fora do cluster.',
+    analogia: 'Um atalho na área de trabalho que aponta para um site.',
+  },
+  {
+    id: 'endpointslice', termo: 'EndpointSlice', nivel: 'fundamentos', padroes: ['endpointslices?', 'endpoints'],
+    definicao: 'A lista de IPs dos Pods prontos que um Service atende, mantida automaticamente a partir do selector.',
+    analogia: 'A lista de chamada da turma, atualizada a cada entrada e saída.',
+  },
+  {
+    id: 'canary', termo: 'Canary e blue-green', nivel: 'fundamentos', padroes: ['canary', 'blue-green'],
+    definicao: 'Jeitos de lançar uma versão nova com segurança: para poucos usuários primeiro (canary) ou com troca total e volta rápida (blue-green).',
+    analogia: 'Provar a comida antes de servir para todos os convidados.',
+  },
+  {
+    id: 'downward-api', termo: 'Downward API', nivel: 'fundamentos', padroes: ['downward api', 'fieldref'],
+    definicao: 'Entrega ao container dados do próprio Pod (nome, namespace, nó) como variável ou arquivo.',
+    analogia: 'O crachá entregue pelo RH: você não escolhe o número, mas pode lê-lo.',
+  },
+  {
+    id: 'prestop', termo: 'preStop', nivel: 'fundamentos', padroes: ['prestop', 'terminationgraceperiodseconds'],
+    definicao: 'Um comando que roda antes de o container ser desligado, para terminar o trabalho em andamento.',
+    analogia: 'Virar a placa para "fechado" e esperar os clientes saírem antes de apagar a luz.',
+  },
+  {
+    id: 'hostpath', termo: 'hostPath', nivel: 'fundamentos', padroes: ['hostpath'],
+    definicao: 'Um volume que monta uma pasta do próprio nó dentro do container. Prende o Pod àquela máquina.',
+    analogia: 'Usar a gaveta da mesa de um colega: só funciona sentado na mesa dele.',
+  },
+
   // ---------- Recursos avançados ----------
   {
     id: 'rbac', termo: 'RBAC', nivel: 'avancados', padroes: ['rbac'],
