@@ -7,7 +7,7 @@ export const XP = { licao: 5, facil: 10, medio: 20, dificil: 40 };
 export const LIMITE_DESBLOQUEIO = 70;
 
 export const NIVEIS = [
-  // A trilha inteira vale cerca de 2.560 XP: o último nível precisa caber nela
+  // A trilha inteira vale cerca de 3.030 XP: o último nível precisa caber nela
   // (tests/gamificacao.test.js confere).
   { nome: 'Iniciante', xp: 0 },
   { nome: 'Aprendiz', xp: 120 },
