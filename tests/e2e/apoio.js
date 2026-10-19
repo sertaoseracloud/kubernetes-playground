@@ -1,7 +1,7 @@
 // Apoio dos testes E2E: abrir uma tela com o navegador "limpo" e medir o que passa da borda.
-import { basico } from '../../src/conteudo/basico.js';
+import { problemas } from '../../src/conteudo/trilha.js';
 
-export const PRIMEIRO = basico.itens.find((i) => i.tipo === 'exercicio') ?? basico.itens[0];
+export const PRIMEIRO = problemas[0];
 export const TEMAS = ['dracula', 'claro', 'suave', 'alto-contraste'];
 export const TELAS = ['#/', '#/trilha', `#/p/${PRIMEIRO.id}`];
 
@@ -21,21 +21,18 @@ export async function abrir(page, hash, { tutorial = false, extras = {}, muralAp
   await page.goto(`/${hash}`);
   await page.reload();
   if (!muralApoio) {
-    const btn = page.getByRole('button', { name: /Continuar|Começar|Fechar/i });
-    if (await btn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await btn.click();
-    }
+    await page.getByRole('button', { name: 'Continuar para o projeto' }).click();
     await page.locator('#flutuantes').evaluate(async (element) => {
       await Promise.all(element.getAnimations().map((animacao) => animacao.finished.catch(() => {})));
-    }).catch(() => {});
+    });
   }
 }
 
 /**
  * Elementos visíveis que passam da borda da janela (getBoundingClientRect, que pega o estouro
  * escondido por um overflow: hidden). Ignora o que mora dentro de um contêiner com rolagem
- * horizontal própria, os textos só para leitor de tela (.sr, .sr-only) e os botões
- * flutuantes recolhidos.
+ * horizontal própria, o .cenario-palco, os textos só para leitor de tela (.sr, .sr-only) e os botões
+ * flutuantes recolhidos (saem pela direita de propósito ao rolar; são fixed e não criam rolagem).
  */
 export function medirEstouro(page) {
   return page.evaluate(() => {
