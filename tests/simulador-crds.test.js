@@ -92,6 +92,27 @@ describe('ACK (recursos do EKS em YAML)', () => {
   });
 });
 
+describe('Azure Service Operator (node pools do AKS em YAML)', () => {
+  const pool = (spec) => doc('containerservice.azure.com/v1api20240901', 'ManagedClustersAgentPool', `spec:\n  owner: {name: loja-aks}\n${spec}`);
+
+  it('exige o cluster dono e aceita só os modos, prioridades e políticas da Azure', () => {
+    expect(erro(doc('containerservice.azure.com/v1api20240901', 'ManagedClustersAgentPool', 'spec:\n  mode: User'))).toContain('spec.owner.name: Required value');
+    expect(erro(pool('  mode: Usuario'))).toContain('"System", "User", "Gateway"');
+    expect(erro(pool('  scaleSetPriority: Low'))).toContain('"Regular", "Spot"');
+    expect(erro(pool('  scaleSetEvictionPolicy: Stop'))).toContain('"Delete", "Deallocate"');
+    expect(erro(pool('  osType: Mac'))).toContain('"Linux", "Windows"');
+    expect(aplicarYaml(pool('  mode: User\n  count: 1')).mensagem).toBe('managedclustersagentpool.containerservice.azure.com/x created');
+  });
+
+  it('recusa pool System Spot, autoscaler sem limites, mínimo maior que o máximo e taint mal escrito', () => {
+    expect(erro(pool('  mode: System\n  scaleSetPriority: Spot'))).toContain('System node pools must use Regular priority');
+    expect(erro(pool('  enableAutoScaling: true\n  minCount: 1'))).toContain('minCount and maxCount are required');
+    expect(erro(pool('  minCount: 5\n  maxCount: 2'))).toContain('spec.minCount: Invalid value');
+    expect(erro(pool('  nodeTaints: ["dedicado=gpu"]'))).toContain('must be key=value:Effect');
+    expect(aplicarYaml(pool('  nodeTaints: ["CriticalAddonsOnly=true:NoSchedule", "so-chave:NoExecute"]')).ok).toBe(true);
+  });
+});
+
 describe('snapshots, Secrets Store, OpenTelemetry, KEDA, Cilium e App Routing', () => {
   it('VolumeSnapshotClass e VolumeSnapshot', () => {
     expect(erro(doc('snapshot.storage.k8s.io/v1', 'VolumeSnapshotClass', 'driver: d'))).toContain('deletionPolicy: Required value');

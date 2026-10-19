@@ -136,6 +136,29 @@ const VALIDACOES = {
   CiliumNetworkPolicy(r, erros) {
     if (!r.spec?.endpointSelector && !r.spec?.nodeSelector) erros.push(obrigatorio(r.kind, r.metadata.name, 'spec.endpointSelector'));
   },
+  // Azure Service Operator: um node pool do AKS declarado como YAML
+  ManagedClustersAgentPool(r, erros) {
+    exigir(r, ['spec.owner.name'], erros);
+    aceitar(r, 'spec.mode', ['System', 'User', 'Gateway'], erros);
+    aceitar(r, 'spec.scaleSetPriority', ['Regular', 'Spot'], erros);
+    aceitar(r, 'spec.scaleSetEvictionPolicy', ['Delete', 'Deallocate'], erros);
+    aceitar(r, 'spec.osType', ['Linux', 'Windows'], erros);
+    const s = r.spec ?? {};
+    if (s.mode === 'System' && s.scaleSetPriority === 'Spot') {
+      erros.push(invalido(r.kind, r.metadata.name, 'spec.scaleSetPriority', 'Invalid value: "Spot": System node pools must use Regular priority'));
+    }
+    if (s.enableAutoScaling === true && (s.minCount == null || s.maxCount == null)) {
+      erros.push(invalido(r.kind, r.metadata.name, 'spec', 'Required value: minCount and maxCount are required when enableAutoScaling is true'));
+    }
+    if (s.minCount != null && s.maxCount != null && Number(s.minCount) > Number(s.maxCount)) {
+      erros.push(invalido(r.kind, r.metadata.name, 'spec.minCount', 'Invalid value: must be less than or equal to maxCount'));
+    }
+    (s.nodeTaints ?? []).forEach((t, i) => {
+      if (!/^[^=:]+(=[^:]*)?:(NoSchedule|PreferNoSchedule|NoExecute)$/.test(String(t))) {
+        erros.push(invalido(r.kind, r.metadata.name, `spec.nodeTaints[${i}]`, `Invalid value: "${t}": must be key=value:Effect`));
+      }
+    });
+  },
   // App Routing do AKS
   NginxIngressController(r, erros) {
     exigir(r, ['spec.ingressClassName'], erros);

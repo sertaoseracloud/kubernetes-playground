@@ -87,6 +87,8 @@ export const API_VERSIONS = {
   ApplicationLoadBalancer: ['alb.networking.azure.io/v1'],
   // Cilium (Azure CNI powered by Cilium e Advanced Container Networking Services)
   CiliumNetworkPolicy: ['cilium.io/v2'], CiliumClusterwideNetworkPolicy: ['cilium.io/v2'],
+  // Azure Service Operator v2 (recursos do AKS declarados como YAML)
+  ManagedClustersAgentPool: ['containerservice.azure.com/v1api20240901', 'containerservice.azure.com/v1api20231001'],
 };
 
 const invalido = (kind, nome, campo, motivo) => `The ${kind} "${nome}" is invalid: ${campo}: ${motivo}`;
