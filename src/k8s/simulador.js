@@ -681,9 +681,9 @@ export function verificarRegra(regra) {
       return { ok: true, detalhe: `Secret contém a chave "${regra.chave}".`, mensagem: `Secret contém ${regra.chave}`, categoria: 'Segurança', obtido: regra.chave };
     }
     case 'service-tipo': {
-      const svc = estado.services.find((s) => s.nome === regra.nome);
-      const tipoEsperado = regra.valorEsperado ?? regra.tipo;
-      if (!svc) return { ok: false, detalhe: `Service "${regra.nome}" não encontrado.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: '(nenhum)' };
+      const svc = estado.services.find((s) => s.nome === (regra.service ?? regra.nome));
+      const tipoEsperado = regra.serviceType ?? regra.valorEsperado ?? regra.tipo;
+      if (!svc) return { ok: false, detalhe: `Service "${regra.service ?? regra.nome}" não encontrado.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: '(nenhum)' };
       if (svc.tipo !== tipoEsperado) return { ok: false, detalhe: `Tipo esperado "${tipoEsperado}", obtido "${svc.tipo}".`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: svc.tipo };
       return { ok: true, detalhe: `Service é do tipo ${tipoEsperado}.`, mensagem: `Service tipo ${tipoEsperado}`, categoria: 'Networking', obtido: svc.tipo };
     }
