@@ -634,7 +634,7 @@ spec:
   });
 
   it('service-tipo: valida tipo ClusterIP', () => {
-    const r = verificarRegra({ tipo: 'service-tipo', nome: 'test-svc', tipo: 'ClusterIP' });
+    const r = verificarRegra({ tipo: 'service-tipo', nome: 'test-svc', serviceType: 'ClusterIP' });
     expect(r.ok).toBe(true);
   });
 
