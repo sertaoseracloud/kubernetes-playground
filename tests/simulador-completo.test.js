@@ -666,4 +666,64 @@ spec:
     definirDiffUsado(false);
   });
 
-  it('regra
+  it('regra desconhecida retorna erro', () => {
+    const r = verificarRegra({ tipo: 'tipo-inexistente' });
+    expect(r.ok).toBe(false);
+    expect(r.detalhe).toContain('desconhecido');
+  });
+});
+
+describe('detectarDrift', () => {
+  it('retorna temDrift false para YAML vazio', () => {
+    const resultado = detectarDrift('');
+    expect(resultado.temDrift).toBe(false);
+    expect(resultado.drifts).toHaveLength(0);
+  });
+
+  it('retorna temDrift false quando estado e YAML estão sincronizados', () => {
+    aplicarYaml(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-cm
+data:
+  k: v`, CHAVE);
+    const resultado = detectarDrift(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-cm
+data:
+  k: v`);
+    expect(resultado.temDrift).toBe(false);
+  });
+
+  it('detecta drift quando YAML difere do estado', () => {
+    aplicarYaml(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drift-cm
+data:
+  k: v1`, CHAVE);
+    const resultado = detectarDrift(`apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drift-cm
+data:
+  k: v2`);
+    expect(resultado.temDrift).toBe(true);
+    expect(resultado.drifts.length).toBeGreaterThan(0);
+  });
+
+  it('retorna temDrift false para YAML inválido', () => {
+    const resultado = detectarDrift('{{invalid yaml');
+    expect(resultado.temDrift).toBe(false);
+  });
+});
+
+describe('carregarEstado', () => {
+  it('carrega estado padrão quando não há estado salvo', () => {
+    carregarEstado('chave-inexistente');
+    const estado = obterEstado();
+    expect(estado.pods).toHaveLength(0);
+    expect(estado.services).toHaveLength(0);
+  });
+});
