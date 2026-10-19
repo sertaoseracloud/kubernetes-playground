@@ -19,9 +19,10 @@ export const licao = (id, titulo, dificuldade, resumo, codigo) => ({
  * Um exercício: enunciado em HTML, solução de referência em YAML e casos de teste.
  * `dica`: um texto ou uma lista de dicas, da mais leve à mais forte (a tela mostra uma de cada vez).
  * `inicial`: o esqueleto que abre no editor, com comentários # TODO guiando cada campo.
+ * `xp`: só para manter o XP de um exercício antigo (o padrão vem da dificuldade).
  */
-export const exercicio = ({ id, titulo, dificuldade, resumo, solucao, testes, dica, existentes, inicial }) => ({
-  id, tipo: 'exercicio', titulo, dificuldade, xp: XP_DO_EXERCICIO[dificuldade], resumo, solucao: yaml(solucao), testes,
+export const exercicio = ({ id, titulo, dificuldade, xp, resumo, solucao, testes, dica, existentes, inicial }) => ({
+  id, tipo: 'exercicio', titulo, dificuldade, xp: xp ?? XP_DO_EXERCICIO[dificuldade], resumo, solucao: yaml(solucao), testes,
   ...(dica ? { dica } : {}),
   ...(existentes ? { existentes: yaml(existentes) } : {}),
   ...(inicial ? { inicial: yaml(inicial) } : {}),
