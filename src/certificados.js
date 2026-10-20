@@ -26,7 +26,7 @@ export const CERTIFICADOS = {
   },
   avancados: {
     titulo: 'Recursos Avançados de Kubernetes',
-    cargaHoraria: 22,
+    cargaHoraria: 24,
     resumo: 'concluiu o módulo Recursos Avançados, dominando RBAC, escala automática, StatefulSet, NetworkPolicy, Ingress e GitOps',
     hashtags: ['Kubernetes', 'GitOps', 'Security'],
     conteudos: ['RBAC e ServiceAccounts', 'HPA, probes e recursos', 'StatefulSet, DaemonSet e Storage', 'Jobs e CronJobs', 'NetworkPolicy e Ingress', 'Secrets', 'GitOps com Argo CD e Flux'],
@@ -61,7 +61,7 @@ export const CERTIFICADOS = {
   },
   final: {
     titulo: 'Especialista Kubernetes: Trilha Completa',
-    cargaHoraria: 128,
+    cargaHoraria: 130,
     resumo: 'concluiu a trilha completa de Kubernetes, dos fundamentos ao multi-cloud',
     hashtags: ['Kubernetes', 'K8s', 'AWS', 'Azure', 'DevOps', 'Cloud Native'],
     conteudos: ['Fundamentos', 'Recursos Avançados', 'AWS (EKS)', 'Azure (AKS)', 'Projetos Práticos'],

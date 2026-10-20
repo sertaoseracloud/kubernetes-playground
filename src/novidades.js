@@ -16,7 +16,7 @@ export const RELEASES = [
     resumo: 'Todos os exercícios agora têm casos ocultos, e Recursos Avançados ganhou cinco exercícios novos: a trilha chega a 261.',
     grupos: [
       { titulo: '🔒 Casos ocultos', itens: ['Fundamentos, Recursos Avançados e o projeto de microsserviços ganharam casos ocultos, que rodam quando você clica em ⬆ Enviar. Agora não dá para passar só acertando os casos que aparecem na tela.', 'Se um caso oculto falhar, a dica diz em qual recurso olhar, sem entregar a resposta.'] },
-      { titulo: '⚙️ Recursos Avançados', itens: ['Cinco exercícios novos: uma equipe de auditoria que só olha, pagamentos com prioridade garantida na memória, um Service headless para o banco, um relatório agendado que não atropela o anterior e a senha do banco lida de um Secret.', 'Quem já tinha concluído o módulo vê os cinco exercícios novos para fazer. Os certificados já emitidos continuam válidos.'] },
+      { titulo: '⚙️ Recursos Avançados', itens: ['Cinco exercícios novos: uma equipe de auditoria que só olha, pagamentos com prioridade garantida na memória, um Service headless para o banco, um relatório agendado que não atropela o anterior e a senha do banco lida de um Secret.', 'Quem já tinha concluído o módulo vê os cinco exercícios novos para fazer. Os certificados já emitidos continuam válidos.', 'Com os exercícios novos, a carga horária do certificado de Recursos Avançados passou de 22 para 24 horas, e a da trilha completa, de 128 para 130.'] },
       { titulo: '♿ Acessibilidade', itens: ['O botão do troféu de cada módulo e os passos da trilha têm como nome o mesmo texto que aparece na tela. Quem usa comando de voz pode falar o que vê, como "Certificado liberado" ou "Começar", e o botão responde.'] },
     ],
   },

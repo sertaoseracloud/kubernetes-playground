@@ -1,6 +1,6 @@
 // Recursos Avançados: Secrets e Segurança.
 // Segue docs/didatica.md: lição com exemplo comentado antes de cada exercício.
-import { licao, exercicio, teste, campo, existe } from './util.js';
+import { licao, exercicio, teste, campo } from './util.js';
 
 /** O Secret do primeiro exercício: o segundo já o encontra no cluster. */
 const DB_CREDENTIALS = `apiVersion: v1
