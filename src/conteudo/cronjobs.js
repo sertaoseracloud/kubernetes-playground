@@ -269,11 +269,80 @@ spec:
       </ul>
       <p>Regra de produção: sempre defina <code>activeDeadlineSeconds</code> (ou um tempo limite na própria tarefa), para um Job
       travado não ficar rodando para sempre.</p>`),
+    exercicio({
+      id: 'cronjobs-concorrencia',
+      titulo: 'Relatório que não atropela o anterior',
+      dificuldade: 'medio',
+      resumo: `
+        <p>O relatório de vendas roda de segunda a sexta às 6h e às vezes demora. Se o de ontem ainda estiver rodando, o de hoje
+        deve esperar a próxima vez, em vez de rodar junto. E não vale guardar Jobs antigos para sempre.</p>
+        <ol>
+          <li>Crie o CronJob <code>relatorio-vendas</code> com <code>schedule: "0 6 * * 1-5"</code>.</li>
+          <li>Em <code>spec</code>, escreva <code>concurrencyPolicy: Forbid</code>.</li>
+          <li>Guarde só os 3 últimos Jobs que deram certo (<code>successfulJobsHistoryLimit: 3</code>) e o último que falhou
+            (<code>failedJobsHistoryLimit: 1</code>).</li>
+          <li>No container <code>relatorio</code>, use a imagem <code>busybox:1.36</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> às 6h o controller de CronJob confere se o Job anterior terminou. Se não terminou, pula esta vez.
+        Jobs antigos além do limite são apagados sozinhos.</p>`,
+      inicial: `
+        apiVersion: batch/v1
+        kind: CronJob
+        metadata:
+          name: relatorio-vendas
+        spec:
+          schedule: "0 6 * * 1-5"
+          concurrencyPolicy:            # TODO: Forbid
+          # TODO: successfulJobsHistoryLimit: 3
+          # TODO: failedJobsHistoryLimit: 1
+          jobTemplate:
+            spec:
+              template:
+                spec:
+                  restartPolicy: OnFailure
+                  containers:
+                    - name: relatorio
+                      image: busybox:1.36
+                      command: ["sh", "-c", "echo gerando o relatorio"]
+      `,
+      dica: [
+        'Os três campos novos ficam em spec do CronJob, no mesmo nível de schedule.',
+        'Forbid pula a execução se a anterior ainda estiver rodando; Allow deixaria rodar junto.',
+        'concurrencyPolicy: Forbid\nsuccessfulJobsHistoryLimit: 3\nfailedJobsHistoryLimit: 1',
+      ],
+      solucao: `apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: relatorio-vendas
+spec:
+  schedule: "0 6 * * 1-5"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: relatorio
+              image: busybox:1.36
+              command: ["sh", "-c", "echo gerando o relatorio"]`,
+      testes: [
+        teste({ descricao: 'Um relatório não roda junto com o anterior', dica: 'Em spec do CronJob, escreva concurrencyPolicy: Forbid.' },
+          existe('CronJob', 'relatorio-vendas'),
+          campo('CronJob', 'relatorio-vendas', 'spec.concurrencyPolicy', { valor: 'Forbid' })),
+        teste({ descricao: 'O histórico guarda 3 sucessos e 1 falha', dica: 'Em spec do CronJob, escreva successfulJobsHistoryLimit: 3 e failedJobsHistoryLimit: 1.' },
+          campo('CronJob', 'relatorio-vendas', 'spec.successfulJobsHistoryLimit', { valor: 3 }),
+          campo('CronJob', 'relatorio-vendas', 'spec.failedJobsHistoryLimit', { valor: 1 })),
+      ],
+    }),
   ],
   // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
   ocultos: {
     'cronjobs-job-backup': { dica: 'Releia os passos: algum valor pedido no Job backup-db ainda não confere.', regras: [campo('Job', 'backup-db', 'spec.template.spec.restartPolicy', { valor: 'Never' }), campo('Job', 'backup-db', 'spec.template.spec.containers[name=backup].name', { valor: 'backup' })] },
     'jobs-indexado': { dica: 'Releia os passos: algum valor pedido no Job processa-lotes ainda não confere.', regras: [campo('Job', 'processa-lotes', 'spec.template.spec.containers[name=lote].image', { valor: 'busybox:1.36' }), campo('Job', 'processa-lotes', 'spec.template.spec.restartPolicy', { valor: 'Never' })] },
     'cronjobs-cronjob-agendado': { dica: 'Releia os passos: algum valor pedido no CronJob limpeza-logs ainda não confere.', regras: [campo('CronJob', 'limpeza-logs', 'spec.jobTemplate.spec.template.spec.containers[name=limpeza].image', { valor: 'busybox:1.36' }), campo('CronJob', 'limpeza-logs', 'spec.schedule', { valor: '*/5 * * * *' })] },
+    'cronjobs-concorrencia': { dica: 'Releia o passo 1: a agenda é de segunda a sexta, às 6h.', regras: [campo('CronJob', 'relatorio-vendas', 'spec.schedule', { valor: '0 6 * * 1-5' })] },
   },
 };

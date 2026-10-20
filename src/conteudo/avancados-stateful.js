@@ -356,11 +356,62 @@ spec:
           { tipo: 'volume-montado', pod: 'postgres', container: 'postgres', volume: 'dados', mountPath: '/var/lib/postgresql/data' }),
       ],
     }),
+    exercicio({
+      id: 'stateful-service-headless',
+      titulo: 'Service headless para o banco',
+      dificuldade: 'facil',
+      resumo: `
+        <p>Num banco com réplicas, cada Pod tem um papel (o principal e as cópias), e quem conecta precisa falar com um Pod
+        específico, não com qualquer um. O Service <b>headless</b> não sorteia Pods: ele dá um nome de DNS para cada um.</p>
+        <ol>
+          <li>Crie o Service <code>postgres</code> com <code>clusterIP: None</code> (é isso que o torna headless).</li>
+          <li>No <code>selector</code>, use a label <code>app: postgres</code>.</li>
+          <li>Em <code>ports</code>, exponha a porta <code>5432</code> com <code>name: postgres</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o Service não ganha IP próprio. O DNS responde com o IP de cada Pod, e um StatefulSet com
+        <code>serviceName: postgres</code> dá a cada réplica um nome fixo, como <code>postgres-0.postgres</code>.</p>`,
+      inicial: `
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: postgres
+        spec:
+          clusterIP:        # TODO: None
+          selector:
+            app:            # TODO: postgres
+          ports:
+            # TODO: um item com name: postgres e port: 5432
+      `,
+      dica: [
+        'Headless é um Service comum com clusterIP: None.',
+        'Em ports, cada item tem name e port.',
+        'ports:\n  - name: postgres\n    port: 5432',
+      ],
+      solucao: `apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432`,
+      testes: [
+        teste({ descricao: 'O Service postgres é headless', dica: 'Em spec do Service postgres, escreva clusterIP: None.' },
+          existe('Service', 'postgres'),
+          campo('Service', 'postgres', 'spec.clusterIP', { valor: 'None' })),
+        teste({ descricao: 'O Service expõe a porta 5432', dica: 'Em ports, coloque um item com name: postgres e port: 5432.' },
+          campo('Service', 'postgres', 'spec.ports[name=postgres].port', { valor: 5432 })),
+      ],
+    }),
   ],
   // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
   ocultos: {
     'storage-storageclass-pvc': { dica: 'Releia os passos: algum valor pedido na StorageClass rapido ainda não confere.', regras: [campo('StorageClass', 'rapido', 'provisioner', { valor: 'rancher.io/local-path' }), campo('PersistentVolumeClaim', 'dados-app', 'spec.accessModes[0]', { valor: 'ReadWriteOnce' })] },
     'stateful-daemonset-logs': { dica: 'Releia os passos: algum valor pedido no DaemonSet coletor-logs ainda não confere.', regras: [campo('DaemonSet', 'coletor-logs', 'spec.selector.matchLabels.app', { valor: 'coletor-logs' }), campo('DaemonSet', 'coletor-logs', 'spec.template.spec.containers[name=fluent-bit].volumeMounts[name=varlog].mountPath', { valor: '/var/log' })] },
     'stateful-statefulset': { dica: 'Releia os passos: algum valor pedido no StatefulSet postgres ainda não confere.', regras: [campo('StatefulSet', 'postgres', 'spec.template.spec.containers[name=postgres].env[name=PGDATA].value', { valor: '/var/lib/postgresql/data/pgdata' }), campo('StatefulSet', 'postgres', 'spec.volumeClaimTemplates[0].spec.accessModes[0]', { valor: 'ReadWriteOnce' })] },
+    'stateful-service-headless': { dica: 'Releia o passo 2: o Service precisa achar os Pods do banco.', regras: [campo('Service', 'postgres', 'spec.selector.app', { valor: 'postgres' })] },
   },
 };
