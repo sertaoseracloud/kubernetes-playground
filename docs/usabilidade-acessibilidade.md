@@ -5,8 +5,8 @@ surdas, mudas e neurodivergentes (TDAH, dislexia, autismo). A mesma auditoria fo
 playgrounds (DivergePHP, DivergeTerraform, DivergePython e DivergeKubernetes); este relatório é o do
 **DivergeKubernetes**, e a tabela de consistência no fim compara os quatro.
 
-**Resumo:** 18 problemas — 1 bloqueante(s), 2 de gravidade alta,
-10 média(s) e 5 baixa(s).
+**Resumo:** 20 problemas — 1 bloqueante(s), 3 de gravidade alta,
+11 média(s) e 5 baixa(s).
 
 ## Como foi feito
 
@@ -35,24 +35,26 @@ Gravidade: **bloqueante** (impede alguém de usar), **alta** (atrapalha muito um
 
 | # | Problema | WCAG | Telas | Gravidade | Quem é afetado | Correção | Situação |
 |---|---|---|---|---|---|---|---|
-| 1 | O campo do terminal prendia o Tab: ele sempre tentava completar o comando, mesmo com o campo vazio. Só o Esc (não anunciado) saía | 2.1.2 | exercício, livre | bloqueante | quem usa só o teclado, pessoas cegas | Com o campo vazio, o Tab segue para o próximo controle; com texto, completa. Dica para o leitor de tela no campo (aria-describedby) | ✅ corrigido |
-| 2 | O botão "⭐ Dê uma estrela no GitHub" tinha texto claro sobre amarelo (contraste de 1,04:1) nos 4 temas | 1.4.3 | instrutor, apoie, mural | alta | baixa visão, daltonismo, quem usa o celular no sol | Texto escuro (`--sobre-cor`) | ✅ corrigido |
-| 3 | O Ctrl+Enter dentro do editor rodava o Apply sem falar o resultado (o botão falava) | 4.1.3 | exercício | alta | pessoas cegas (que usam o atalho) | O atalho fala o mesmo que o botão, como nos outros três sites | ✅ corrigido |
-| 4 | O resultado do ▶ Apply era falado duas vezes: o resumo (#anuncio) e o terminal (região viva) | 4.1.3 | exercício, livre | média | pessoas cegas, TDAH | O terminal fica mudo enquanto o resumo é falado e volta a ser região viva para os comandos digitados | ✅ corrigido |
-| 5 | Barra do exercício com muitos botões; no celular, vários só com ícone | 2.4.6, 3.3.2 e boas práticas cognitivas | exercício, livre | média | iniciantes, TDAH, autismo, dislexia | À vista só ▶ Apply e ⬆ Enviar; Diff, Drift, Restaurar e Compartilhar em "⋯ Mais ações" (botão com aria-expanded, Esc fecha), cada um com texto e uma frase de ajuda; os botões de posição ganharam texto | ✅ corrigido (aprovado) |
-| 6 | O mural de apoio (PIX) abria em todo carregamento, inclusive por cima de um exercício aberto por link | 3.2.1 e 2.2.4 (AAA, boa prática) | todas | média | TDAH, autismo, leitor de tela | No máximo uma vez por dia, só na landing e na trilha | ✅ corrigido (aprovado) |
-| 7 | No celular, ao andar com o Tab pela trilha, o botão fixo "Ir para o passo atual" cobria o nó focado; no exercício, a barra fixa do topo podia cobrir as abas | 2.4.11, 2.5.8 | trilha e exercício (≤ 900 px) | média | teclado, baixa visão | Folga de rolagem (scroll-margin) para o que recebe foco e para os painéis | ✅ corrigido |
-| 8 | No celular, fechar o tutorial ou o painel ♿ deixava o foco perdido no `body` (o ❓ e o ♿ ficam escondidos atrás do ⚙️) | 2.4.3 | todas (≤ 760 px) | média | teclado, leitor de tela | O foco volta ao ⚙️ | ✅ corrigido |
-| 9 | Um endereço que não existe (ou um link compartilhado cortado) caía calado na landing; um exercício que não existe caía na trilha | 3.3.1, 2.4.2 | 404 | média | todos, principalmente iniciantes | Tela "🧭 Página não encontrada" que diz o que houve e oferece a trilha e a página inicial | ✅ corrigido |
-| 10 | Animações infinitas na trilha (próximo passo pulsando, troféu brilhando, "você está aqui" flutuando) | 2.2.2 | trilha | média | TDAH, autismo, enxaqueca | Param sozinhas depois de 2 ciclos (menos de 5 s). "Reduzir movimento" para tudo | ✅ corrigido |
-| 11 | Se os testes não conseguiam rodar, o leitor de tela ouvia "Enviando…" e mais nada | 4.1.3, 3.3.1 | exercício | média | pessoas cegas | Fala o erro e o que fazer | ✅ corrigido |
-| 12 | Fechar o mural de apoio deixava o foco no `body` | 2.4.3 | landing, trilha | baixa | teclado, leitor de tela | O foco vai para o título da tela (como já acontecia no php) | ✅ corrigido |
-| 13 | No celular, o nome do exercício era cortado com "…" | 1.4.10 | exercício (≤ 900 px) | baixa | todos no celular, dislexia | O nome aparece inteiro | ✅ corrigido |
-| 14 | A lista de atalhos do painel ♿ dizia "Executar" e "preview" (texto do PHP) | 3.3.2 | painel ♿ | baixa | teclado, leitor de tela | Lista com o nome certo do botão; no k8s, também o Ctrl+Shift+D do Diff | ✅ corrigido |
-| 15 | Troféus e o nó "próximo passo" da trilha: o texto visível não está no nome acessível | 2.5.3 | trilha | média | quem usa comando de voz | — | ⏳ com a sessão de débito técnico (src/ui/inicio.js) |
-| 16 | Personagens dos cenários andam sem parar; o único controle é "Reduzir movimento" no painel ♿ | 2.2.2 | trilha | média | TDAH, autismo | Botão visível "⏸ Pausar cenário" | ⏳ com a sessão dos cenários (PixiJS) |
-| 17 | Com o espaçamento de texto do 1.4.12, a barra de status do topo corta o texto | 1.4.12 | todas | baixa | dislexia, baixa visão | O mesmo texto é falado e aparece no resultado | ⏸ pendente (baixa) |
-| 18 | Ctrl+Shift+D (Diff) é também "favoritar todas as abas" no Chrome e no Firefox | 2.1.4 | exercício | baixa | teclado | Fora do editor o site impede o atalho do navegador; está documentado. Trocar o atalho mudaria o hábito de quem já usa | ⏸ pendente (baixa) |
+| 1 | Os botões ❓ Tutorial, ♿ Acessibilidade e 🔒 Privacidade sumiam (sem deixar rastro) quando qualquer área rolava para baixo, inclusive a saída do terminal rolando sozinha: na tela do exercício, quem usa mouse perdia o acesso à ajuda e ao painel ♿ | 3.2.1, 2.4.3 (e boa prática) | exercício, livre | alta | quem usa mouse ou toque, iniciantes, baixa visão | Só a rolagem da página recolhe os botões; o terminal, o editor e os painéis não | ✅ corrigido |
+| 2 | O campo do terminal prendia o Tab: ele sempre tentava completar o comando, mesmo com o campo vazio. Só o Esc (não anunciado) saía | 2.1.2 | exercício, livre | bloqueante | quem usa só o teclado, pessoas cegas | Com o campo vazio, o Tab segue para o próximo controle; com texto, completa. Dica para o leitor de tela no campo (aria-describedby) | ✅ corrigido |
+| 3 | O botão "⭐ Dê uma estrela no GitHub" tinha texto claro sobre amarelo (contraste de 1,04:1) nos 4 temas | 1.4.3 | instrutor, apoie, mural | alta | baixa visão, daltonismo, quem usa o celular no sol | Texto escuro (`--sobre-cor`) | ✅ corrigido |
+| 4 | O Ctrl+Enter dentro do editor rodava o Apply sem falar o resultado (o botão falava) | 4.1.3 | exercício | alta | pessoas cegas (que usam o atalho) | O atalho fala o mesmo que o botão, como nos outros três sites | ✅ corrigido |
+| 5 | O resultado do ▶ Apply era falado duas vezes: o resumo (#anuncio) e o terminal (região viva) | 4.1.3 | exercício, livre | média | pessoas cegas, TDAH | O terminal fica mudo enquanto o resumo é falado e volta a ser região viva para os comandos digitados | ✅ corrigido |
+| 6 | Barra do exercício com muitos botões; no celular, vários só com ícone | 2.4.6, 3.3.2 e boas práticas cognitivas | exercício, livre | média | iniciantes, TDAH, autismo, dislexia | À vista só ▶ Apply e ⬆ Enviar; Diff, Drift, Restaurar e Compartilhar em "⋯ Mais ações" (botão com aria-expanded, Esc fecha), cada um com texto e uma frase de ajuda; os botões de posição ganharam texto | ✅ corrigido (aprovado) |
+| 7 | O mural de apoio (PIX) abria em todo carregamento, inclusive por cima de um exercício aberto por link | 3.2.1 e 2.2.4 (AAA, boa prática) | todas | média | TDAH, autismo, leitor de tela | No máximo uma vez por dia, só na landing e na trilha | ✅ corrigido (aprovado) |
+| 8 | No celular, ao andar com o Tab pela trilha, o botão fixo "Ir para o passo atual" cobria o nó focado; no exercício, a barra fixa do topo podia cobrir as abas | 2.4.11, 2.5.8 | trilha e exercício (≤ 900 px) | média | teclado, baixa visão | Folga de rolagem (scroll-margin) para o que recebe foco e para os painéis | ✅ corrigido |
+| 9 | No celular, fechar o tutorial ou o painel ♿ deixava o foco perdido no `body` (o ❓ e o ♿ ficam escondidos atrás do ⚙️) | 2.4.3 | todas (≤ 760 px) | média | teclado, leitor de tela | O foco volta ao ⚙️ | ✅ corrigido |
+| 10 | A saída do terminal rola, mas não recebia foco pelo Tab: durante a animação (campo de comando desligado), quem usa só o teclado não conseguia rolar | 2.1.1 | exercício, livre | média | quem usa só o teclado | A área do terminal entra na ordem do Tab, com foco visível | ✅ corrigido |
+| 11 | Um endereço que não existe (ou um link compartilhado cortado) caía calado na landing; um exercício que não existe caía na trilha | 3.3.1, 2.4.2 | 404 | média | todos, principalmente iniciantes | Tela "🧭 Página não encontrada" que diz o que houve e oferece a trilha e a página inicial | ✅ corrigido |
+| 12 | Animações infinitas na trilha (próximo passo pulsando, troféu brilhando, "você está aqui" flutuando) | 2.2.2 | trilha | média | TDAH, autismo, enxaqueca | Param sozinhas depois de 2 ciclos (menos de 5 s). "Reduzir movimento" para tudo | ✅ corrigido |
+| 13 | Se os testes não conseguiam rodar, o leitor de tela ouvia "Enviando…" e mais nada | 4.1.3, 3.3.1 | exercício | média | pessoas cegas | Fala o erro e o que fazer | ✅ corrigido |
+| 14 | Fechar o mural de apoio deixava o foco no `body` | 2.4.3 | landing, trilha | baixa | teclado, leitor de tela | O foco vai para o título da tela (como já acontecia no php) | ✅ corrigido |
+| 15 | No celular, o nome do exercício era cortado com "…" | 1.4.10 | exercício (≤ 900 px) | baixa | todos no celular, dislexia | O nome aparece inteiro | ✅ corrigido |
+| 16 | A lista de atalhos do painel ♿ dizia "Executar" e "preview" (texto do PHP) | 3.3.2 | painel ♿ | baixa | teclado, leitor de tela | Lista com o nome certo do botão; no k8s, também o Ctrl+Shift+D do Diff | ✅ corrigido |
+| 17 | Troféus e o nó "próximo passo" da trilha: o texto visível não está no nome acessível | 2.5.3 | trilha | média | quem usa comando de voz | — | ⏳ com a sessão de débito técnico (src/ui/inicio.js) |
+| 18 | Personagens dos cenários andam sem parar; o único controle é "Reduzir movimento" no painel ♿ | 2.2.2 | trilha | média | TDAH, autismo | Botão visível "⏸ Pausar cenário" | ⏳ com a sessão dos cenários (PixiJS) |
+| 19 | Com o espaçamento de texto do 1.4.12, a barra de status do topo corta o texto | 1.4.12 | todas | baixa | dislexia, baixa visão | O mesmo texto é falado e aparece no resultado | ⏸ pendente (baixa) |
+| 20 | Ctrl+Shift+D (Diff) é também "favoritar todas as abas" no Chrome e no Firefox | 2.1.4 | exercício | baixa | teclado | Fora do editor o site impede o atalho do navegador; está documentado. Trocar o atalho mudaria o hábito de quem já usa | ⏸ pendente (baixa) |
 
 ### O que já estava bom (e continua)
 
@@ -98,6 +100,7 @@ Em **negrito**, o que destoava do padrão antes desta rodada.
 | Endereço que não existe | landing | landing | landing | landing | "Página não encontrada" |
 | Animações da trilha | infinitas | infinitas | infinitas | infinitas | param em < 5 s |
 | Foco encoberto na trilha (celular) | sim | sim | sim | sim | não |
+| ❓ e ♿ somem quando o terminal ou um painel rola | sim | **sim (já na abertura do exercício)** | sim | sim | não |
 | Nome da ação principal | ▶ Executar | ▶ Plan | ▶ Executar | ▶ Apply | mantido: é o verbo de cada ferramenta |
 
 Os arquivos comuns ficaram iguais nos quatro: `src/acessibilidade-ux.css`, `src/ui/mais-acoes.js`,
