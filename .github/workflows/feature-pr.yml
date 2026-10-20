@@ -115,5 +115,6 @@ jobs:
             gh pr reopen "$NUMERO" --repo "$GITHUB_REPOSITORY"
             atualizar_texto
           else
-            gh pr create               --repo "$GITHUB_REPOSITORY"               --base develop               --head "$GITHUB_REF_NAME"               --title "$TITULO"               --body "$CORPO"
+            gh pr create --repo "$GITHUB_REPOSITORY" --base develop --head "$GITHUB_REF_NAME" \
+              --title "$TITULO" --body "$CORPO"
           fi

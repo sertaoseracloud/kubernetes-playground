@@ -10,7 +10,7 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
-    versao: '0.8.0',
+    versao: '0.9.0',
     data: '2026-10-20',
     titulo: 'Mais fácil para quem está começando, e para quem usa leitor de tela',
     resumo: 'A barra do exercício ficou mais simples, o aviso de apoio parou de interromper, e o site ficou melhor para o teclado e para o leitor de tela.',
@@ -39,6 +39,17 @@ export const RELEASES = [
           'A lista de atalhos do painel ♿ ficou certa para o Kubernetes, com o Ctrl+Shift+D do Diff.',
         ],
       },
+    ],
+  },
+  {
+    versao: '0.8.0',
+    data: '2026-10-20',
+    titulo: 'Casos ocultos em toda a trilha',
+    resumo: 'Todos os exercícios agora têm casos ocultos, e Recursos Avançados ganhou cinco exercícios novos: a trilha chega a 261.',
+    grupos: [
+      { titulo: '🔒 Casos ocultos', itens: ['Fundamentos, Recursos Avançados e o projeto de microsserviços ganharam casos ocultos, que rodam quando você clica em ⬆ Enviar. Agora não dá para passar só acertando os casos que aparecem na tela.', 'Se um caso oculto falhar, a dica diz em qual recurso olhar, sem entregar a resposta.'] },
+      { titulo: '⚙️ Recursos Avançados', itens: ['Cinco exercícios novos: uma equipe de auditoria que só olha, pagamentos com prioridade garantida na memória, um Service headless para o banco, um relatório agendado que não atropela o anterior e a senha do banco lida de um Secret.', 'Quem já tinha concluído o módulo vê os cinco exercícios novos para fazer. Os certificados já emitidos continuam válidos.', 'Com os exercícios novos, a carga horária do certificado de Recursos Avançados passou de 22 para 24 horas, e a da trilha completa, de 128 para 130.'] },
+      { titulo: '♿ Acessibilidade', itens: ['O botão do troféu de cada módulo e os passos da trilha têm como nome o mesmo texto que aparece na tela. Quem usa comando de voz pode falar o que vê, como "Certificado liberado" ou "Começar", e o botão responde.'] },
     ],
   },
   {

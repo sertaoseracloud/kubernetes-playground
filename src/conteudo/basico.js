@@ -3,7 +3,7 @@
 // exemplo comentado), enunciado em passos, esqueleto com # TODO, dicas progressivas e
 // "como corrigir" em cada caso de teste. Os ids dos exercícios não mudam (progresso e
 // certificados dependem deles).
-import { licao, exercicio, teste } from './util.js';
+import { licao, exercicio, teste, campo } from './util.js';
 
 export const basico = {
   id: 'basico',
@@ -1026,4 +1026,18 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'k8s-primeiro-yaml': { dica: 'Releia os passos: confira a apiVersion e deixe um container só no Pod nginx-demo.', regras: [campo('Pod', 'nginx-demo', 'apiVersion', { valor: 'v1' }), campo('Pod', 'nginx-demo', 'spec.containers[1]', { ausente: true })] },
+    'basico-debug-yaml': { dica: 'Confira se nada ficou solto no nível de cima: containers fica dentro de spec, e image dentro do item do container.', regras: [campo('Pod', 'debug-pod', 'containers', { ausente: true }), campo('Pod', 'debug-pod', 'image', { ausente: true })] },
+    'basico-multi-document': { dica: 'Releia os passos: algum valor pedido no Pod pod-a ainda não confere.', regras: [campo('Pod', 'pod-a', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 }), campo('Pod', 'pod-b', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 })] },
+    'basico-namespace': { dica: 'Releia os passos: algum valor pedido no Pod nginx-dev ainda não confere.', regras: [campo('Pod', 'nginx-dev', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 }), campo('Pod', 'nginx-dev', 'spec.containers[name=nginx].name', { valor: 'nginx' })] },
+    'basico-annotations': { dica: 'Releia os passos: algum valor pedido no Pod annotated-pod ainda não confere.', regras: [campo('Pod', 'annotated-pod', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 }), campo('Pod', 'annotated-pod', 'spec.containers[name=nginx].name', { valor: 'nginx' })] },
+    'basico-labels-selectors': { dica: 'Releia os passos: algum valor pedido no Pod api-pod ainda não confere.', regras: [campo('Pod', 'api-pod', 'spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Service', 'api-svc', 'spec.selector.app', { valor: 'api' })] },
+    'basico-env-vars': { dica: 'Releia os passos: algum valor pedido no Pod env-pod ainda não confere.', regras: [campo('Pod', 'env-pod', 'spec.containers[name=busybox].env[name=APP_MODE].value', { valor: 'production' }), campo('Pod', 'env-pod', 'spec.containers[name=busybox].env[name=APP_MODE].name', { valor: 'APP_MODE' })] },
+    'basico-configmap-env': { dica: 'Releia os passos: algum valor pedido no ConfigMap app-config ainda não confere.', regras: [campo('ConfigMap', 'app-config', 'data.DATABASE_HOST', { valor: 'db.exemplo.com' }), campo('Pod', 'config-pod', 'spec.containers[name=busybox].env[name=DATABASE_HOST].valueFrom.configMapKeyRef.key', { valor: 'DATABASE_HOST' })] },
+    'basico-resource-limits': { dica: 'Releia os passos: algum valor pedido no Pod limited-pod ainda não confere.', regras: [campo('Pod', 'limited-pod', 'spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Pod', 'limited-pod', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 })] },
+    'basico-diff-plan': { dica: 'Releia os passos: algum valor pedido no Service nginx-svc ainda não confere.', regras: [campo('Service', 'nginx-svc', 'spec.selector.app', { valor: 'nginx' }), campo('Pod', 'nginx-demo', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 })] },
+    'basico-drift-detection': { dica: 'Releia os passos: algum valor pedido no Pod web-app ainda não confere.', regras: [campo('Pod', 'web-app', 'spec.containers[name=nginx].ports[0].containerPort', { valor: 80 }), campo('Pod', 'web-app', 'spec.containers[name=nginx].name', { valor: 'nginx' })] },
+  },
 };

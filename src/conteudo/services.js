@@ -1,6 +1,6 @@
 // Módulo 1, tópico 3: Services e Networking.
 // Tipos de Service, DNS interno, endpoints e Ingress. Segue docs/didatica.md.
-import { licao, exercicio, teste } from './util.js';
+import { licao, exercicio, teste, campo } from './util.js';
 
 /** Pods de exemplo que alguns exercícios já encontram no cluster. */
 const POD_BACKEND = `apiVersion: v1
@@ -771,4 +771,19 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'svc-clusterip-exercicio': { dica: 'Releia os passos: algum valor pedido no Service web-svc ainda não confere.', regras: [campo('Service', 'web-svc', 'spec.selector.app', { valor: 'web' }), campo('Service', 'web-svc', 'spec.ports[0].port', { valor: 80 })] },
+    'svc-datasource-pod': { dica: 'Releia os passos: algum valor pedido no Service backend-svc ainda não confere.', regras: [campo('Service', 'backend-svc', 'spec.selector.app', { valor: 'backend' }), campo('Service', 'backend-svc', 'spec.ports[0].port', { valor: 80 })] },
+    'svc-multi-port': { dica: 'Releia os passos: algum valor pedido no Service multi-svc ainda não confere.', regras: [campo('Service', 'multi-svc', 'spec.selector.app', { valor: 'multi' }), campo('Service', 'multi-svc', 'spec.ports[name=http].targetPort', { valor: 8080 })] },
+    'svc-nodeport': { dica: 'Releia os passos: algum valor pedido no Service web-nodeport ainda não confere.', regras: [campo('Service', 'web-nodeport', 'spec.ports[0].targetPort', { valor: 8080 }), campo('Service', 'web-nodeport', 'spec.selector.app', { valor: 'web' })] },
+    'svc-loadbalancer': { dica: 'Releia os passos: algum valor pedido no Service api-lb ainda não confere.', regras: [campo('Service', 'api-lb', 'spec.ports[0].targetPort', { valor: 8443 }), campo('Service', 'api-lb', 'spec.selector.app', { valor: 'api' })] },
+    'svc-headless': { dica: 'Releia os passos: algum valor pedido no Service db-headless ainda não confere.', regras: [campo('Service', 'db-headless', 'spec.selector.app', { valor: 'database' }), campo('Service', 'db-headless', 'spec.ports[0].port', { valor: 5432 })] },
+    'svc-dns-srv': { dica: 'Releia os passos: algum valor pedido no Service srv-svc ainda não confere.', regras: [campo('Service', 'srv-svc', 'spec.selector.app', { valor: 'srv-app' }), campo('Service', 'srv-svc', 'spec.ports[name=http].port', { valor: 80 })] },
+    'svc-endpoint-slices': { dica: 'Releia os passos: algum valor pedido no Service slice-svc ainda não confere.', regras: [campo('Service', 'slice-svc', 'spec.selector.app', { valor: 'slice-app' }), campo('Service', 'slice-svc', 'spec.ports[0].port', { valor: 80 })] },
+    'svc-topology': { dica: 'Releia os passos: algum valor pedido no Service topo-svc ainda não confere.', regras: [campo('Service', 'topo-svc', 'spec.selector.app', { valor: 'topo' }), campo('Service', 'topo-svc', 'spec.ports[0].port', { valor: 80 })] },
+    'svc-ingress-exercicio': { dica: 'Releia os passos: algum valor pedido no Ingress meu-ingress ainda não confere.', regras: [campo('Ingress', 'meu-ingress', 'spec.rules[0].host', { valor: 'app.exemplo.com' }), campo('Ingress', 'meu-ingress', 'spec.rules[0].http.paths[0].pathType', { valor: 'Prefix' })] },
+    'svc-ingress-output-exercicio': { dica: 'Releia os passos: algum valor pedido no Ingress web-ingress ainda não confere.', regras: [campo('Ingress', 'web-ingress', 'spec.rules[0].host', { valor: 'web.exemplo.com' }), campo('Ingress', 'web-ingress', 'spec.rules[0].http.paths[0].pathType', { valor: 'Prefix' })] },
+    'svc-externalname': { dica: 'Releia o passo sobre o que este tipo de Service não usa.', regras: [campo('Service', 'ext-api', 'spec.selector', { ausente: true }), campo('Service', 'ext-api', 'spec.ports', { ausente: true })] },
+  },
 };

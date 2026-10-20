@@ -18,7 +18,7 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
 - **Landing page** (`#/`): apresenta o projeto, a trilha, os certificados e os recursos de
   acessibilidade. Os números (exercícios, módulos, projetos) vêm do próprio conteúdo. A trilha fica
   em `#/trilha`, e quem já começou vê "▶ Continuar" no topo.
-- **Mais de 100 exercícios** com dificuldade Fácil/Médio/Difícil, mais **lições** de conceito no começo de cada assunto:
+- **Mais de 250 exercícios** com dificuldade Fácil/Médio/Difícil, mais **lições** de conceito no começo de cada assunto:
   1. **Fundamentos**: arquitetura, Pods, labels e selectors, ConfigMaps, probes, volumes, Services
      (ClusterIP, NodePort, LoadBalancer, headless), Ingress, Deployments, rolling update, HPA, PDB e DaemonSet.
   2. **Recursos avançados**: RBAC e ServiceAccounts, HPA v2, probes e cotas, StatefulSet, StorageClass,
@@ -158,6 +158,7 @@ npm run dev      # servidor local com recarga
 npm run lint     # ESLint
 npm test         # testes (simulador, regras, telas e toda a trilha)
 npm run test:cobertura  # os mesmos testes, com o limite de cobertura
+npm run comuns   # confere os arquivos comuns aos quatro playgrounds (comuns.json)
 npm run build    # gera dist/ (precisa de CERTIFICADO_SEGREDO)
 npm run test:e2e        # Playwright contra o dist (fluxo, axe nos 4 temas, larguras de celular)
 npm run lighthouse      # Lighthouse CI contra o dist
@@ -169,6 +170,11 @@ Para testar um build local sem o segredo de verdade:
 ```bash
 CERTIFICADO_SEGREDO=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") npm run build
 ```
+
+Alguns arquivos são iguais nos quatro playgrounds (php, terraform, python e kubernetes) e estão
+listados em [`comuns.json`](comuns.json) com o hash de cada um. Para mudar um deles, altere aqui e
+leve a mesma mudança aos outros com `npm run comuns:copiar -- ../php-playground ../terraform-playground ../python-playground`.
+Detalhes em [docs/debito-tecnico.md](docs/debito-tecnico.md#arquivos-comuns).
 
 ## Como publicar
 
@@ -182,7 +188,7 @@ O repositório segue o **gitflow**. Pense no `develop` como o ensaio geral e no 
   <https://sertaoseracloud.github.io/kubernetes-playground/homologacao/>, com uma faixa de aviso,
   progresso guardado à parte (prefixo `kubernetes-playground-homologacao:`), outro segredo de
   certificado, `noindex` e sem `sitemap.xml`. Depois do smoke test, abre o PR de promoção para `main`.
-- **`main`**: cada push publica o site principal e cria a tag `v<versão>`, se ela ainda não existir.
+- **`main`**: cada push publica o site principal e cria a tag `v<versão>` e a release do GitHub com o texto de `src/novidades.js`, se ainda não existirem.
 - **`hotfix/*`**: correção urgente que sai do `main` e entra nele do mesmo jeito.
 
 `main` e `develop` só recebem PR, com os checks verdes. Os workflows:
