@@ -339,4 +339,11 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'rbac-role-leitor': { dica: 'Releia os passos: algum valor pedido na RoleBinding leitor-pods ainda não confere.', regras: [campo('RoleBinding', 'leitor-pods', 'roleRef.apiGroup', { valor: 'rbac.authorization.k8s.io' }), campo('RoleBinding', 'leitor-pods', 'subjects[name=monitor].kind', { valor: 'ServiceAccount' })] },
+    'rbac-clusterrole-nodes': { dica: 'Releia os passos: algum valor pedido na ClusterRoleBinding ver-nos ainda não confere.', regras: [campo('ClusterRoleBinding', 'ver-nos', 'subjects[name=plataforma].apiGroup', { valor: 'rbac.authorization.k8s.io' }), campo('ClusterRoleBinding', 'ver-nos', 'roleRef.name', { valor: 'ver-nos' })] },
+    'rbac-deploy-sa': { dica: 'Releia os passos: algum valor pedido no Deployment api ainda não confere.', regras: [campo('Deployment', 'api', 'spec.template.spec.containers[name=api].image', { valor: 'nginx:1.27' }), campo('Deployment', 'api', 'spec.selector.matchLabels.app', { valor: 'api' })] },
+    'rbac-sa-sem-token': { dica: 'Confira a apiVersion da ServiceAccount relatorios e não liste secrets nela.', regras: [campo('ServiceAccount', 'relatorios', 'apiVersion', { valor: 'v1' }), campo('ServiceAccount', 'relatorios', 'secrets', { ausente: true })] },
+  },
 };

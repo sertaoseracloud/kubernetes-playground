@@ -6,6 +6,7 @@ import { avancadosRbac } from './avancados-rbac.js';
 import { avancadosEscala } from './avancados-escala.js';
 import { avancadosStateful } from './avancados-stateful.js';
 import { avancadosRede } from './avancados-rede.js';
+import { comOcultos } from './util.js';
 
 const grupos = [
   { id: 'rbac', titulo: 'RBAC e ServiceAccounts', icone: '🛂' },
@@ -18,7 +19,7 @@ const grupos = [
 ];
 
 const tagItens = (modulo, grupoId) =>
-  (modulo.itens ?? []).map((item) => ({ ...item, grupo: grupoId }));
+  comOcultos(modulo.itens ?? [], modulo.ocultos ?? {}).map((item) => ({ ...item, grupo: grupoId }));
 
 export const avancados = {
   id: 'avancados',

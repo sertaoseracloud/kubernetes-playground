@@ -347,4 +347,10 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'escala-hpa-v2-comportamento': { dica: 'Releia os passos: algum valor pedido no HorizontalPodAutoscaler loja ainda não confere.', regras: [campo('HorizontalPodAutoscaler', 'loja', 'spec.metrics[0].resource.target.type', { valor: 'Utilization' }), campo('HorizontalPodAutoscaler', 'loja', 'spec.scaleTargetRef.kind', { valor: 'Deployment' })] },
+    'saude-startup-probe': { dica: 'Releia os passos: algum valor pedido no Deployment legado ainda não confere.', regras: [campo('Deployment', 'legado', 'spec.template.spec.containers[name=legado].image', { valor: 'registry.example.com/legado:2.3' }), campo('Deployment', 'legado', 'spec.selector.matchLabels.app', { valor: 'legado' })] },
+    'recursos-limitrange': { dica: 'Releia os passos: algum valor pedido no LimitRange padroes ainda não confere.', regras: [campo('LimitRange', 'padroes', 'spec.limits[0].type', { valor: 'Container' }), campo('LimitRange', 'padroes', 'spec.limits[0].defaultRequest.memory', { valor: '128Mi' })] },
+  },
 };

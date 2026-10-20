@@ -1,6 +1,6 @@
 // Recursos Avançados: Secrets e Segurança.
 // Segue docs/didatica.md: lição com exemplo comentado antes de cada exercício.
-import { licao, exercicio, teste } from './util.js';
+import { licao, exercicio, teste, campo } from './util.js';
 
 /** O Secret do primeiro exercício: o segundo já o encontra no cluster. */
 const DB_CREDENTIALS = `apiVersion: v1
@@ -220,4 +220,9 @@ spec:
         <li>Use <code>immutable: true</code> nos Secrets que não devem mudar.</li>
       </ul>`),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'secrets-opaque-credenciais': { dica: 'Releia os passos: algum valor pedido no Secret db-credentials ainda não confere.', regras: [campo('Secret', 'db-credentials', 'stringData.password', { valor: 's3cret0!' }), campo('Secret', 'db-credentials', 'type', { valor: 'Opaque' })] },
+    'secrets-pod-volume': { dica: 'Releia os passos: algum valor pedido no Pod app-com-secret ainda não confere.', regras: [campo('Pod', 'app-com-secret', 'spec.containers[name=app].envFrom[0].secretRef.name', { valor: 'db-credentials' }), campo('Pod', 'app-com-secret', 'spec.containers[name=app].image', { valor: 'nginx:1.25' })] },
+  },
 };

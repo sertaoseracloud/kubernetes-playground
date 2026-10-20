@@ -1,7 +1,7 @@
 // Módulo 1, tópico 4: Deployments e Escalabilidade.
 // Deployments, estratégias de atualização, escala automática, disponibilidade e DaemonSets.
 // Segue docs/didatica.md: cada conceito novo tem lição antes do exercício.
-import { licao, exercicio, teste } from './util.js';
+import { licao, exercicio, teste, campo } from './util.js';
 
 /** O Deployment do HPA: já existe no cluster quando o exercício abre. */
 const WEB_DEPLOY = `apiVersion: apps/v1
@@ -1117,4 +1117,20 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'deploy-3-replicas': { dica: 'Releia os passos: algum valor pedido no Deployment web-deploy ainda não confere.', regras: [campo('Deployment', 'web-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Deployment', 'web-deploy', 'spec.selector.matchLabels.app', { valor: 'web' })] },
+    'deploy-resource-limits': { dica: 'Releia os passos: algum valor pedido no Deployment limited-deploy ainda não confere.', regras: [campo('Deployment', 'limited-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Deployment', 'limited-deploy', 'spec.selector.matchLabels.app', { valor: 'limited' })] },
+    'deploy-datasource-configmap': { dica: 'Releia os passos: algum valor pedido no Deployment app-deploy ainda não confere.', regras: [campo('Deployment', 'app-deploy', 'spec.template.spec.containers[name=nginx].volumeMounts[name=config-volume].mountPath', { valor: '/etc/config' }), campo('Deployment', 'app-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' })] },
+    'deploy-rolling-strategy': { dica: 'Releia os passos: algum valor pedido no Deployment rolling-deploy ainda não confere.', regras: [campo('Deployment', 'rolling-deploy', 'spec.strategy.type', { valor: 'RollingUpdate' }), campo('Deployment', 'rolling-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' })] },
+    'deploy-recreate-strategy': { dica: 'Releia os passos: algum valor pedido no Deployment recreate-deploy ainda não confere.', regras: [campo('Deployment', 'recreate-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Deployment', 'recreate-deploy', 'spec.selector.matchLabels.app', { valor: 'recreate' })] },
+    'deploy-rollback': { dica: 'Releia os passos: algum valor pedido no Deployment history-deploy ainda não confere.', regras: [campo('Deployment', 'history-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Deployment', 'history-deploy', 'spec.selector.matchLabels.app', { valor: 'history' })] },
+    'deploy-canary': { dica: 'Releia os passos: algum valor pedido no Deployment stable-deploy ainda não confere.', regras: [campo('Deployment', 'stable-deploy', 'spec.selector.matchLabels.track', { valor: 'stable' }), campo('Deployment', 'canary-deploy', 'spec.selector.matchLabels.track', { valor: 'canary' })] },
+    'deploy-blue-green': { dica: 'Releia os passos: algum valor pedido no Deployment green-deploy ainda não confere.', regras: [campo('Deployment', 'green-deploy', 'spec.selector.matchLabels.color', { valor: 'green' }), campo('Deployment', 'blue-deploy', 'spec.selector.matchLabels.color', { valor: 'blue' })] },
+    'deploy-hpa-exercicio': { dica: 'Releia os passos: algum valor pedido no HorizontalPodAutoscaler web-hpa ainda não confere.', regras: [campo('HorizontalPodAutoscaler', 'web-hpa', 'spec.metrics[0].resource.target.type', { valor: 'Utilization' }), campo('HorizontalPodAutoscaler', 'web-hpa', 'spec.scaleTargetRef.kind', { valor: 'Deployment' })] },
+    'deploy-pdb': { dica: 'Releia os passos: algum valor pedido no Deployment pdb-deploy ainda não confere.', regras: [campo('Deployment', 'pdb-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Deployment', 'pdb-deploy', 'spec.selector.matchLabels.app', { valor: 'protected' })] },
+    'deploy-topology-spread': { dica: 'Releia os passos: algum valor pedido no Deployment spread-deploy ainda não confere.', regras: [campo('Deployment', 'spread-deploy', 'spec.template.spec.topologySpreadConstraints[0].whenUnsatisfiable', { valor: 'DoNotSchedule' }), campo('Deployment', 'spread-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' })] },
+    'deploy-priority-class': { dica: 'Releia os passos: algum valor pedido no Deployment priority-deploy ainda não confere.', regras: [campo('Deployment', 'priority-deploy', 'spec.template.spec.containers[name=nginx].image', { valor: 'nginx:1.25' }), campo('Deployment', 'priority-deploy', 'spec.selector.matchLabels.app', { valor: 'priority' })] },
+    'deploy-daemonset': { dica: 'Releia os passos: algum valor pedido no DaemonSet monitor-ds ainda não confere.', regras: [campo('DaemonSet', 'monitor-ds', 'spec.selector.matchLabels.app', { valor: 'monitor' }), campo('DaemonSet', 'monitor-ds', 'spec.template.spec.containers[name=monitor].name', { valor: 'monitor' })] },
+  },
 };

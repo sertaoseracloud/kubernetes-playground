@@ -357,4 +357,10 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'storage-storageclass-pvc': { dica: 'Releia os passos: algum valor pedido na StorageClass rapido ainda não confere.', regras: [campo('StorageClass', 'rapido', 'provisioner', { valor: 'rancher.io/local-path' }), campo('PersistentVolumeClaim', 'dados-app', 'spec.accessModes[0]', { valor: 'ReadWriteOnce' })] },
+    'stateful-daemonset-logs': { dica: 'Releia os passos: algum valor pedido no DaemonSet coletor-logs ainda não confere.', regras: [campo('DaemonSet', 'coletor-logs', 'spec.selector.matchLabels.app', { valor: 'coletor-logs' }), campo('DaemonSet', 'coletor-logs', 'spec.template.spec.containers[name=fluent-bit].volumeMounts[name=varlog].mountPath', { valor: '/var/log' })] },
+    'stateful-statefulset': { dica: 'Releia os passos: algum valor pedido no StatefulSet postgres ainda não confere.', regras: [campo('StatefulSet', 'postgres', 'spec.template.spec.containers[name=postgres].env[name=PGDATA].value', { valor: '/var/lib/postgresql/data/pgdata' }), campo('StatefulSet', 'postgres', 'spec.volumeClaimTemplates[0].spec.accessModes[0]', { valor: 'ReadWriteOnce' })] },
+  },
 };

@@ -270,4 +270,10 @@ spec:
       <p>Regra de produção: sempre defina <code>activeDeadlineSeconds</code> (ou um tempo limite na própria tarefa), para um Job
       travado não ficar rodando para sempre.</p>`),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'cronjobs-job-backup': { dica: 'Releia os passos: algum valor pedido no Job backup-db ainda não confere.', regras: [campo('Job', 'backup-db', 'spec.template.spec.restartPolicy', { valor: 'Never' }), campo('Job', 'backup-db', 'spec.template.spec.containers[name=backup].name', { valor: 'backup' })] },
+    'jobs-indexado': { dica: 'Releia os passos: algum valor pedido no Job processa-lotes ainda não confere.', regras: [campo('Job', 'processa-lotes', 'spec.template.spec.containers[name=lote].image', { valor: 'busybox:1.36' }), campo('Job', 'processa-lotes', 'spec.template.spec.restartPolicy', { valor: 'Never' })] },
+    'cronjobs-cronjob-agendado': { dica: 'Releia os passos: algum valor pedido no CronJob limpeza-logs ainda não confere.', regras: [campo('CronJob', 'limpeza-logs', 'spec.jobTemplate.spec.template.spec.containers[name=limpeza].image', { valor: 'busybox:1.36' }), campo('CronJob', 'limpeza-logs', 'spec.schedule', { valor: '*/5 * * * *' })] },
+  },
 };
