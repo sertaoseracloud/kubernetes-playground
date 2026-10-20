@@ -137,33 +137,26 @@ function medirCaminho(camada, palco, esquerdaDoMundo) {
     .map((r) => ({ c: (r.left + r.width / 2 - base.left - esquerdaDoMundo) / TILE, l: (r.top + r.height / 2 - base.top) / TILE }));
 }
 
-function montar(camada, janela) {
+/**
+ * O plano de um módulo, sem desenhar nada: o mapa com as casas da vila, quem anda nele e onde cada
+ * um começa. É o mesmo para os dois desenhos (canvas 2D e PixiJS).
+ */
+export function planejar(camada, janela) {
+  const inicioDoPlano = performance.now();
   const cen = CENARIOS[camada.dataset.cenario];
   const palco = camada.querySelector('.cenario-palco');
   const { semente } = camada.dataset;
-  palco.replaceChildren();
   alargar(camada);
   const largura = palco.clientWidth || janela.innerWidth || 1280;
   const altura = palco.clientHeight || janela.innerHeight || 800;
   const colunas = Math.max(1, Math.ceil(largura / TILE));
   const linhas = Math.min(MAX_LINHAS, Math.max(1, Math.ceil(altura / TILE)));
+  // O mundo tem colunas inteiras de 32px: centraliza para a estrada ficar embaixo dos nós.
   const esquerdaDoMundo = (largura - colunas * TILE) / 2;
   const caminho = medirCaminho(camada, palco, esquerdaDoMundo);
   const base = gerarMapa({ colunas, linhas, cenario: cen, semente, caminho });
   const daVila = vila({ mapa: base, cenario: cen, semente, feitos: Number(camada.dataset.feitos) || 0 });
   const mapa = comCasas(base, daVila.casas);
-
-  // O mundo tem colunas inteiras de 32px: centraliza para a estrada ficar embaixo dos nós.
-  const mundo = document.createElement('div');
-  mundo.className = 'cenario-mundo';
-  mundo.style.left = `${esquerdaDoMundo}px`;
-  const canvas = document.createElement('canvas');
-  canvas.className = 'cenario-mapa';
-  canvas.width = colunas * TILE;
-  canvas.height = linhas * TILE;
-  mundo.append(canvas);
-  palco.append(mundo);
-  desenharMapa(canvas, mapa, cen, semente);
 
   const sortear = sorteador(`${semente}-passos`);
   // 3 personagens (1 no celular) por tela de altura; depois, os filhos e os filhotes da vila. O limite
@@ -176,7 +169,39 @@ function montar(camada, janela) {
   const porId = Object.fromEntries(cen.personagens.map((p) => [p.id, p]));
   const pequenos = [...daVila.filhos.map((f) => porId[f.pai]), ...daVila.filhotes.map((f) => porId[f.mae])].map((p) => ({ ...p, pequeno: true }));
   const defs = [...deSempre, ...pequenos].slice(0, limite);
-  const personagens = posicoesIniciais(mapa, defs, sortear).map((estado, i) => {
+  const posicoes = posicoesIniciais(mapa, defs, sortear);
+  medir('cenarios:planejar', inicioDoPlano);
+  return {
+    camada, cen, semente, mapa, defs, posicoes, sortear, largura, altura, esquerdaDoMundo,
+    bloqueado: Boolean(camada.closest('.bloqueada')),
+  };
+}
+
+/** Quanto tempo leva montar um palco (aparece no painel Performance e nas medições). */
+function medir(nome, inicio) {
+  try { performance.measure(nome, { start: inicio, end: performance.now() }); } catch { /* sem User Timing */ }
+}
+
+function montar(camada, janela) {
+  const inicio = performance.now();
+  const palco = camada.querySelector('.cenario-palco');
+  palco.replaceChildren();
+  const plano = planejar(camada, janela);
+  const { cen, semente, mapa, defs, sortear, largura, esquerdaDoMundo } = plano;
+  const { colunas, linhas } = mapa;
+
+  const mundo = document.createElement('div');
+  mundo.className = 'cenario-mundo';
+  mundo.style.left = `${esquerdaDoMundo}px`;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'cenario-mapa';
+  canvas.width = colunas * TILE;
+  canvas.height = linhas * TILE;
+  mundo.append(canvas);
+  palco.append(mundo);
+  desenharMapa(canvas, mapa, cen, semente);
+
+  const personagens = plano.posicoes.map((estado, i) => {
     if (!estado) return null;
     const el = document.createElement('span');
     el.className = `personagem personagem-${i + 1} mov-${defs[i].movimento}${defs[i].pequeno ? ' pequeno' : ''}`;
@@ -189,14 +214,21 @@ function montar(camada, janela) {
     desenharPersonagem(el, p.def, p.estado);
     return p;
   }).filter(Boolean);
+  medir('cenarios:montar', inicio);
 
   return {
     camada, canvas, mapa, cen, semente, sortear, personagens, largura: palco.clientWidth, altura: palco.clientHeight, larguraMontada: largura,
-    visivel: false, bloqueado: Boolean(camada.closest('.bloqueada')),
+    visivel: false, bloqueado: plano.bloqueado,
   };
 }
 
 function andar(palco, janela) {
+  const inicio = performance.now();
+  andarSemMedir(palco, janela);
+  globalThis.__custoCenarios = (globalThis.__custoCenarios ?? 0) + performance.now() - inicio;
+}
+
+function andarSemMedir(palco, janela) {
   for (const p of palco.personagens) {
     const novo = proximoPasso(p.estado, palco.mapa, palco.sortear);
     if (!novo.parado && novo.direcao[0]) novo.olhaEsquerda = novo.direcao[0] < 0;
@@ -209,8 +241,92 @@ function andar(palco, janela) {
   }
 }
 
+/** SPIKE: ?cenario=pixi na URL troca o desenho pelo PixiJS (carregado só aqui, com import()). */
+const querPixi = (janela) => {
+  try { return new URLSearchParams(janela.location?.search ?? '').get('cenario') === 'pixi'; } catch { return false; }
+};
+
+/** SPIKE: ?cenario=leve liga o 2D otimizado (palco-leve.js): atlas, pedaços e um laço de rAF. */
+const querLeve = (janela) => {
+  try { return new URLSearchParams(janela.location?.search ?? '').get('cenario') === 'leve'; } catch { return false; }
+};
+
+function ligarLeve(raiz, janela) {
+  const camadas = [...raiz.querySelectorAll('.cenario')].filter((c) => CENARIOS[c.dataset.cenario]);
+  let palco = null;
+  let desligado = false;
+  let largura = janela.innerWidth;
+  const montarTudo = ({ montarLeve, animarLeve }) => {
+    palco?.desligar();
+    const folhas = new Map();
+    const contorno = altoContraste() ? corSuave() : null;
+    const modulos = camadas.map((c) => montarLeve(planejar(c, janela), { contorno, folhas }));
+    palco = animarLeve(modulos, { janela, movimento: () => !movimentoReduzido(janela) });
+    janela.__cenarios = { renderizador: 'canvas2d-leve', personagens: modulos.reduce((s, m) => s + m.personagens.length, 0) };
+  };
+  let modulo = null;
+  const aoRedimensionar = () => {
+    if (!modulo || janela.innerWidth === largura) return;
+    largura = janela.innerWidth;
+    montarTudo(modulo);
+  };
+  import('./palco-leve.js').then((m) => {
+    if (desligado) return;
+    modulo = m;
+    montarTudo(m);
+    janela.addEventListener('resize', aoRedimensionar);
+  });
+  return {
+    desligar() {
+      desligado = true;
+      janela.removeEventListener('resize', aoRedimensionar);
+      palco?.desligar();
+    },
+  };
+}
+
+function ligarPixi(raiz, janela, voltar) {
+  const camadas = [...raiz.querySelectorAll('.cenario')].filter((c) => CENARIOS[c.dataset.cenario]);
+  const planejarTodos = () => camadas.map((c) => { c.querySelector('.cenario-palco').replaceChildren(); return planejar(c, janela); });
+  let palco = null;
+  let desligado = false;
+  let largura = janela.innerWidth;
+  const aoRedimensionar = () => {
+    if (!palco || janela.innerWidth === largura) return;
+    largura = janela.innerWidth;
+    palco.replanejar(planejarTodos());
+  };
+  import('./palco-pixi.js')
+    .then(({ ligarPalcoPixi }) => ligarPalcoPixi(raiz, planejarTodos(), { janela, movimento: () => !movimentoReduzido(janela) }))
+    .then((p) => {
+      if (desligado) { p.desligar(); return; }
+      palco = p;
+      janela.__cenarios = { renderizador: p.renderizador, personagens: p.personagens() };
+      janela.addEventListener('resize', aoRedimensionar);
+    })
+    .catch((erro) => {
+      // Sem WebGL nem canvas para o Pixi: volta para o desenho 2D de sempre.
+      console.warn('cenários: PixiJS indisponível, usando o canvas 2D', erro);
+      if (!desligado) palco = voltar();
+    });
+  return {
+    desligar() {
+      desligado = true;
+      janela.removeEventListener('resize', aoRedimensionar);
+      palco?.desligar();
+    },
+  };
+}
+
 /** Liga os cenários da trilha que está em `raiz`. Devolve `desligar()`, que limpa tudo. */
 export function ligarCenarios(raiz, { janela = window } = {}) {
+  if (querPixi(janela)) return ligarPixi(raiz, janela, () => ligarCanvas2d(raiz, janela));
+  if (querLeve(janela)) return ligarLeve(raiz, janela);
+  if (janela.location?.search?.includes('cenario=nenhum')) return { desligar() {} }; // SPIKE: controle das medições
+  return ligarCanvas2d(raiz, janela);
+}
+
+function ligarCanvas2d(raiz, janela) {
   let palcos = [...raiz.querySelectorAll('.cenario')].filter((c) => CENARIOS[c.dataset.cenario]).map((c) => montar(c, janela));
   let temporizador = null;
 

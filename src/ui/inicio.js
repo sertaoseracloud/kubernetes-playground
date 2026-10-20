@@ -254,6 +254,12 @@ function diploma(j) {
 // Os cenários da renderização anterior (temporizador e observadores) são desligados a cada nova.
 let desligarCenarios = null;
 
+/** Ao sair da trilha, os cenários param e devolvem o que usavam (temporizador, observadores, WebGL). */
+export function desligarCenariosDaTrilha() {
+  desligarCenarios?.();
+  desligarCenarios = null;
+}
+
 export function renderInicio(el) {
   const j = jornadaAtual();
   const certs = certificadosDaJornada(j);

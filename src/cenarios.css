@@ -63,3 +63,14 @@
 [data-tema="suave"] .cenario { filter: saturate(.5) brightness(.9); }
 [data-tema="alto-contraste"] .cenario-mapa { opacity: 1; }
 [data-tema="alto-contraste"] .personagem { transition: none; }
+
+/* SPIKE PixiJS (palco-pixi.js): um canvas só, fixo atrás da trilha, do tamanho da janela. */
+.com-pixi { isolation: isolate; }
+/* .cenario também é o nome do quadro de casos de teste (estilo.css), que tem fundo: aqui, nenhum. */
+.com-pixi .cenario { background: none; padding: 0; border-radius: 0; }
+.cenario-pixi { position: fixed; z-index: -1; pointer-events: none; image-rendering: pixelated; }
+
+/* SPIKE 2D otimizado (palco-leve.js): o mapa em pedaços e os personagens com o atlas de fundo. */
+.personagem-leve i { display: block; width: 32px; height: 32px; background-repeat: no-repeat; image-rendering: pixelated; }
+.personagem-leve.pequeno i { width: 16px; height: 16px; margin: 16px 0 0 8px; }
+.personagem-leve.olha-esquerda i { transform: scaleX(-1); }
