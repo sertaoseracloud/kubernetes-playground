@@ -467,6 +467,119 @@ export const GLOSSARIO = [
     definicao: 'O plugin de rede que dá a cada Pod um IP de verdade da VPC.',
     analogia: 'Cada morador ganha um endereço próprio da rua, em vez de dividir o do prédio.',
   },
+  {
+    id: 'arn', termo: 'ARN', nivel: 'aws', padroes: ['arns?'],
+    definicao: 'Amazon Resource Name: o "endereço completo" de qualquer coisa na AWS, como arn:aws:iam::123456789012:role/Leitores.',
+    analogia: 'O CPF de um recurso: identifica um só, em toda a AWS.',
+  },
+  {
+    id: 'access-entry', termo: 'Access entry e aws-auth', nivel: 'aws', padroes: ['access entr(y|ies)', 'accessentry', 'aws-auth', 'access polic(y|ies)'],
+    definicao: 'Como o EKS decide quem entra no cluster: o ConfigMap aws-auth (jeito antigo) ou as access entries da API do EKS, com políticas prontas de acesso.',
+    analogia: 'A lista da portaria do prédio: diz quem entra e em quais andares.',
+    exemplo: 'spec:\n  principalARN: arn:aws:iam::123456789012:role/Leitores\n  accessPolicies:\n    - policyARN: arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy',
+  },
+  {
+    id: 'ack', termo: 'ACK', nivel: 'aws', padroes: ['ack', 'aws controllers for kubernetes'],
+    definicao: 'AWS Controllers for Kubernetes: operadores que leem recursos YAML do cluster (Nodegroup, AccessEntry...) e criam o equivalente na AWS.',
+    analogia: 'Um despachante: você preenche o formulário no balcão do cluster e ele resolve na repartição da AWS.',
+  },
+  {
+    id: 'pod-identity', termo: 'EKS Pod Identity', nivel: 'aws', padroes: ['pod identity', 'podidentityassociation'],
+    definicao: 'Liga uma ServiceAccount a uma role do IAM por uma associação no EKS, sem annotation e sem provedor OIDC por cluster.',
+    analogia: 'Uma lista na portaria: o porteiro acha o nome e entrega a chave certa, sem precisar de crachá com foto.',
+  },
+  {
+    id: 'node-group', termo: 'Managed node group', nivel: 'aws', padroes: ['node groups?', 'nodegroups?'],
+    definicao: 'Um grupo de máquinas EC2 iguais que a AWS cria, escala (mínimo, máximo, desejado) e atualiza para o cluster.',
+    analogia: 'Uma frota de carros alugados do mesmo modelo: a locadora faz a manutenção.',
+  },
+  {
+    id: 'taint', termo: 'Taint e toleration', nivel: 'avancados', padroes: ['taints?', 'tolerations?'],
+    definicao: 'O taint é uma marca no nó que afasta os Pods; a toleration no Pod é a permissão para entrar mesmo assim.',
+    analogia: 'Uma placa de "acesso restrito" na porta (taint) e o crachá que libera a entrada (toleration).',
+    exemplo: 'tolerations:\n  - key: dedicado\n    operator: Equal\n    value: gpu\n    effect: NoSchedule',
+  },
+  {
+    id: 'nodeselector', termo: 'nodeSelector', nivel: 'avancados', padroes: ['nodeselector'],
+    definicao: 'Um mapa de labels no spec do Pod: ele só pode rodar em nós que tenham todas essas labels.',
+    analogia: 'Pedir mesa "na varanda": o recepcionista só oferece mesas com essa etiqueta.',
+  },
+  {
+    id: 'karpenter', termo: 'Karpenter', nivel: 'aws', padroes: ['karpenter', 'nodepools?', 'ec2nodeclass', 'nodeclaims?'],
+    definicao: 'Um autoscaler de nós que olha os Pods Pending e compra a máquina certa na hora. NodePool diz quais máquinas; EC2NodeClass diz como.',
+    analogia: 'Chamar um carro de aplicativo do tamanho do grupo, em vez de manter uma frota parada.',
+  },
+  {
+    id: 'cluster-autoscaler', termo: 'Cluster Autoscaler', nivel: 'aws', padroes: ['cluster autoscaler', 'cluster-autoscaler'],
+    definicao: 'Aumenta e diminui o tamanho dos node groups que já existem, conforme há Pods sem lugar ou nós ociosos.',
+    analogia: 'O gerente que chama mais um ônibus igual aos outros quando a fila cresce.',
+  },
+  {
+    id: 'spot', termo: 'Spot', nivel: 'aws', padroes: ['spot'],
+    definicao: 'Capacidade que sobra na nuvem, com grande desconto, mas que pode ser recolhida com pouco aviso.',
+    analogia: 'A passagem de última hora: muito mais barata, mas a companhia pode remarcar.',
+  },
+  {
+    id: 'nlb', termo: 'NLB', nivel: 'aws', padroes: ['nlb', 'network load balancer'],
+    definicao: 'Network Load Balancer da AWS: balanceia conexões TCP e UDP, muito rápido, sem olhar caminhos HTTP. Nasce de um Service LoadBalancer.',
+    analogia: 'Uma esteira que só leva o pacote adiante, sem abrir a carta.',
+  },
+  {
+    id: 'security-group', termo: 'Security group', nivel: 'aws', padroes: ['security groups?', 'securitygrouppolicy'],
+    definicao: 'O firewall da AWS ligado a uma placa de rede: diz quais portas e origens podem entrar e sair.',
+    analogia: 'O segurança na porta de cada sala, com a lista de quem pode entrar.',
+  },
+  {
+    id: 'ingressclass', termo: 'IngressClass', nivel: 'avancados', padroes: ['ingressclass(es)?', 'ingressclassname', 'ingressclassparams'],
+    definicao: 'Diz qual controlador cuida de um Ingress (ALB, NGINX, AGIC...) e, com parâmetros, as escolhas fixas daquela classe.',
+    analogia: 'A bandeira do táxi: diz de qual cooperativa ele é e quais regras segue.',
+  },
+  {
+    id: 'target-group', termo: 'Target group', nivel: 'aws', padroes: ['target groups?', 'targetgroupbinding'],
+    definicao: 'A lista de destinos (IPs ou máquinas) para onde um ALB ou NLB manda o tráfego.',
+    analogia: 'A lista de caixas abertos para onde o fiscal manda cada cliente da fila.',
+  },
+  {
+    id: 'csi', termo: 'CSI driver', nivel: 'avancados', padroes: ['csi'],
+    definicao: 'Container Storage Interface: o plugin que cria e liga discos e arquivos do provedor (EBS, EFS, Azure Disk) aos Pods.',
+    analogia: 'O adaptador de tomada: cada país tem o seu, e o aparelho (o Pod) não precisa saber.',
+  },
+  {
+    id: 'snapshot', termo: 'Snapshot de volume', nivel: 'avancados', padroes: ['snapshots?', 'volumesnapshots?', 'volumesnapshotclass'],
+    definicao: 'Uma foto do disco num instante. Serve de backup e para criar um disco novo com os mesmos dados.',
+    analogia: 'Tirar uma foto do quadro antes de apagar: dá para copiar tudo de novo depois.',
+  },
+  {
+    id: 'kms', termo: 'KMS', nivel: 'aws', padroes: ['kms'],
+    definicao: 'O serviço de chaves de criptografia da AWS. Discos, snapshots e segredos podem ser cifrados com uma chave sua.',
+    analogia: 'O chaveiro do cofre da empresa: sem a chave certa, o cofre não abre.',
+  },
+  {
+    id: 'cloudwatch', termo: 'CloudWatch e Container Insights', nivel: 'aws', padroes: ['cloudwatch', 'container insights', 'fluent ?bit'],
+    definicao: 'O serviço de logs e métricas da AWS. O Container Insights coleta dados dos nós e Pods; o Fluent Bit leva os logs.',
+    analogia: 'O painel e a caixa-preta do avião.',
+  },
+  {
+    id: 'opentelemetry', termo: 'OpenTelemetry e ADOT', nivel: 'aws', padroes: ['opentelemetry', 'adot', 'otlp', 'x-ray'],
+    definicao: 'O padrão aberto para coletar traces, métricas e logs. ADOT é a versão da AWS; o coletor recebe em OTLP e manda ao X-Ray e ao CloudWatch.',
+    analogia: 'O rastreio de uma encomenda: cada parada (serviço) registra por onde o pacote (a requisição) passou.',
+  },
+  {
+    id: 'pss', termo: 'Pod Security Standards', nivel: 'aws', padroes: ['pod security( standards| admission)?', 'pss', 'restricted', 'baseline'],
+    definicao: 'Três níveis de regras de segurança para Pods (privileged, baseline e restricted), aplicados por labels no Namespace.',
+    analogia: 'O fiscal da obra: confere os equipamentos de segurança na entrada e barra quem está sem.',
+    exemplo: 'metadata:\n  labels:\n    pod-security.kubernetes.io/enforce: restricted',
+  },
+  {
+    id: 'secrets-manager', termo: 'Secrets Manager e SecretProviderClass', nivel: 'aws', padroes: ['secrets manager', 'secretproviderclass', 'secrets store'],
+    definicao: 'O cofre de senhas da AWS. Com o Secrets Store CSI Driver, a SecretProviderClass diz quais segredos montar no Pod como arquivos.',
+    analogia: 'Um cofre no banco: o Pod mostra a identidade e recebe só a senha que pode ver.',
+  },
+  {
+    id: 'consolidacao', termo: 'Consolidação e disruption', nivel: 'aws', padroes: ['consolidação', 'consolidar', 'consolidation', 'disruption'],
+    definicao: 'Quando o Karpenter junta Pods em menos nós e desliga os que sobram, dentro dos limites de budgets e PDBs.',
+    analogia: 'Juntar os passageiros de dois ônibus meio vazios num só e liberar o outro.',
+  },
 
   // ---------- Azure ----------
   {
