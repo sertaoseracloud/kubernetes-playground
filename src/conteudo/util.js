@@ -54,3 +54,20 @@ export function yaml(texto) {
   const recuo = recuos.length ? Math.min(...recuos) : 0;
   return `${linhas.map((l) => l.slice(recuo)).join('\n')}\n`;
 }
+
+/** Vários manifestos (cada um com o próprio recuo) num texto só, separados por ---. */
+export const docs = (...partes) => partes.map(yaml).join('---\n');
+
+/**
+ * Casos ocultos: rodam só no ⬆ Enviar e conferem o resto do que os passos pedem, para o código
+ * não ficar "decorado" nos casos visíveis. `mapa` é { idDoExercicio: { dica, regras: [...] } }
+ * (ou uma lista desses objetos). A `dica` aparece só se o caso falhar.
+ */
+export function comOcultos(itens, mapa) {
+  return itens.map((item) => {
+    const extras = [mapa[item.id] ?? []].flat();
+    if (item.tipo !== 'exercicio' || !extras.length) return item;
+    const casos = extras.map(({ dica, regras }) => ({ descricao: 'Caso oculto', dica, oculto: true, regras }));
+    return { ...item, testes: [...item.testes, ...casos] };
+  });
+}

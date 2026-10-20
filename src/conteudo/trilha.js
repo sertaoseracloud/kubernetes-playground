@@ -6,15 +6,20 @@ import { aws } from './aws.js';
 import { azure } from './azure.js';
 import { projetoMicroservicos } from './projeto-microservicos.js';
 import { projetoMulticloud } from './projeto-multicloud.js';
+import { projetos } from './projetos.js';
 import { comparacao } from './comparacao.js';
 
 // GitOps já faz parte de Recursos Avançados (avancados.js): listá-lo de novo aqui duplicava
 // 19 itens e desalinhava os troféus dos certificados. A comparação com o Terraform é um
 // módulo extra: não tem certificado próprio e não conta para o certificado final.
-export const modulos = [fundamentos, avancados, aws, azure, projetoMicroservicos, projetoMulticloud, comparacao];
+export const modulos = [fundamentos, avancados, aws, azure, projetoMicroservicos, projetoMulticloud, projetos, comparacao];
 
-/** Projetos completos da trilha (os módulos projeto-*); os grupos dos outros módulos são tópicos. */
-export const contarProjetos = (lista = modulos) => lista.filter((m) => m.id.startsWith('projeto-')).length;
+/**
+ * Projetos completos da trilha: cada módulo projeto-* é um projeto, e no módulo de projetos práticos
+ * cada tópico é um projeto. Os grupos dos outros módulos são só tópicos.
+ */
+export const contarProjetos = (lista = modulos) => lista.reduce((total, m) => total
+  + (m.id.startsWith('projeto-') ? 1 : m.id === 'projetos' ? (m.grupos ?? []).length : 0), 0);
 
 /** Lista plana de todos os itens da trilha (lições + exercícios). */
 // Cada item sabe de que módulo é (o aviso de módulo bloqueado e a descrição da página usam isso).

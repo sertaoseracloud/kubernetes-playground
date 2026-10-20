@@ -3,6 +3,7 @@
 // Não há conexão com kubectl nem cluster real: tudo é simulado, como no terraform-playground.
 import * as yaml from 'js-yaml';
 import { lerEstado, gravarEstado } from '../progresso.js';
+import { validarCrd, admissaoPss } from './crds.js';
 
 // ---------- Validação de campos obrigatórios e sugestões ----------
 
@@ -73,12 +74,21 @@ export const API_VERSIONS = {
   TargetGroupBinding: ['elbv2.k8s.aws/v1beta1'], IngressClassParams: ['elbv2.k8s.aws/v1beta1'],
   NodePool: ['karpenter.sh/v1'], EC2NodeClass: ['karpenter.k8s.aws/v1'],
   ENIConfig: ['crd.k8s.amazonaws.com/v1alpha1'], SecurityGroupPolicy: ['vpcresources.k8s.aws/v1beta1'],
+  // ACK (AWS Controllers for Kubernetes): recursos do EKS gerenciados pelo próprio cluster
+  PodIdentityAssociation: ['eks.services.k8s.aws/v1alpha1'], AccessEntry: ['eks.services.k8s.aws/v1alpha1'],
+  Nodegroup: ['eks.services.k8s.aws/v1alpha1'], Addon: ['eks.services.k8s.aws/v1alpha1'],
+  // OpenTelemetry Operator (o add-on ADOT do EKS)
+  OpenTelemetryCollector: ['opentelemetry.io/v1beta1', 'opentelemetry.io/v1alpha1'], Instrumentation: ['opentelemetry.io/v1alpha1'],
   // Azure (AKS)
   ScaledObject: ['keda.sh/v1alpha1'], ScaledJob: ['keda.sh/v1alpha1'], TriggerAuthentication: ['keda.sh/v1alpha1'],
   ClusterTriggerAuthentication: ['keda.sh/v1alpha1'],
   NginxIngressController: ['approuting.kubernetes.azure.com/v1alpha1'],
   AKSNodeClass: ['karpenter.azure.com/v1beta1'],
   ApplicationLoadBalancer: ['alb.networking.azure.io/v1'],
+  // Cilium (Azure CNI powered by Cilium e Advanced Container Networking Services)
+  CiliumNetworkPolicy: ['cilium.io/v2'], CiliumClusterwideNetworkPolicy: ['cilium.io/v2'],
+  // Azure Service Operator v2 (recursos do AKS declarados como YAML)
+  ManagedClustersAgentPool: ['containerservice.azure.com/v1api20240901', 'containerservice.azure.com/v1api20231001'],
 };
 
 const invalido = (kind, nome, campo, motivo) => `The ${kind} "${nome}" is invalid: ${campo}: ${motivo}`;
@@ -178,6 +188,7 @@ function validarOutrosKinds(recurso, erros) {
       if (spec?.minAvailable != null && spec?.maxUnavailable != null) erros.push(invalido(kind, nome, 'spec', 'Invalid value: minAvailable and maxUnavailable cannot be both set'));
       break;
   }
+  validarCrd(recurso, erros);
 }
 
 /** Valida campos obrigatórios de um recurso antes de processá-lo. Devolve array de erros. */
@@ -539,6 +550,8 @@ function aplicarRecursoEm(recurso, alvo) {
 
   switch (kind) {
     case 'Pod': {
+      const proibido = admissaoPss(recurso, alvo.outros);
+      if (proibido) return { ok: false, mensagem: proibido, recursos: [] };
       const containers = mapearContainers(recurso.spec?.containers);
       const primeiro = containers[0] ?? {};
       const pod = {

@@ -286,7 +286,7 @@ describe('regra campo', () => {
 describe('kubectl com os novos tipos', () => {
   it('get e describe de StatefulSet, Role e CRD', () => {
     aplicarYaml('apiVersion: rbac.authorization.k8s.io/v1\nkind: Role\nmetadata:\n  name: leitor\nrules:\n  - apiGroups: [""]\n    resources: ["pods"]\n    verbs: ["get"]');
-    aplicarYaml('apiVersion: karpenter.sh/v1\nkind: NodePool\nmetadata:\n  name: padrao\nspec:\n  template:\n    spec:\n      requirements: []');
+    aplicarYaml('apiVersion: karpenter.sh/v1\nkind: NodePool\nmetadata:\n  name: padrao\nspec:\n  template:\n    spec:\n      nodeClassRef:\n        group: karpenter.k8s.aws\n        kind: EC2NodeClass\n        name: padrao\n      requirements: []');
     const texto = (cmd) => interpretar(cmd, obterEstado()).linhas.map((l) => l.texto).join('\n');
     expect(texto('kubectl get roles')).toContain('leitor');
     expect(texto('kubectl get nodepools')).toContain('padrao');
@@ -304,7 +304,7 @@ describe('kubectl com os novos tipos', () => {
 
 describe('mensagem do apply', () => {
   it('usa kind.grupo como o kubectl', () => {
-    expect(aplicarYaml('apiVersion: karpenter.sh/v1\nkind: NodePool\nmetadata:\n  name: padrao\nspec: {}').mensagem).toBe('nodepool.karpenter.sh/padrao created');
+    expect(aplicarYaml('apiVersion: karpenter.sh/v1\nkind: NodePool\nmetadata:\n  name: padrao\nspec:\n  template:\n    spec:\n      nodeClassRef:\n        group: karpenter.k8s.aws\n        kind: EC2NodeClass\n        name: padrao\n      requirements: []').mensagem).toBe('nodepool.karpenter.sh/padrao created');
     expect(aplicarYaml('apiVersion: v1\nkind: Namespace\nmetadata:\n  name: loja').mensagem).toBe('namespace/loja created');
   });
 });

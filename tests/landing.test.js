@@ -12,7 +12,7 @@ describe('landing page', () => {
     expect(n.exercicios).toBe(problemas.length);
     expect(n.modulos).toBe(modulos.length);
     expect(n.projetos).toBe(contarProjetos());
-    expect(n.projetos).toBe(2); // microserviços e multi-cloud
+    expect(n.projetos).toBe(10); // microserviços, multi-cloud e os 8 do módulo de projetos práticos
     expect(n.certificados).toBe(ORDEM.length);
   });
 

@@ -6,5 +6,6 @@ export const CENARIO_DO_MODULO = {
   azure: 'ceu',
   'projeto-microservicos': 'cidade',
   'projeto-multicloud': 'arquipelago',
+  projetos: 'cidade',
   comparacao: 'canteiro',
 };
