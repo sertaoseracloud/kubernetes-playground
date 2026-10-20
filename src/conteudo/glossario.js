@@ -607,6 +607,47 @@ export const GLOSSARIO = [
     definicao: 'Azure Disk: disco de um nó por vez (ReadWriteOnce). Azure Files: compartilhamento de rede para vários Pods (ReadWriteMany).',
     analogia: 'O HD externo e a pasta compartilhada, versão Azure.',
   },
+  {
+    id: 'node-pool', termo: 'Node pool', nivel: 'azure', padroes: ['node pools?', 'managedclustersagentpool'],
+    definicao: 'Um grupo de máquinas virtuais iguais do AKS. Pools System rodam os add-ons; pools User, as aplicações.',
+    analogia: 'Uma frota de carros do mesmo modelo, separada por tipo de trabalho.',
+  },
+  {
+    id: 'aso', termo: 'Azure Service Operator', nivel: 'azure', padroes: ['azure service operator', 'aso'],
+    definicao: 'Um operador que lê recursos YAML do cluster (como um node pool) e cria o equivalente na Azure.',
+    analogia: 'O despachante que leva o formulário do cluster até a repartição da Azure.',
+  },
+  {
+    id: 'keda', termo: 'KEDA', nivel: 'azure', padroes: ['keda', 'scaledobjects?', 'triggerauthentication'],
+    definicao: 'Escala um Deployment por eventos (mensagens numa fila, horário, métricas), inclusive até zero réplicas.',
+    analogia: 'O gerente que olha o tamanho da fila do caixa para decidir quantos caixas abrir.',
+    exemplo: 'triggers:\n  - type: cron\n    metadata:\n      start: "0 8 * * *"\n      end: "0 20 * * *"\n      desiredReplicas: "5"',
+  },
+  {
+    id: 'nap', termo: 'Node auto-provisioning (NAP)', nivel: 'azure', padroes: ['node auto-provisioning', 'nap', 'aksnodeclass'],
+    definicao: 'O Karpenter gerenciado pelo AKS: cria a VM certa para os Pods Pending, a partir de NodePools e AKSNodeClass.',
+    analogia: 'O carro de aplicativo do tamanho do grupo, agora no shopping da Azure.',
+  },
+  {
+    id: 'cilium', termo: 'Cilium', nivel: 'azure', padroes: ['cilium', 'ciliumnetworkpolic(y|ies)', 'ebpf'],
+    definicao: 'Um plugin de rede que usa eBPF no kernel dos nós. No AKS, aplica NetworkPolicies e CiliumNetworkPolicies, até por nome de domínio.',
+    analogia: 'Um porteiro eletrônico que reconhece cada morador e cada entregador pelo nome, não só pelo número da casa.',
+  },
+  {
+    id: 'app-routing', termo: 'App Routing', nivel: 'azure', padroes: ['app routing', 'webapprouting', 'nginxingresscontroller'],
+    definicao: 'Add-on do AKS que instala e atualiza um NGINX Ingress Controller gerenciado pela Azure.',
+    analogia: 'O porteiro terceirizado: a empresa contrata, treina e troca o uniforme por você.',
+  },
+  {
+    id: 'azure-monitor', termo: 'Azure Monitor e Managed Prometheus', nivel: 'azure', padroes: ['azure monitor', 'managed prometheus', 'log analytics', 'podmonitor', 'servicemonitor', 'prometheus'],
+    definicao: 'Onde ficam logs e métricas do AKS: o Container Insights manda logs ao Log Analytics; o Managed Prometheus guarda as métricas.',
+    analogia: 'O painel do carro e o diário de bordo, guardados na central da frota.',
+  },
+  {
+    id: 'key-vault', termo: 'Key Vault', nivel: 'azure', padroes: ['key vault', 'keyvault'],
+    definicao: 'O cofre da Azure para senhas, chaves e certificados. O Secrets Store CSI Driver monta os segredos no Pod como arquivos.',
+    analogia: 'O cofre do banco: o Pod mostra a identidade e recebe só o que pode ver.',
+  },
 ];
 
 // Letras (com acento), dígitos, _ e $ contam como parte de uma palavra.
