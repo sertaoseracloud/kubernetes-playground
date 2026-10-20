@@ -2,7 +2,7 @@
 
 Data: 2026-10-20 · Repo de referência: kubernetes-playground (DivergeKubernetes) · Branch: `feature/cenarios-pixijs`
 
-Status: **análise concluída, aguardando aprovação** antes da migração e da Parte 2.
+Status: **implementado** (decisão do usuário: PixiJS como desenho principal; ver seção 6.1).
 
 ## Glossário (termos técnicos, com analogias)
 
@@ -164,6 +164,16 @@ Onde o Pixi seria melhor: montar e redimensionar (≈4× mais rápido que o 2D o
 
 O que **não** vai para o PR final: `palco-pixi.js`, a dependência `pixi.js`, as chaves `?cenario=pixi|leve|nenhum` e os contadores `__pixi`/`__cenarios` de inspeção. O que fica: `atlas.js`, `planejar()`, o palco 2D otimizado (substituindo o atual), o desligamento ao trocar de rota e as medições `cenarios:planejar`/`cenarios:montar` (aparecem no painel Performance).
 
+### 6.1 Decisão do usuário (2026-10-20)
+
+O usuário escolheu **migrar para o PixiJS** mesmo assim. A implementação reduz os riscos medidos:
+
+- O Pixi só é usado com WebGL acelerado. Sem placa de vídeo (SwiftShader, llvmpipe, como no CI e em máquinas sem GPU), o desenho é o canvas 2D de sempre, porque ali o WebGL roda na CPU e custaria mais. A detecção usa `failIfMajorPerformanceCaveat` e o nome do renderizador (`WEBGL_debug_renderer_info`); o Chromium não marca o SwiftShader como lento.
+- O orçamento da animação caiu para 24 quadros/s, e nada é desenhado sem mudança (rolagem, passo, salto ou casa nova).
+- O Ticker para com a aba oculta (`visibilitychange`); módulos fora da tela não andam (geometria por rolagem), e só anda quem está a até 2 tiles da tela.
+- O contexto WebGL é devolvido ao sair da trilha (`desligarCenariosDaTrilha()` em `navegar()`).
+- As falas dos moradores são **definições curtas de conceitos, para revisão** ("Termo: o que é."), e o balão da fala **nunca cobre o ícone, a legenda ou o balão de uma fase** (`posicaoDaFala`, com teste). Ambos foram pedidos pelo usuário.
+
 ## 7. Parte 2: a vida dos personagens (vale com qualquer renderizador)
 
 Tudo continua determinístico: o estado de cada personagem sai de **(semente do módulo, exercícios feitos, número do passo)**. Nada novo é gravado.
@@ -188,11 +198,11 @@ Tudo continua determinístico: o estado de cada personagem sai de **(semente do 
 
 ### Interação do usuário
 
-- **Clicar ou tocar num personagem** mostra uma fala curta (dica ou curiosidade do tema do curso, em texto simples, sem solução e sem detalhes de validação).
+- **Clicar ou tocar num personagem** mostra a definição curta de um conceito do curso, para revisar (texto simples, sem solução e sem detalhes de validação). O balão fica por cima da trilha, mas desvia do ícone, da legenda e do balão de cada fase; sem lugar livre, a definição vai só para o leitor de tela e para a lista.
   - As falas ficam em `src/conteudo/falas-da-vila.js`, por site.
   - O clique é tratado na seção do módulo: o palco converte o ponto em tile e procura um personagem ali. A camada continua `pointer-events: none` e não rouba a rolagem. A área de toque é o tile inteiro (32×32 px), inclusive nos filhotes.
 - **Alternativa fora do canvas**, junto do cabeçalho de cada módulo:
-  - um botão **"Conhecer a vila"** (`aria-expanded`) abre uma lista com os moradores do módulo (nome e fala), em texto, navegável por teclado e leitor de tela;
+  - um botão **"Conhecer a vila"** (`aria-expanded`) abre uma lista com os moradores do módulo e todas as definições de cada um, em texto, navegável por teclado e leitor de tela;
   - um botão **"⏸ Pausar cenário" / "▶ Animar cenário"** (`aria-pressed`, lembrado no `localStorage` como preferência de interface, igual às outras do painel ♿), que atende ao WCAG 2.2.2.
   - Os dois têm no mínimo 24×24 px, foco visível e nenhum efeito na largura (sem rolagem horizontal a 320, 375 e 412 px).
 

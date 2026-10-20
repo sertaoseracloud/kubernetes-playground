@@ -9,7 +9,7 @@
 // código do Kubernetes: o simulador (src/k8s/) foi escrito do zero e só
 // imita o comportamento e as mensagens da ferramenta.
 
-export const ATUALIZADA_EM = '2026-10-19';
+export const ATUALIZADA_EM = '2026-10-20';
 export const TITULAR = 'Sertão será cloud';
 export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playground';
 
@@ -35,5 +35,9 @@ export const TERCEIROS = [
   { nome: 'Assinatura digital (@noble/ed25519, @noble/hashes)', pacotes: ['@noble/ed25519', '@noble/hashes'], licenca: 'MIT' },
   { nome: 'Fontes Fira Code e Atkinson Hyperlegible', pacotes: ['@fontsource/fira-code', '@fontsource/atkinson-hyperlegible'], licenca: 'OFL-1.1' },
   { nome: 'QR Code do PIX (qrcode-generator)', pacotes: ['qrcode-generator'], licenca: 'MIT' },
+  // Só na tela da trilha, com placa de vídeo (src/ui/cenarios/palco-pixi.js), com as dependências que entram junto.
+  { nome: 'Desenho dos cenários da trilha (PixiJS)', pacotes: ['pixi.js', '@pixi/colord', 'eventemitter3', 'ismobilejs', 'parse-svg-path'], licenca: 'MIT' },
+  { nome: 'Triangulação do PixiJS (earcut)', pacotes: ['earcut'], licenca: 'ISC' },
+  { nome: 'Cache do PixiJS (tiny-lru)', pacotes: ['tiny-lru'], licenca: 'BSD-3-Clause' },
   { nome: 'Cores do tema Dracula', pacotes: [], licenca: 'MIT' },
 ];
