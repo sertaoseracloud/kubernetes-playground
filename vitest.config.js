@@ -25,7 +25,7 @@ export default defineConfig({
       reporter: ['text-summary', 'json-summary', 'html'],
       // Com os cenários, o grafo e o editor de abas, a cobertura medida em 2026-10-19 é 75/67/78/78
       // (antes, 71/63/74/74). Os limites sobem com folga de um ponto, como no DivergeTerraform. Só podem subir.
-      thresholds: { statements: 74, branches: 66, functions: 76, lines: 77 },
+      thresholds: { statements: 78, branches: 71, functions: 80, lines: 80 },
     },
   },
 });
