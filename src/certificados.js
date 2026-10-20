@@ -54,14 +54,14 @@ export const CERTIFICADOS = {
   },
   'projeto-multicloud': {
     titulo: 'Projeto: Deploy Multi-Cloud',
-    cargaHoraria: 3,
+    cargaHoraria: 4,
     resumo: 'construiu deploy multi-cloud com abstrações cloud-agnostic',
     hashtags: ['Kubernetes', 'Multi-Cloud', 'AWS', 'Azure'],
-    conteudos: ['Manifestos genéricos', 'Kustomize overlays', 'CI/CD multi-cluster'],
+    conteudos: ['Manifestos genéricos', 'Kustomize overlays', 'CI/CD multi-cluster', 'Entrada no EKS (ALB) e no AKS (App Routing)'],
   },
   final: {
     titulo: 'Especialista Kubernetes: Trilha Completa',
-    cargaHoraria: 127,
+    cargaHoraria: 128,
     resumo: 'concluiu a trilha completa de Kubernetes, dos fundamentos ao multi-cloud',
     hashtags: ['Kubernetes', 'K8s', 'AWS', 'Azure', 'DevOps', 'Cloud Native'],
     conteudos: ['Fundamentos', 'Recursos Avançados', 'AWS (EKS)', 'Azure (AKS)', 'Projetos Práticos'],

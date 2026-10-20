@@ -16,10 +16,10 @@ import { caminhoLegivel, explicarCampo, aplicarYaml, resetarEstado, verificarReg
 
 // Os módulos (ou tópicos de um módulo) já revisados no padrão. Módulo novo entra aqui quando
 // seguir docs/didatica.md.
-const REVISADOS = ['fundamentos', 'avancados', 'aws', 'azure', 'projeto-microservicos', 'projeto-multicloud'];
+const REVISADOS = ['fundamentos', 'avancados', 'aws', 'azure', 'projeto-microservicos', 'projeto-multicloud', 'projetos'];
 const revisado = (i) => REVISADOS.includes(i.modulo) || REVISADOS.includes(i.grupo);
 // Os módulos (ou tópicos) em que todo exercício também tem casos ocultos (rodam só no ⬆ Enviar).
-const COM_OCULTOS = ['aws', 'azure'];
+const COM_OCULTOS = ['aws', 'azure', 'projeto-multicloud', 'projetos'];
 
 const texto = (html) => html.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 const revisados = itens.filter(revisado);

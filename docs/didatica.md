@@ -189,7 +189,13 @@ Mesma forma do AWS, trocando as peças:
 
 ### 5. Projetos (2 → 10 projetos de 5 etapas)
 
-Cada projeto é um módulo `projeto-*` com **uma lição de arquitetura** (o desenho do que será
+Os dois primeiros projetos são módulos `projeto-*` (com certificado). Os outros oito ficam no módulo
+extra **Projetos práticos** (`src/conteudo/projetos.js`), um tópico por projeto, em arquivos
+`projetos-*.js`: um módulo novo na cadeia de certificados invalidaria os certificados finais já
+emitidos (a cadeia do certificado final inclui o selo de cada módulo anterior), por isso o módulo é
+extra, como a comparação com o Terraform. Projeto novo entra em `PROJETOS`, em `projetos.js`.
+
+Cada projeto tem **uma lição de arquitetura** (o desenho do que será
 construído) e **5 etapas**. A etapa N abre com a solução da etapa N-1 no `inicial` (com `# TODO`
 na parte nova) ou com o que já está no cluster em `existentes`. O enunciado começa com
 `<p class="etapa-info">🧩 <b>Projeto X</b> · etapa N de 5.</p>`. Etapas típicas:

@@ -1,7 +1,45 @@
 // Módulo: Projeto prático de Deploy Multi-Cloud com Kubernetes.
 // Foca em abstrações cloud-agnostic, Kustomize overlays e pipelines multi-cluster.
+import { exercicio, teste, existe, campo, comOcultos } from './util.js';
 
-export const projetoMulticloud = {
+/** A base genérica da etapa 1 (já no cluster nas etapas da entrada). */
+const BASE_GENERICA = `
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: app-web
+    labels:
+      app: web
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        app: web
+    template:
+      metadata:
+        labels:
+          app: web
+      spec:
+        containers:
+          - name: web
+            image: nginx:1.25
+            ports:
+              - containerPort: 80
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: app-svc
+  spec:
+    type: ClusterIP
+    selector:
+      app: web
+    ports:
+      - port: 80
+        targetPort: 80
+`;
+
+const modulo = {
   id: 'projeto-multicloud',
   titulo: 'Projeto: Deploy Multi-Cloud',
   descricao: 'Manifestos genéricos e overlays para AWS e Azure, evitando vendor lock-in com Kustomize.',
@@ -20,7 +58,10 @@ export const projetoMulticloud = {
           <li><b>Kustomize overlays</b>: patches que adicionam anotações, labels ou configurações específicas por ambiente (AWS, Azure, GCP).</li>
           <li><b>CI/CD multi-cluster</b>: pipeline que aplica o overlay correto no cluster de destino.</li>
         </ul>
-        <p>Essa abordagem permite migrar entre clouds sem reescrever YAMLs — apenas trocando o overlay.</p>`,
+        <p>Essa abordagem permite migrar entre clouds sem reescrever YAMLs, apenas trocando o overlay.</p>
+        <p>As cinco etapas do projeto: (1) a base genérica, (2) os overlays de cada nuvem, (3) o pipeline que entrega nos dois clusters,
+        (4) a entrada no EKS com um Ingress do ALB e (5) a entrada no AKS com o App Routing, mais a proteção de upgrades que vale nas duas.
+        A entrada é o que mais muda entre nuvens, por isso fica nos overlays; o PodDisruptionBudget é genérico e vai na base.</p>`,
     },
     {
       id: 'multicloud-manifestos-genericos',
@@ -29,7 +70,7 @@ export const projetoMulticloud = {
       dificuldade: 'dificil',
       xp: 25,
       resumo: `
-        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 1 de 3. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
+        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 1 de 5. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
         <p>Um manifesto <b>genérico</b> não tem nada de uma nuvem só: nem annotations da AWS, nem da Azure, nem StorageClass com nome de provedor.</p>
         <ol>
           <li>Deployment <code>app-web</code> com <code>replicas: 3</code>, label <code>app: web</code> (também no metadata do Deployment) e o container <code>web</code> (<code>nginx:1.25</code>, porta 80).</li>
@@ -136,7 +177,7 @@ spec:
       dificuldade: 'dificil',
       xp: 30,
       resumo: `
-        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 2 de 3. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
+        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 2 de 5. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
         <p>O que muda por nuvem (região, classe de disco) fica num overlay por provedor. Aqui, um ConfigMap representa o que cada overlay gera.</p>
         <ol>
           <li>ConfigMap <code>overlay-aws</code>: <code>cloud: aws</code>, <code>region: us-east-1</code> e <code>storage-class: gp3</code>.</li>
@@ -200,7 +241,7 @@ data:
       dificuldade: 'dificil',
       xp: 30,
       resumo: `
-        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 3 de 3. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
+        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 3 de 5. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
         <p>Um pipeline multi-cluster entrega a mesma versão para os dois clusters de produção, com uma estratégia de troca segura.
         Um ConfigMap guarda a configuração; um Deployment faz o papel do agente de deploy.</p>
         <ol>
@@ -294,5 +335,166 @@ spec:
         },
       ],
     },
+    exercicio({
+      id: 'multicloud-entrada-eks',
+      titulo: 'A entrada no EKS: Ingress do ALB',
+      dificuldade: 'medio',
+      existentes: BASE_GENERICA,
+      resumo: `
+        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 4 de 5. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
+        <p>A base genérica (Deployment <code>app-web</code> e Service <code>app-svc</code>) já está no cluster. A <b>entrada</b> é o que mais muda
+        entre nuvens: no EKS, um Ingress vira um ALB pelo AWS Load Balancer Controller (módulo da AWS). Ela fica no overlay da AWS.</p>
+        <ol>
+          <li>Crie o Ingress <code>app-eks</code> com <code>ingressClassName: alb</code>.</li>
+          <li>Annotations <code>alb.ingress.kubernetes.io/scheme: internet-facing</code> e <code>alb.ingress.kubernetes.io/target-type: ip</code>.</li>
+          <li>A regra leva <code>/</code> (<code>pathType: Prefix</code>) ao Service <code>app-svc</code>, porta 80.</li>
+        </ol>
+        <p><b>No cluster:</b> no EKS, o controlador cria um ALB público mandando direto para os IPs dos Pods de <code>app-web</code>. A base não muda.</p>`,
+      inicial: `
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: app-eks
+          annotations:
+            # TODO: scheme internet-facing e target-type ip (passo 2)
+        spec:
+          ingressClassName:    # TODO: alb
+          rules:
+            - http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name:  # TODO: app-svc
+                        port:
+                          number: 80
+      `,
+      dica: [
+        'É o Ingress do exercício "Ingress com anotações ALB" do módulo da AWS, apontando para o Service da base.',
+        'As duas annotations começam com alb.ingress.kubernetes.io/.',
+        'annotations:\n  alb.ingress.kubernetes.io/scheme: internet-facing\n  alb.ingress.kubernetes.io/target-type: ip\nspec:\n  ingressClassName: alb',
+      ],
+      solucao: `
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: app-eks
+          annotations:
+            alb.ingress.kubernetes.io/scheme: internet-facing
+            alb.ingress.kubernetes.io/target-type: ip
+        spec:
+          ingressClassName: alb
+          rules:
+            - http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: app-svc
+                        port:
+                          number: 80
+      `,
+      testes: [
+        teste({ descricao: 'O Ingress é do ALB', dica: 'No spec, escreva ingressClassName: alb.' },
+          campo('Ingress', 'app-eks', 'spec.ingressClassName', { valor: 'alb' })),
+        teste({ descricao: 'O ALB é público e manda para os IPs dos Pods', dica: 'Annotations scheme: internet-facing e target-type: ip.' },
+          campo('Ingress', 'app-eks', 'metadata.annotations["alb.ingress.kubernetes.io/scheme"]', { valor: 'internet-facing' }),
+          campo('Ingress', 'app-eks', 'metadata.annotations["alb.ingress.kubernetes.io/target-type"]', { valor: 'ip' })),
+        teste({ descricao: 'Leva ao Service da base', dica: 'No backend, service.name: app-svc e port.number: 80.' },
+          campo('Ingress', 'app-eks', 'spec.rules[0].http.paths[0].backend.service.name', { valor: 'app-svc' })),
+      ],
+    }),
+    exercicio({
+      id: 'multicloud-entrada-aks',
+      titulo: 'A entrada no AKS e a mesma proteção nas duas nuvens',
+      dificuldade: 'dificil',
+      existentes: BASE_GENERICA,
+      resumo: `
+        <p class="etapa-info">🧩 <b>Projeto Multicloud</b> · etapa 5 de 5. O objetivo é o mesmo YAML rodar no EKS e no AKS.</p>
+        <p>No AKS, a mesma entrada usa o NGINX gerenciado do App Routing (módulo da Azure). E um PodDisruptionBudget é genérico: ele vai na
+        <b>base</b>, porque protege o app nos upgrades das duas nuvens.</p>
+        <ol>
+          <li>Crie o Ingress <code>app-aks</code> com <code>ingressClassName: webapprouting.kubernetes.azure.com</code>, levando <code>/</code>
+            (<code>Prefix</code>) ao Service <code>app-svc</code>, porta 80.</li>
+          <li>Crie o PodDisruptionBudget <code>app-web</code> com <code>minAvailable: 2</code>.</li>
+          <li>O <code>selector.matchLabels</code> do PDB é <code>app: web</code> (o mesmo da base).</li>
+        </ol>
+        <p><b>No cluster:</b> no AKS, o NGINX do App Routing passa a rotear para <code>app-svc</code>; nos upgrades de nós das duas nuvens, sempre
+        sobram 2 das 3 réplicas no ar.</p>`,
+      inicial: `
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: app-aks
+        spec:
+          ingressClassName:    # TODO: a classe do App Routing
+          rules:
+            - http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: app-svc
+                        port:
+                          number: 80
+        ---
+        # TODO: o PodDisruptionBudget app-web (minAvailable 2, selector app: web)
+      `,
+      dica: [
+        'A classe do App Routing é webapprouting.kubernetes.azure.com. O PDB é o dos Fundamentos.',
+        'O PDB escolhe os Pods pela mesma label que o Service da base usa.',
+        'ingressClassName: webapprouting.kubernetes.azure.com\n---\napiVersion: policy/v1\nkind: PodDisruptionBudget\nmetadata:\n  name: app-web\nspec:\n  minAvailable: 2\n  selector:\n    matchLabels:\n      app: web',
+      ],
+      solucao: `
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: app-aks
+        spec:
+          ingressClassName: webapprouting.kubernetes.azure.com
+          rules:
+            - http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: app-svc
+                        port:
+                          number: 80
+        ---
+        apiVersion: policy/v1
+        kind: PodDisruptionBudget
+        metadata:
+          name: app-web
+        spec:
+          minAvailable: 2
+          selector:
+            matchLabels:
+              app: web
+      `,
+      testes: [
+        teste({ descricao: 'O Ingress usa o App Routing', dica: 'No spec do Ingress: ingressClassName: webapprouting.kubernetes.azure.com.' },
+          campo('Ingress', 'app-aks', 'spec.ingressClassName', { valor: 'webapprouting.kubernetes.azure.com' })),
+        teste({ descricao: 'O PDB segura 2 réplicas', dica: 'Crie o PodDisruptionBudget app-web com minAvailable: 2.' },
+          existe('PodDisruptionBudget', 'app-web'),
+          campo('PodDisruptionBudget', 'app-web', 'spec.minAvailable', { valor: 2 })),
+        teste({ descricao: 'O PDB protege os Pods da base', dica: 'Em selector.matchLabels do PDB: app: web.' },
+          campo('PodDisruptionBudget', 'app-web', 'spec.selector.matchLabels.app', { valor: 'web' })),
+      ],
+    }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'multicloud-manifestos-genericos': { dica: 'A base não pode ter nada de uma nuvem só, e o Service leva à porta 80.', regras: [campo('Service', 'app-svc', 'metadata.annotations', { ausente: true }), campo('Service', 'app-svc', 'spec.ports[0].port', { valor: 80 })] },
+    'multicloud-kustomize-overlays': { dica: 'Confira a região e a classe de disco de cada overlay.', regras: [{ tipo: 'configmap-contem', configmap: 'overlay-azure', chave: 'region', valor: 'eastus' }, { tipo: 'configmap-contem', configmap: 'overlay-azure', chave: 'storage-class', valor: 'managed-premium' }] },
+    'multicloud-pipeline-cicd': { dica: 'Confira a estratégia do passo 1 e a imagem do agente.', regras: [{ tipo: 'configmap-contem', configmap: 'pipeline-config', chave: 'strategy', valor: 'blue-green' }, campo('Deployment', 'deploy-agent', 'spec.template.spec.containers[name=agent].image', { valor: 'alpine:3.19' })] },
+    'multicloud-entrada-eks': { dica: 'Confira o tipo do caminho e a porta do Service.', regras: [campo('Ingress', 'app-eks', 'spec.rules[0].http.paths[0].pathType', { valor: 'Prefix' }), campo('Ingress', 'app-eks', 'spec.rules[0].http.paths[0].backend.service.port.number', { valor: 80 })] },
+    'multicloud-entrada-aks': { dica: 'O Ingress do AKS leva ao mesmo Service da base, sem annotations da AWS.', regras: [campo('Ingress', 'app-aks', 'spec.rules[0].http.paths[0].backend.service.name', { valor: 'app-svc' }), campo('Ingress', 'app-aks', 'metadata.annotations', { ausente: true })] },
+  },
 };
+
+export const projetoMulticloud = { ...modulo, itens: comOcultos(modulo.itens, modulo.ocultos) };
