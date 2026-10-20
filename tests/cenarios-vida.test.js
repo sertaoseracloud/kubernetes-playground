@@ -53,13 +53,18 @@ describe('destinos do módulo', () => {
   });
 });
 
+/** Um cenário do site com água (ou lava…), pessoas que andam e animais: serve em qualquer site. */
+const CENARIO = Object.values(CENARIOS).find((c) => c.bloqueio && c.personagens.some((p) => p.tipo === 'pessoa' && p.movimento === 'andar')
+  && c.personagens.some((p) => p.tipo !== 'pessoa')) ?? Object.values(CENARIOS)[0];
+
 function vilaDeVerdade(semente = 'pods', feitos = 9) {
-  const cen = CENARIOS.porto;
+  const cen = CENARIO;
   const base = gerarMapa({ colunas: 30, linhas: 40, cenario: cen, semente, caminho: [{ c: 15, l: 5 }, { c: 12, l: 20 }, { c: 17, l: 35 }] });
   const daVila = vilaDoModulo({ mapa: base, cenario: cen, semente, feitos });
   const mapa = comCasas(base, daVila.casas);
   const porId = Object.fromEntries(cen.personagens.map((p) => [p.id, p]));
-  const defs = [...cen.personagens, cen.personagens[0], ...daVila.filhos.map((f) => ({ ...porId[f.pai], pequeno: true }))];
+  const adulto = cen.personagens.find((p) => p.tipo === 'pessoa' && p.movimento === 'andar');
+  const defs = [...cen.personagens, adulto, ...daVila.filhos.map((f) => ({ ...porId[f.pai], pequeno: true }))];
   const posicoes = posicoesIniciais(mapa, defs, sorteador(`${semente}-passos`));
   const destinos = destinosDoModulo(mapa, daVila.casas, [{ c: 15, l: 5, feito: true }, { c: 12, l: 20, atual: true }, { c: 17, l: 35 }]);
   return { mapa, vila: criarVila({ mapa, defs, posicoes, semente, destinos, emojis: ['☸️', '📦'] }) };

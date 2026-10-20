@@ -191,8 +191,8 @@ describe('vila viva', () => {
   });
 
   it('as falas giram entre as do morador, começando por uma escolhida pela semente', () => {
-    const falas = FALAS_DA_VILA.timoneira.falas;
-    const ditas = Array.from({ length: falas.length }, () => falaDoMorador('timoneira', 'teste').fala);
+    const [id, { falas }] = Object.entries(FALAS_DA_VILA).find(([, info]) => info.falas.length > 1);
+    const ditas = Array.from({ length: falas.length }, () => falaDoMorador(id, 'teste').fala);
     expect(new Set(ditas).size).toBe(falas.length);
     expect(falaDoMorador('ninguem')).toBeNull();
   });
@@ -242,14 +242,16 @@ describe('falas e "Conhecer a vila"', () => {
     }
   });
 
-  it('a lista de cada módulo traz os moradores e o quanto a vila cresceu', () => {
-    const html = htmlConhecerVila('porto', 'fundamentos', 7);
+  it('a lista de cada módulo traz todas as definições dos moradores e o quanto a vila cresceu', () => {
+    // Um cenário com pessoas e animais (qualquer site tem).
+    const cen = Object.values(CENARIOS).find((c) => c.personagens.some((p) => p.tipo === 'pessoa') && c.personagens.some((p) => p.tipo !== 'pessoa'));
+    const html = htmlConhecerVila(cen.id, 'modulo', 7);
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('aria-controls="vila-fundamentos"');
+    expect(html).toContain('aria-controls="vila-modulo"');
     expect(html).toContain('hidden');
-    expect(html).toContain('Timoneira');
+    for (const p of cen.personagens) for (const fala of FALAS_DA_VILA[p.id].falas) expect(html).toContain(fala.replace(/"/g, '&quot;').replace(/'/g, '&#39;'));
     expect(html).toContain('3 casas, 2 crianças e 2 filhotes');
-    expect(htmlConhecerVila('porto', 'x', 0)).toContain('A cada exercício resolvido');
+    expect(htmlConhecerVila(cen.id, 'x', 0)).toContain('A cada exercício resolvido');
     expect(htmlConhecerVila('nenhum', 'x')).toBe('');
     expect(contarDaVila({ personagens: [{ tipo: 'animal' }] }, 3)).toEqual({ casas: 1, filhos: 0, filhotes: 2 });
   });
