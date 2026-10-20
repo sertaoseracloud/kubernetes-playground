@@ -270,4 +270,10 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'rede-ingress-tls': { dica: 'Releia os passos: algum valor pedido no Ingress loja ainda não confere.', regras: [campo('Ingress', 'loja', 'spec.tls[0].hosts[0]', { valor: 'loja.example.com' }), campo('Ingress', 'loja', 'spec.rules[0].host', { valor: 'loja.example.com' })] },
+    'rede-default-deny': { dica: 'Releia os passos: algum valor pedido na NetworkPolicy negar-tudo ainda não confere.', regras: [campo('NetworkPolicy', 'negar-tudo', 'spec.policyTypes[0]', { valor: 'Ingress' }), campo('NetworkPolicy', 'negar-tudo', 'metadata.namespace', { valor: 'loja' })] },
+    'rede-frontend-backend': { dica: 'Releia os passos: algum valor pedido na NetworkPolicy backend-permite-frontend ainda não confere.', regras: [campo('NetworkPolicy', 'backend-permite-frontend', 'spec.podSelector.matchLabels.app', { valor: 'backend' }), campo('NetworkPolicy', 'backend-permite-frontend', 'spec.policyTypes[0]', { valor: 'Ingress' })] },
+  },
 };

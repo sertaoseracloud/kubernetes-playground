@@ -2,6 +2,7 @@ import { basico } from './basico.js';
 import { pods } from './pods.js';
 import { services } from './services.js';
 import { deployments } from './deployments.js';
+import { comOcultos } from './util.js';
 
 const grupos = [
   { id: 'basico', titulo: 'Fundamentos Básicos', icone: '☸️' },
@@ -11,7 +12,7 @@ const grupos = [
 ];
 
 const tagItens = (modulo, grupoId) =>
-  (modulo.itens ?? []).map((item) => ({ ...item, grupo: grupoId }));
+  comOcultos(modulo.itens ?? [], modulo.ocultos ?? {}).map((item) => ({ ...item, grupo: grupoId }));
 
 export const fundamentos = {
   id: 'fundamentos',

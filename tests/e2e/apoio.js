@@ -6,25 +6,26 @@ export const TEMAS = ['dracula', 'claro', 'suave', 'alto-contraste'];
 export const TELAS = ['#/', '#/trilha', `#/p/${PRIMEIRO.id}`];
 
 /**
- * Abre `hash` com o localStorage zerado. Por padrão, tutorial e privacidade já foram vistos,
- * e o mural de apoio é fechado; `extras` grava outras chaves (sem o prefixo).
+ * Abre `hash` com o localStorage zerado. Por padrão, tutorial, privacidade e o mural de apoio do
+ * dia já foram vistos; com `muralApoio`, o mural abre (na landing e na trilha). `extras` grava
+ * outras chaves (sem o prefixo).
  */
-export async function abrir(page, hash, { tutorial = false, extras = {}, muralApoio = false } = {}) {
+export async function abrir(page, hash, { tutorial = false, privacidade = true, extras = {}, muralApoio = false } = {}) {
   await page.goto('/');
-  await page.evaluate(({ tutorial, extras }) => {
+  await page.evaluate(({ tutorial, privacidade, extras, muralApoio }) => {
     localStorage.clear();
     const gravar = (chave, valor) => localStorage.setItem(`kubernetes-playground:${chave}`, JSON.stringify(valor));
-    gravar('pref:privacidade-vista', true);
+    if (privacidade) gravar('pref:privacidade-vista', true);
     if (!tutorial) gravar('pref:tutorial-visto', true);
+    if (!muralApoio) gravar('pref:mural-apoio-visto-em', new Date().toLocaleDateString('sv'));
     for (const [chave, valor] of Object.entries(extras)) gravar(chave, valor);
-  }, { tutorial, extras });
+  }, { tutorial, privacidade, extras, muralApoio });
   await page.goto(`/${hash}`);
   await page.reload();
   if (!muralApoio) {
-    await page.getByRole('button', { name: 'Continuar para o projeto' }).click();
     await page.locator('#flutuantes').evaluate(async (element) => {
       await Promise.all(element.getAnimations().map((animacao) => animacao.finished.catch(() => {})));
-    });
+    }).catch(() => {});
   }
 }
 
@@ -35,7 +36,9 @@ export async function abrir(page, hash, { tutorial = false, extras = {}, muralAp
  * flutuantes recolhidos (saem pela direita de propósito ao rolar; são fixed e não criam rolagem).
  */
 export function medirEstouro(page) {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    // Os botões flutuantes podem estar no meio da transição (recolhendo ou voltando): espera terminar.
+    await Promise.all((document.getElementById('flutuantes')?.getAnimations() ?? []).map((animacao) => animacao.finished.catch(() => {})));
     const largura = document.documentElement.clientWidth;
     const rolaSozinho = (el) => {
       for (let p = el.parentElement; p; p = p.parentElement) {
