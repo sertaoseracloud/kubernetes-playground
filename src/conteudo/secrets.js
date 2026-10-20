@@ -1,6 +1,6 @@
 // Recursos Avançados: Secrets e Segurança.
 // Segue docs/didatica.md: lição com exemplo comentado antes de cada exercício.
-import { licao, exercicio, teste } from './util.js';
+import { licao, exercicio, teste, campo } from './util.js';
 
 /** O Secret do primeiro exercício: o segundo já o encontra no cluster. */
 const DB_CREDENTIALS = `apiVersion: v1
@@ -219,5 +219,91 @@ spec:
         <li>Prefira montar como volume a usar variáveis (facilita a troca de senha e evita vazar em logs).</li>
         <li>Use <code>immutable: true</code> nos Secrets que não devem mudar.</li>
       </ul>`),
+    exercicio({
+      id: 'secrets-env-secretkeyref',
+      titulo: 'Senha do banco numa variável de ambiente',
+      dificuldade: 'medio',
+      resumo: `
+        <p>A API lê a senha do banco da variável <code>DB_PASSWORD</code>. Em vez de escrever a senha no Deployment, ela vem do
+        Secret <code>db-credentials</code>, que já está no cluster.</p>
+        <ol>
+          <li>No container <code>api</code> do Deployment <code>api</code>, crie a variável <code>DB_PASSWORD</code>.</li>
+          <li>Em <code>valueFrom.secretKeyRef</code>, use <code>name: db-credentials</code> (o Secret) e
+            <code>key: password</code> (a chave dentro dele).</li>
+        </ol>
+        <p><b>No cluster:</b> quando o Pod nasce, o kubelet lê a chave <code>password</code> do Secret e entrega o valor ao
+        container como variável. A senha não aparece no YAML do Deployment.</p>`,
+      existentes: `
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: db-credentials
+        type: Opaque
+        stringData:
+          password: s3cret0!
+      `,
+      inicial: `
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: api
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: api
+          template:
+            metadata:
+              labels:
+                app: api
+            spec:
+              containers:
+                - name: api
+                  image: nginx:1.27
+                  env:
+                    - name: DB_PASSWORD
+                      # TODO: valueFrom.secretKeyRef com name: db-credentials e key: password
+      `,
+      dica: [
+        'Em vez de value, a variável usa valueFrom, que busca o valor em outro recurso.',
+        'secretKeyRef pede duas coisas: o nome do Secret (name) e a chave lá dentro (key).',
+        'valueFrom:\n  secretKeyRef:\n    name: db-credentials\n    key: password',
+      ],
+      solucao: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: nginx:1.27
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password`,
+      testes: [
+        teste({ descricao: 'DB_PASSWORD vem do Secret db-credentials', dica: 'Em valueFrom.secretKeyRef da variável DB_PASSWORD, escreva name: db-credentials.' },
+          campo('Deployment', 'api', 'spec.template.spec.containers[name=api].env[name=DB_PASSWORD].valueFrom.secretKeyRef.name', { valor: 'db-credentials' })),
+        teste({ descricao: 'A variável lê a chave password', dica: 'Em secretKeyRef, escreva key: password.' },
+          campo('Deployment', 'api', 'spec.template.spec.containers[name=api].env[name=DB_PASSWORD].valueFrom.secretKeyRef.key', { valor: 'password' })),
+      ],
+    }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'secrets-opaque-credenciais': { dica: 'Releia os passos: algum valor pedido no Secret db-credentials ainda não confere.', regras: [campo('Secret', 'db-credentials', 'stringData.password', { valor: 's3cret0!' }), campo('Secret', 'db-credentials', 'type', { valor: 'Opaque' })] },
+    'secrets-pod-volume': { dica: 'Releia os passos: algum valor pedido no Pod app-com-secret ainda não confere.', regras: [campo('Pod', 'app-com-secret', 'spec.containers[name=app].envFrom[0].secretRef.name', { valor: 'db-credentials' }), campo('Pod', 'app-com-secret', 'spec.containers[name=app].image', { valor: 'nginx:1.25' })] },
+    'secrets-env-secretkeyref': { dica: 'A senha vem só do Secret: não escreva o valor direto na variável.', regras: [campo('Deployment', 'api', 'spec.template.spec.containers[name=api].env[name=DB_PASSWORD].value', { ausente: true })] },
+  },
 };

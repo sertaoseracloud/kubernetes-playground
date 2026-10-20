@@ -338,5 +338,69 @@ spec:
           { tipo: 'deployment-replicas', deployment: 'api', valor: 2 }),
       ],
     }),
+    exercicio({
+      id: 'rbac-rolebinding-grupo',
+      titulo: 'Equipe de auditoria só olhando',
+      dificuldade: 'facil',
+      resumo: `
+        <p>A equipe de auditoria precisa ver tudo o que roda no namespace <code>loja</code>, mas sem mudar nada. O Kubernetes já
+        traz uma ClusterRole pronta para isso, a <code>view</code>: basta ligar o grupo a ela, só dentro do namespace.</p>
+        <ol>
+          <li>Crie o RoleBinding <code>auditoria-view</code> no namespace <code>loja</code>.</li>
+          <li>Em <code>roleRef</code>, aponte para a ClusterRole <code>view</code> (<code>kind: ClusterRole</code>,
+            <code>apiGroup: rbac.authorization.k8s.io</code>).</li>
+          <li>Em <code>subjects</code>, coloque um item com <code>kind: Group</code>, <code>name: auditoria</code> e
+            <code>apiGroup: rbac.authorization.k8s.io</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> quem está no grupo <code>auditoria</code> pode listar e ler Pods, Services e Deployments do
+        namespace <code>loja</code>. Em outro namespace, ou para apagar e editar, a API responde <code>Forbidden</code>.</p>`,
+      inicial: `
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        metadata:
+          name: auditoria-view
+          namespace:          # TODO: loja
+        roleRef:
+          kind:               # TODO: ClusterRole
+          name:               # TODO: view
+          apiGroup: rbac.authorization.k8s.io
+        subjects:
+          # TODO: um item com kind: Group, name: auditoria e apiGroup: rbac.authorization.k8s.io
+      `,
+      dica: [
+        'O RoleBinding liga quem (subjects) a uma permissão pronta (roleRef). Aqui, a permissão é a ClusterRole view.',
+        'Em subjects, o item é um grupo: kind: Group, e não ServiceAccount nem User.',
+        'subjects:\n  - kind: Group\n    name: auditoria\n    apiGroup: rbac.authorization.k8s.io',
+      ],
+      solucao: `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: auditoria-view
+  namespace: loja
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: Group
+    name: auditoria
+    apiGroup: rbac.authorization.k8s.io`,
+      testes: [
+        teste({ descricao: 'O RoleBinding usa a ClusterRole view', dica: 'Em roleRef, escreva kind: ClusterRole e name: view.' },
+          existe('RoleBinding', 'auditoria-view'),
+          campo('RoleBinding', 'auditoria-view', 'roleRef.kind', { valor: 'ClusterRole' }),
+          campo('RoleBinding', 'auditoria-view', 'roleRef.name', { valor: 'view' })),
+        teste({ descricao: 'O grupo auditoria recebe a permissão', dica: 'Em subjects, coloque um item com kind: Group e name: auditoria.' },
+          campo('RoleBinding', 'auditoria-view', 'subjects[name=auditoria].kind', { valor: 'Group' })),
+      ],
+    }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'rbac-role-leitor': { dica: 'Releia os passos: algum valor pedido na RoleBinding leitor-pods ainda não confere.', regras: [campo('RoleBinding', 'leitor-pods', 'roleRef.apiGroup', { valor: 'rbac.authorization.k8s.io' }), campo('RoleBinding', 'leitor-pods', 'subjects[name=monitor].kind', { valor: 'ServiceAccount' })] },
+    'rbac-clusterrole-nodes': { dica: 'Releia os passos: algum valor pedido na ClusterRoleBinding ver-nos ainda não confere.', regras: [campo('ClusterRoleBinding', 'ver-nos', 'subjects[name=plataforma].apiGroup', { valor: 'rbac.authorization.k8s.io' }), campo('ClusterRoleBinding', 'ver-nos', 'roleRef.name', { valor: 'ver-nos' })] },
+    'rbac-deploy-sa': { dica: 'Releia os passos: algum valor pedido no Deployment api ainda não confere.', regras: [campo('Deployment', 'api', 'spec.template.spec.containers[name=api].image', { valor: 'nginx:1.27' }), campo('Deployment', 'api', 'spec.selector.matchLabels.app', { valor: 'api' })] },
+    'rbac-sa-sem-token': { dica: 'Confira a apiVersion da ServiceAccount relatorios e não liste secrets nela.', regras: [campo('ServiceAccount', 'relatorios', 'apiVersion', { valor: 'v1' }), campo('ServiceAccount', 'relatorios', 'secrets', { ausente: true })] },
+    'rbac-rolebinding-grupo': { dica: 'Releia os passos: o RoleBinding vale só para um namespace.', regras: [campo('RoleBinding', 'auditoria-view', 'metadata.namespace', { valor: 'loja' }), campo('RoleBinding', 'auditoria-view', 'subjects[name=auditoria].apiGroup', { valor: 'rbac.authorization.k8s.io' })] },
+  },
 };

@@ -244,4 +244,10 @@ spec:
       ],
     }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'gitops-argocd-application': { dica: 'Releia os passos: algum valor pedido na Application guestbook ainda não confere.', regras: [campo('Application', 'guestbook', 'spec.syncPolicy.syncOptions[0]', { valor: 'CreateNamespace=true' }), campo('Application', 'guestbook', 'spec.project', { valor: 'default' })] },
+    'gitops-flux-gitrepository': { dica: 'Releia os passos: algum valor pedido na Kustomization podinfo ainda não confere.', regras: [campo('Kustomization', 'podinfo', 'spec.interval', { valor: '10m' }), campo('GitRepository', 'podinfo', 'metadata.namespace', { valor: 'flux-system' })] },
+    'gitops-flux-helmrelease': { dica: 'Releia os passos: algum valor pedido na HelmRelease podinfo ainda não confere.', regras: [campo('HelmRelease', 'podinfo', 'spec.chart.spec.sourceRef.name', { valor: 'podinfo' }), campo('HelmRelease', 'podinfo', 'spec.interval', { valor: '10m' })] },
+  },
 };
