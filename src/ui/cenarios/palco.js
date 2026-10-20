@@ -286,14 +286,41 @@ function ligarPixi(raiz, camadas, janela, carregarPixi) {
   let palco = null;
   let reserva = null;
   let desligado = false;
+  let espera = null;
+  let montagem = 0;
   raiz.dataset.cenarioDesenho = 'carregando';
+  // Um módulo por tarefa (planejar um módulo longo leva ~150 ms num celular fraco), começando pelos
+  // que estão na tela: a trilha responde enquanto o resto da vila é montado.
   const montarTudo = () => {
+    janela.clearTimeout(espera);
+    const esta = ++montagem;
     const inicio = performance.now();
-    mods = camadas.map((c) => criarModulo(c, janela));
-    for (const m of mods) m.palco.append(m.baloes);
-    palco.montar(mods);
-    if (mods.map((m) => comemorarSePreciso(m, janela)).some(Boolean)) palco.agitar();
-    medir('cenarios:montar', inicio);
+    const altura = janela.innerHeight || 800;
+    const distancia = (c) => {
+      const r = c.getBoundingClientRect();
+      return r.bottom < 0 ? -r.bottom : Math.max(0, r.top - altura);
+    };
+    const fila = camadas.map((c, i) => ({ c, i })).sort((a, b) => distancia(a.c) - distancia(b.c));
+    const porPosicao = new Array(camadas.length).fill(null);
+    mods = [];
+    palco.montar([]);
+    let comemorou = false;
+    const proximo = () => {
+      if (desligado || esta !== montagem) return;
+      const inicioDoModulo = performance.now();
+      const { c, i } = fila.shift();
+      const mod = criarModulo(c, janela);
+      mod.palco.append(mod.baloes);
+      porPosicao[i] = mod;
+      mods = porPosicao.filter(Boolean);
+      palco.adicionar(mod);
+      if (comemorarSePreciso(mod, janela)) comemorou = true;
+      medir('cenarios:modulo', inicioDoModulo);
+      if (fila.length) { espera = janela.setTimeout(proximo, 0); return; }
+      if (comemorou) palco.agitar();
+      medir('cenarios:montar', inicio);
+    };
+    proximo();
   };
   const aoPasso = ({ topoDaTela, altura }) => {
     let andou = false;
@@ -352,6 +379,7 @@ function ligarPixi(raiz, camadas, janela, carregarPixi) {
     modulos: () => (reserva ? reserva.modulos() : mods),
     desligar() {
       desligado = true;
+      janela.clearTimeout(espera);
       janela.removeEventListener('resize', aoRedimensionar);
       observador?.disconnect();
       mutacao?.disconnect();

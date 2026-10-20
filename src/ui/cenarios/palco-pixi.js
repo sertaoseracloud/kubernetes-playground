@@ -137,26 +137,32 @@ export async function criarPalcoPixi(raiz, { janela = window, podeAndar = () => 
     }
   };
 
+  const criarModuloPixi = (mod) => {
+    const raizModulo = new Container();
+    const chao = new Container();
+    chao.alpha = 0.45;
+    const gente = new Container();
+    raizModulo.addChild(chao, gente);
+    if (mod.bloqueado) raizModulo.alpha = 0.2;
+    app.stage.addChild(raizModulo);
+    const a = atlasDe(mod.plano.cen, mod.bloqueado);
+    const sprites = mod.vila.moradores.map((m) => {
+      const s = new Sprite(a.quadros.get(`per-${m.id}-0`));
+      s.anchor.set(0.5, 1);
+      gente.addChild(s);
+      return { m, s };
+    });
+    const cor = contorno() ?? mod.plano.cen.estrada.cores[1];
+    return { mod, atlas: a, raiz: raizModulo, chao, pedacos: new Map(), sprites, cor, topo: 0, esquerda: 0, altura: 0, crescer: null };
+  };
   const montar = (lista) => {
     for (const m of modulos) m.raiz.destroy({ children: true });
-    modulos = lista.map((mod) => {
-      const raizModulo = new Container();
-      const chao = new Container();
-      chao.alpha = 0.45;
-      const gente = new Container();
-      raizModulo.addChild(chao, gente);
-      if (mod.bloqueado) raizModulo.alpha = 0.2;
-      app.stage.addChild(raizModulo);
-      const a = atlasDe(mod.plano.cen, mod.bloqueado);
-      const sprites = mod.vila.moradores.map((m) => {
-        const s = new Sprite(a.quadros.get(`per-${m.id}-0`));
-        s.anchor.set(0.5, 1);
-        gente.addChild(s);
-        return { m, s };
-      });
-      const cor = contorno() ?? mod.plano.cen.estrada.cores[1];
-      return { mod, atlas: a, raiz: raizModulo, chao, pedacos: new Map(), sprites, cor, topo: 0, esquerda: 0, altura: 0, crescer: null };
-    });
+    modulos = lista.map(criarModuloPixi);
+    medirGeometria();
+  };
+  /** Mais um módulo (a montagem vai um por tarefa, para não travar o celular). */
+  const adicionar = (mod) => {
+    modulos.push(criarModuloPixi(mod));
     medirGeometria();
   };
 
@@ -245,6 +251,7 @@ export async function criarPalcoPixi(raiz, { janela = window, podeAndar = () => 
   return {
     renderizador: app.renderer.name,
     montar(lista) { montar(lista); ultimoY = null; },
+    adicionar(mod) { adicionar(mod); ultimoY = null; },
     redimensionar() { ajustarCanvas(); medirGeometria(); ultimoY = null; },
     /** Anima sem dar passo (o salto da comemoração, a casa nova). */
     agitar() { const agora = performance.now(); passoEm = agora; proximoPasso = agora + PASSO_MS; animando = true; ultimoY = null; },

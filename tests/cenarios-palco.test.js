@@ -21,14 +21,19 @@ function janelaFalsa() {
     innerHeight: 800,
     setInterval: () => 1,
     clearInterval: () => {},
-    setTimeout: () => 0,
-    clearTimeout: () => {},
+    // De verdade: o palco Pixi monta um módulo por tarefa.
+    setTimeout: (f, ms) => setTimeout(f, ms),
+    clearTimeout: (id) => clearTimeout(id),
     matchMedia: () => ({ matches: false }),
     addEventListener() {},
     removeEventListener() {},
     IntersectionObserver: class { observe() {} disconnect() {} },
   };
 }
+
+const todos = () => document.querySelectorAll('.cenario').length;
+/** Espera o palco Pixi montar todos os módulos (um por tarefa). */
+const montado = (f) => vi.waitFor(() => expect(f.mods?.length).toBe(todos()));
 
 /** Um "Pixi" falso: guarda o que o palco pediu e deixa o teste dar os passos. */
 function pixiFalso({ falhar = false } = {}) {
@@ -39,7 +44,8 @@ function pixiFalso({ falhar = false } = {}) {
       f.opcoes = opcoes;
       return {
         renderizador: 'webgl',
-        montar(mods) { f.montagens += 1; f.mods = mods; },
+        montar(mods) { f.montagens += 1; f.mods = [...mods]; },
+        adicionar(mod) { f.mods.push(mod); },
         redimensionar() {},
         agitar() { f.agitado += 1; },
         redesenhar() { f.redesenhos += 1; },
@@ -68,10 +74,9 @@ describe('palco com PixiJS', () => {
     const f = pixiFalso();
     const r = ligarCenarios(tela(), { janela: janelaFalsa(), carregarPixi: f.carregar, webgl: () => true });
     expect(tela().dataset.cenarioDesenho).toBe('carregando');
-    await esperar(); await esperar();
+    await montado(f);
     expect(tela().dataset.cenarioDesenho).toBe('webgl');
     expect(f.montagens).toBe(1);
-    expect(f.mods.length).toBe(document.querySelectorAll('.cenario').length);
     // Nada de canvas 2D: o mapa e os personagens são do Pixi; os balões, do DOM.
     expect(document.querySelectorAll('.cenario-mapa, .personagem')).toHaveLength(0);
     expect(document.querySelectorAll('.cenario-baloes').length).toBe(f.mods.length);
@@ -109,7 +114,7 @@ describe('palco com PixiJS', () => {
   it('os passos vêm do Ticker do Pixi; parados com reduzir movimento, alto contraste ou pausa', async () => {
     const f = pixiFalso();
     const r = ligarCenarios(tela(), { janela: janelaFalsa(), carregarPixi: f.carregar, webgl: () => true });
-    await esperar(); await esperar();
+    await montado(f);
     expect(f.opcoes.podeAndar()).toBe(true);
     const antes = r.modulos().map((m) => m.vila.passos);
     expect(f.passo()).toBe(true);
@@ -139,12 +144,12 @@ describe('vila viva', () => {
     await esperar(); await esperar();
     const f2 = pixiFalso();
     const r1 = ligarCenarios(tela(), { janela: janelaFalsa(), carregarPixi: f2.carregar, webgl: () => true });
-    await esperar(); await esperar();
+    await montado(f2);
     r1.desligar();
     camada.dataset.feitos = '1'; // o 1º exercício resolvido dá uma casa
     const f3 = pixiFalso();
     const r2 = ligarCenarios(tela(), { janela: janelaFalsa(), carregarPixi: f3.carregar, webgl: () => true });
-    await esperar(); await esperar();
+    await montado(f3);
     const mod = r2.modulos()[0];
     expect(f3.agitado).toBe(1);
     expect(mod.vila.moradores.filter((m) => m.visivel).every((m) => m.salto)).toBe(true);

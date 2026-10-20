@@ -56,7 +56,7 @@ let agora = 1000;
 function janelaFalsa() {
   return {
     innerWidth: 1280, innerHeight: 800, devicePixelRatio: 3,
-    setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 0, clearTimeout: () => {},
+    setInterval: () => 1, clearInterval: () => {}, setTimeout: (f, ms) => setTimeout(f, ms), clearTimeout: (id) => clearTimeout(id),
     matchMedia: () => ({ matches: false }),
     addEventListener() {}, removeEventListener() {},
     IntersectionObserver: class { observe() {} disconnect() {} },
@@ -83,6 +83,8 @@ async function ligar() {
   const r = ligarCenarios(tela(), { janela: janelaFalsa(), carregarPixi: () => import('../src/ui/cenarios/palco-pixi.js'), webgl: () => true });
   // O import() e o init() são assíncronos: espera o palco ficar pronto.
   await vi.waitFor(() => expect(tela().dataset.cenarioDesenho).toBe('webgl'), { timeout: 10000 });
+  // Um módulo por tarefa: espera todos.
+  await vi.waitFor(() => expect(r.modulos()).toHaveLength(document.querySelectorAll('.cenario').length), { timeout: 10000 });
   return r;
 }
 
