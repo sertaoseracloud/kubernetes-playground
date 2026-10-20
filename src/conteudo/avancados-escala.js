@@ -346,5 +346,90 @@ spec:
           campo('ResourceQuota', 'cota', 'spec.hard.pods', { valor: '20' })),
       ],
     }),
+    exercicio({
+      id: 'recursos-qos-guaranteed',
+      titulo: 'Pagamentos com prioridade garantida',
+      dificuldade: 'medio',
+      resumo: `
+        <p>Quando falta memória num nó, o Kubernetes escolhe quem sai primeiro pela classe de QoS de cada Pod. Com
+        <code>requests</code> iguais aos <code>limits</code>, o Pod fica na classe <b>Guaranteed</b>, a última a ser despejada.
+        É o que o serviço de pagamentos precisa.</p>
+        <ol>
+          <li>Crie o Deployment <code>pagamentos</code> com 2 réplicas e a label <code>app: pagamentos</code>, com o container
+            <code>api</code> e a imagem <code>nginx:1.27</code>.</li>
+          <li>Em <code>resources.requests</code>, peça <code>cpu: 500m</code> e <code>memory: 256Mi</code>.</li>
+          <li>Em <code>resources.limits</code>, use os mesmos valores: <code>cpu: 500m</code> e <code>memory: 256Mi</code>.</li>
+        </ol>
+        <p><b>No cluster:</b> o Scheduler reserva 500m de CPU e 256Mi em um nó para cada réplica. Se o nó apertar, Pods das
+        classes BestEffort e Burstable saem antes dos de pagamentos.</p>`,
+      inicial: `
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: pagamentos
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: pagamentos
+          template:
+            metadata:
+              labels:
+                app: pagamentos
+            spec:
+              containers:
+                - name: api
+                  image: nginx:1.27
+                  resources:
+                    requests:
+                      cpu:        # TODO: 500m
+                      memory:     # TODO: 256Mi
+                    # TODO: limits com os mesmos valores de requests
+      `,
+      dica: [
+        'Guaranteed quer dizer: em cada container, limits igual a requests, para CPU e para memória.',
+        'limits fica no mesmo nível de requests, dentro de resources.',
+        'limits:\n  cpu: 500m\n  memory: 256Mi',
+      ],
+      solucao: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pagamentos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pagamentos
+  template:
+    metadata:
+      labels:
+        app: pagamentos
+    spec:
+      containers:
+        - name: api
+          image: nginx:1.27
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi`,
+      testes: [
+        teste({ descricao: 'Os requests reservam 500m de CPU e 256Mi', dica: 'Em resources.requests do container api, escreva cpu: 500m e memory: 256Mi.' },
+          campo('Deployment', 'pagamentos', 'spec.template.spec.containers[name=api].resources.requests.cpu', { valor: '500m' }),
+          campo('Deployment', 'pagamentos', 'spec.template.spec.containers[name=api].resources.requests.memory', { valor: '256Mi' })),
+        teste({ descricao: 'Os limits são iguais aos requests', dica: 'Em resources.limits, repita os valores de requests: cpu: 500m e memory: 256Mi.' },
+          campo('Deployment', 'pagamentos', 'spec.template.spec.containers[name=api].resources.limits.cpu', { valor: '500m' }),
+          campo('Deployment', 'pagamentos', 'spec.template.spec.containers[name=api].resources.limits.memory', { valor: '256Mi' })),
+      ],
+    }),
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'escala-hpa-v2-comportamento': { dica: 'Releia os passos: algum valor pedido no HorizontalPodAutoscaler loja ainda não confere.', regras: [campo('HorizontalPodAutoscaler', 'loja', 'spec.metrics[0].resource.target.type', { valor: 'Utilization' }), campo('HorizontalPodAutoscaler', 'loja', 'spec.scaleTargetRef.kind', { valor: 'Deployment' })] },
+    'saude-startup-probe': { dica: 'Releia os passos: algum valor pedido no Deployment legado ainda não confere.', regras: [campo('Deployment', 'legado', 'spec.template.spec.containers[name=legado].image', { valor: 'registry.example.com/legado:2.3' }), campo('Deployment', 'legado', 'spec.selector.matchLabels.app', { valor: 'legado' })] },
+    'recursos-limitrange': { dica: 'Releia os passos: algum valor pedido no LimitRange padroes ainda não confere.', regras: [campo('LimitRange', 'padroes', 'spec.limits[0].type', { valor: 'Container' }), campo('LimitRange', 'padroes', 'spec.limits[0].defaultRequest.memory', { valor: '128Mi' })] },
+    'recursos-qos-guaranteed': { dica: 'Releia o passo 1: o número de réplicas e a imagem do container.', regras: [campo('Deployment', 'pagamentos', 'spec.replicas', { valor: 2 }), campo('Deployment', 'pagamentos', 'spec.template.spec.containers[name=api].image', { valor: 'nginx:1.27' })] },
+  },
 };

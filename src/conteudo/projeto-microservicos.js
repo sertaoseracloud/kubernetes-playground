@@ -1,7 +1,9 @@
 // Módulo: Projeto prático de Microserviços em Kubernetes.
 // Integra Deployment, Service, ConfigMap, Secret, Ingress e HPA num cenário realista.
+import { comOcultos } from './util.js';
 
-export const projetoMicroservicos = {
+
+const modulo = {
   id: 'projeto-microservicos',
   titulo: 'Projeto: Microserviços em K8s',
   descricao: 'Deploy completo de uma aplicação com frontend, API, banco e fila usando recursos nativos do Kubernetes.',
@@ -615,4 +617,15 @@ spec:
       ],
     },
   ],
+  // Casos ocultos (rodam só no ⬆ Enviar): o resto do que os passos pedem.
+  ocultos: {
+    'microsvc-backend-deploy': { dica: 'Releia os passos: algum valor pedido no Deployment backend-api ainda não confere.', regras: [{ tipo: 'campo', kind: 'Deployment', nome: 'backend-api', caminho: 'spec.template.spec.containers[name=api].image', valor: 'node:18-alpine' }, { tipo: 'campo', kind: 'Deployment', nome: 'backend-api', caminho: 'spec.selector.matchLabels.app', valor: 'backend-api' }] },
+    'microsvc-config-secret': { dica: 'Releia os passos: algum valor pedido no Secret db-credentials ainda não confere.', regras: [{ tipo: 'campo', kind: 'Secret', nome: 'db-credentials', caminho: 'data.password', valor: 'c2VuaGFzZWNyZXRhMTIz' }, { tipo: 'campo', kind: 'Secret', nome: 'db-credentials', caminho: 'data.username', valor: 'YWRtaW4=' }] },
+    'microsvc-ingress': { dica: 'Releia os passos: algum valor pedido no Ingress app-ingress ainda não confere.', regras: [{ tipo: 'campo', kind: 'Ingress', nome: 'app-ingress', caminho: 'spec.rules[0].http.paths[1].backend.service.name', valor: 'frontend-svc' }, { tipo: 'campo', kind: 'Ingress', nome: 'app-ingress', caminho: 'spec.rules[0].host', valor: 'app.local' }] },
+    'microsvc-hpa': { dica: 'Releia os passos: algum valor pedido no Deployment backend-api ainda não confere.', regras: [{ tipo: 'campo', kind: 'Deployment', nome: 'backend-api', caminho: 'spec.template.spec.containers[name=api].image', valor: 'node:18-alpine' }, { tipo: 'campo', kind: 'HorizontalPodAutoscaler', nome: 'backend-hpa', caminho: 'spec.scaleTargetRef.name', valor: 'backend-api' }] },
+    'microsvc-service-discovery': { dica: 'Releia os passos: algum valor pedido no Deployment frontend-app ainda não confere.', regras: [{ tipo: 'campo', kind: 'Deployment', nome: 'frontend-app', caminho: 'spec.selector.matchLabels.app', valor: 'frontend-app' }, { tipo: 'campo', kind: 'Deployment', nome: 'frontend-app', caminho: 'spec.template.spec.containers[name=nginx].image', valor: 'nginx:alpine' }] },
+    'microsvc-kustomize-ambientes': { dica: 'Releia os passos: algum valor pedido no Deployment backend-api-dev ainda não confere.', regras: [{ tipo: 'campo', kind: 'Deployment', nome: 'backend-api-dev', caminho: 'spec.template.spec.containers[name=api].image', valor: 'node:18-alpine' }, { tipo: 'campo', kind: 'Deployment', nome: 'backend-api-prod', caminho: 'spec.template.spec.containers[name=api].image', valor: 'node:18-alpine' }] },
+  },
 };
+
+export const projetoMicroservicos = { ...modulo, itens: comOcultos(modulo.itens, modulo.ocultos) };
