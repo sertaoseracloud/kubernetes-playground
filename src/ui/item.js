@@ -162,7 +162,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   const editorInstance = new EditorArquivos({
     abas: $('abas-arquivos'),
     editor: $('editor'),
-    aoExecutar: () => executarApply(),
+    aoExecutar: () => executarApply({ falar: true }),
     aoEnviar: () => enviar(),
     aoMudar: (arquivos) => {
       clearTimeout(salvarTimer);
@@ -593,6 +593,17 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   // visíveis (sem marcar como resolvido; quem marca é o ⬆ Enviar, com todos os casos).
   async function executarApply({ digitado = false, falar = false } = {}) {
     if (estado.ocupado || !estado.item) return;
+    // Pelo botão ou pelo atalho, o resultado é falado em resumo: o terminal fica mudo enquanto isso.
+    if (!falar || digitado) return rodarApply({ digitado, falar });
+    terminal.silenciar(60_000);
+    try {
+      return await rodarApply({ digitado, falar });
+    } finally {
+      terminal.silenciar(800);
+    }
+  }
+
+  async function rodarApply({ digitado, falar }) {
     const codigo = obterCodigo();
     if (!codigo.trim()) {
       escreverLinha('error: nenhum manifesto YAML fornecido', 'erro');
@@ -670,6 +681,8 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     } catch (erro) {
       console.error(erro);
       el.testes.innerHTML = `<p class="veredito falha">Erro</p><p class="veredito-sub">${esc(erro.message)}</p>`;
+      // Sem isto, quem usa leitor de tela ouvia "Enviando…" e mais nada.
+      definirStatus('Erro ao rodar os testes', { falar: `Não deu para rodar os testes: ${erro.message}. Tente enviar de novo.` });
     } finally {
       estado.ocupado = false;
       el.enviar.disabled = false;
