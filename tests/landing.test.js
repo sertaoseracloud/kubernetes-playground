@@ -21,8 +21,8 @@ describe('landing page', () => {
     renderLanding(el);
     expect(el.querySelectorAll('.modulo-card')).toHaveLength(modulos.length);
     expect(el.querySelectorAll('.vitrine-badges svg')).toHaveLength(ORDEM.length);
-    expect(el.querySelector('.hero-acoes a').getAttribute('href')).toBe('#/trilha');
-    expect(el.querySelector('a[href="#/privacidade"]')).not.toBeNull();
+    expect(el.querySelector('.hero-acoes a').getAttribute('href')).toBe('/trilha/');
+    expect(el.querySelector('a[href="/privacidade/"]')).not.toBeNull();
   });
 
   it('quem já começou vê "Continuar"', () => {

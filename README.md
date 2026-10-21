@@ -7,7 +7,7 @@ manifestos YAML, roda `kubectl apply`, `get`, `describe`, `diff` e `delete` e v�
 
 **Acesse:** https://sertaoseracloud.github.io/kubernetes-playground/
 
-**Acessível para todas as pessoas.** O nome vem de *neurodivergente*: a plataforma foi feita para pessoas cegas (o leitor de tela fala o resultado de cada teste), surdas e mudas (nada depende de som ou de voz, com tradução para Libras pelo VLibras) e neurodivergentes (perfis para TDAH, dislexia, autismo e ansiedade). A meta é a WCAG 2.2 nível AA, conferida com o axe-core a cada versão. Detalhes na página **Acessibilidade** do site (`#/acessibilidade`).
+**Acessível para todas as pessoas.** O nome vem de *neurodivergente*: a plataforma foi feita para pessoas cegas (o leitor de tela fala o resultado de cada teste), surdas e mudas (nada depende de som ou de voz, com tradução para Libras pelo VLibras) e neurodivergentes (perfis para TDAH, dislexia, autismo e ansiedade). A meta é a WCAG 2.2 nível AA, conferida com o axe-core a cada versão. Detalhes na página **Acessibilidade** do site (`/acessibilidade/`).
 
 É o irmão do [DivergeTerraform](https://github.com/sertaoseracloud/terraform-playground): os dois sites
 têm as mesmas features comuns (trilha, cenários, certificados, acessibilidade, terminal, grafo). A
@@ -15,9 +15,9 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
 
 ## O que tem
 
-- **Landing page** (`#/`): apresenta o projeto, a trilha, os certificados e os recursos de
+- **Landing page** (`/`): apresenta o projeto, a trilha, os certificados e os recursos de
   acessibilidade. Os números (exercícios, módulos, projetos) vêm do próprio conteúdo. A trilha fica
-  em `#/trilha`, e quem já começou vê "▶ Continuar" no topo.
+  em `/trilha/`, e quem já começou vê "▶ Continuar" no topo.
 - **Mais de 250 exercícios** com dificuldade Fácil/Médio/Difícil, mais **lições** de conceito no começo de cada assunto:
   1. **Fundamentos**: arquitetura, Pods, labels e selectors, ConfigMaps, probes, volumes, Services
      (ClusterIP, NodePort, LoadBalancer, headless), Ingress, Deployments, rolling update, HPA, PDB e DaemonSet.
@@ -42,11 +42,11 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
   (como o simulador funciona).
 - **Aba 📘 Docs**: os kinds usados no exercício, com a `apiVersion` servida, uma explicação curta e o link da
   documentação oficial.
-- **Playground livre** (`#/livre`) com vários arquivos.
+- **Playground livre** (`/livre/`) com vários arquivos.
 - **Instruções com estrutura previsível**: todo desafio mostra um roteiro curto, 🎯 **O que fazer**,
   📚 **Palavras técnicas** (até 6 termos com explicação simples, **analogia do dia a dia** e exemplo;
   glossário em `src/conteudo/glossario.js`), ✅ **Como saber que deu certo** e 💡 Dica.
-- **👨‍🏫 Quem é o instrutor?** (`#/instrutor`) e **☕ Apoie o projeto** (`#/apoie`, PIX por QR Code ou copia e
+- **👨‍🏫 Quem é o instrutor?** (`/instrutor/`) e **☕ Apoie o projeto** (`/apoie/`, PIX por QR Code ou copia e
   cola, montado no navegador por `src/apoio.js`).
 - **♿ Acessibilidade**: temas Dracula, Alto contraste, Claro e Suave; tamanho do texto (87,5% a 175%,
   editor incluído); fonte Atkinson Hyperlegible; mais espaçamento; links sublinhados e foco reforçado;
@@ -55,12 +55,12 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
 - **🧠 Neurodiversidade** (recomendações do W3C para acessibilidade cognitiva, COGA): perfis rápidos
   (🎯 Foco, 📖 Leitura facilitada, 🌿 Calmo, 🤝 Sem pressão), modo foco, lista de tarefas com caixas de
   marcar, régua de leitura, linhas curtas e lembrete de pausa.
-- **❓ Tutorial** passo a passo, **progresso** por módulo, **🆕 Novidades** (`#/novidades`) e **compartilhar**
+- **❓ Tutorial** passo a passo, **progresso** por módulo, **🆕 Novidades** (`/novidades/`) e **compartilhar**
   com os arquivos no link.
 
 ### Trilha gamificada e certificados
 
-- A trilha (`#/trilha`) é um **caminho** em zigue-zague. Lição vale 5 XP, fácil 10, médio 20 e difícil 40.
+- A trilha (`/trilha/`) é um **caminho** em zigue-zague. Lição vale 5 XP, fácil 10, médio 20 e difícil 40.
   O aluno sobe de **nível** (Iniciante → Mestre do Kubernetes) e ganha uma **sequência de dias** 🔥.
 - O próximo módulo **desbloqueia quando o atual chega a 70%**.
 - **🗺️ Cenários da trilha**: cada módulo tem um mapa em tiles de pixel art (como nos RPGs clássicos) que ocupa a
@@ -86,12 +86,13 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
 - **Selo de verificação** (HMAC-SHA256) e **cadeia de certificados** (Fundamentos → Avançados → AWS → Azure →
   Projetos → Final): cada certificado inclui no selo o hash do anterior, então mudar uma data ou um nome em
   qualquer ponto quebra os seguintes.
-- **🔎 Validador** (`#/validar`): link ou código, impresso/PDF e arquivo XML, com o badge, os dados e a cadeia.
+- **🔎 Validador** (`/validar/`): link ou código, impresso/PDF e arquivo XML, com o badge, os dados e a cadeia.
 - **↩️ Restaurar o progresso pelo certificado**: ao validar um certificado válido, quem tem neste navegador o
   **mesmo nome** do certificado restaura o módulo e os anteriores da cadeia (`src/restaurar.js`).
 - **📄 XML do certificado** e **✍️ assinatura Ed25519** com a chave pública em `chave-publica-ed25519.txt`.
 - **A palavra secreta nunca entra no código nem no site.** Ela fica nos secrets do GitHub Actions; o build
-  injeta só um valor derivado dela (`vite.config.js`) e falha se o secret não existir.
+  injeta só um valor derivado dela (`astro.config.mjs`) e falha se o secret não existir. Depois do build,
+  `scripts/conferir-segredo.mjs` procura a palavra em todos os arquivos publicados e falha se ela aparecer.
 - **Limite:** sem servidor, a chave derivada vai no JavaScript do site. O selo pega alterações no link, mas
   quem estudar o código publicado consegue gerar selos.
 
@@ -101,7 +102,7 @@ depois de mudar um deles, rode `npm run badges` e faça commit de `public/`.
 
 ### Privacidade, cookies e LGPD
 
-A página **🔒 Privacidade** (`#/privacidade`) explica como os dados são tratados:
+A página **🔒 Privacidade** (`/privacidade/`) explica como os dados são tratados:
 
 - **Sem cookies e sem rastreamento**: não há analytics, anúncios nem servidor próprio.
 - **Dados só no navegador** (`localStorage`, prefixo `kubernetes-playground:`): progresso, datas, dias de
@@ -111,6 +112,25 @@ A página **🔒 Privacidade** (`#/privacidade`) explica como os dados são trat
 - **Nada vai para um cluster de verdade**: o simulador não faz chamadas de rede e não pede credenciais.
 - **LGPD**: finalidade, base legal do nome (consentimento), direitos do art. 18 com **📥 Baixar meus dados**
   e **🗑️ Apagar meus dados**, e cuidado com menores (art. 14).
+
+## Arquitetura: Astro e endereços reais
+
+O site é gerado pelo [Astro](https://astro.build): **uma página HTML por tela**. Pense numa padaria que
+assa o pão de madrugada: quem chega (o aluno ou o Google) já recebe a página pronta, com título e
+descrição próprios.
+
+- **Rotas** ([`src/compartilhar.js`](src/compartilhar.js)): `/`, `/trilha/`, `/p/<id>/` (cada lição e
+  exercício), `/livre/`, `/validar/`, `/privacidade/`... Códigos (certificado, link compartilhado) ficam
+  no hash (`/validar/#<código>`), que nunca vai ao servidor.
+- **Páginas** ([`src/pages/`](src/pages/)): todas usam a mesma marcação, a do [`index.html`](index.html),
+  montada por [`scripts/prerender.mjs`](scripts/prerender.mjs) com o `<head>` de cada tela
+  ([`src/paginas.js`](src/paginas.js)). A landing já vem escrita em HTML. O sitemap lista todas.
+- **Navegação** ([`src/navegacao.js`](src/navegacao.js)): dentro do site, o clique troca só a tela, sem
+  recarregar (como antes); voltar, avançar, recarregar e abrir em outra aba também funcionam.
+- **Links antigos** (`#/trilha`, `#/p/<id>`, `#/validar/<código>`...): continuam valendo e viram o endereço
+  novo na hora. Os certificados e badges já impressos ou publicados não precisam mudar.
+- **Prefixo**: `/kubernetes-playground/` no site principal e `/kubernetes-playground/homologacao/` na
+  homologação (`HOMOLOGACAO=1`). Todo link passa por `rota()`, que já inclui o prefixo.
 
 ## O simulador
 
@@ -158,14 +178,15 @@ módulo novo, em `src/conteudo/cenarios.js`.
 
 ```bash
 npm ci
-npm run dev      # servidor local com recarga
+npm run dev      # servidor local com recarga: http://localhost:4321/kubernetes-playground/
+npm run check    # astro check (páginas e tipos)
 npm run lint     # ESLint
 npm test         # testes (simulador, regras, telas e toda a trilha)
 npm run test:cobertura  # os mesmos testes, com o limite de cobertura
 npm run comuns   # confere os arquivos comuns aos quatro playgrounds (comuns.json)
 npm run build    # gera dist/ (precisa de CERTIFICADO_SEGREDO)
-npm run test:e2e        # Playwright contra o dist (fluxo, axe nos 4 temas, larguras de celular)
-npm run lighthouse      # Lighthouse CI contra o dist
+npm run test:e2e        # Playwright contra o dist, no endereço de verdade (fluxo, axe nos 4 temas, celular)
+npm run lighthouse      # Lighthouse CI contra o dist (landing, trilha e um exercício)
 npm run badges   # regenera badges, capa e ícones em public/
 ```
 

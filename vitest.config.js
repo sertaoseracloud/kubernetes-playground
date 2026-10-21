@@ -23,9 +23,9 @@ export default defineConfig({
       include: ['src/**/*.js'],
       exclude: ['src/conteudo/**'],
       reporter: ['text-summary', 'json-summary', 'html'],
-      // Com os cenários, o grafo e o editor de abas, a cobertura medida em 2026-10-19 é 75/67/78/78
-      // (antes, 71/63/74/74). Os limites sobem com folga de um ponto, como no DivergeTerraform. Só podem subir.
-      thresholds: { statements: 78, branches: 71, functions: 80, lines: 80 },
+      // Com as rotas reais (Astro), a cobertura medida em 2026-10-21 é 80/73/82/82 (antes, 75/67/78/78
+      // em 2026-10-19). Os limites sobem com folga de um ponto, como no DivergeTerraform. Só podem subir.
+      thresholds: { statements: 79, branches: 72, functions: 81, lines: 81 },
     },
   },
 });

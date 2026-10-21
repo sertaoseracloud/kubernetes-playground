@@ -10,7 +10,8 @@ import './cenarios.css';
 import './landing.css';
 import './acessibilidade-ux.css';
 
-import { lerRota } from './compartilhar.js';
+import { lerRota, EVENTO_ROTA } from './compartilhar.js';
+import { iniciarNavegacao } from './navegacao.js';
 import { iniciarAcessibilidade } from './ui/acessibilidade.js';
 import { iniciarRegua, iniciarPausa } from './ui/neuro.js';
 import { renderPrivacidade, iniciarAvisoPrivacidade } from './ui/privacidade.js';
@@ -22,7 +23,6 @@ import { renderInstrutor } from './ui/instrutor.js';
 import { renderDeclaracaoAcessibilidade } from './ui/declaracao-acessibilidade.js';
 import { renderNaoEncontrada } from './ui/nao-encontrada.js';
 import { anunciar } from './ui/anuncios.js';
-import { VERSAO } from './novidades.js';
 import { iniciarMenu, iniciarFlutuantes } from './ui/menu.js';
 import { iniciarMaisAcoes } from './ui/mais-acoes.js';
 import { renderInicio, resumoProgresso, desligarCenariosDaTrilha } from './ui/inicio.js';
@@ -33,11 +33,13 @@ import { iniciarTutorial } from './ui/tutorial.js';
 import { iniciarMuralApoio } from './ui/mural-apoio.js';
 import { $ } from './ui/util.js';
 import { HOMOLOGACAO } from './ambiente.js';
-import { definirPagina, PRINCIPAL, NOME } from './seo.js';
-import { buscarItem, modulos } from './conteudo/trilha.js';
+import { definirPagina } from './seo.js';
+import { paginaDe } from './paginas.js';
 
 // Antes de tudo: tema e tamanho de texto escolhidos pelo aluno.
 const acessibilidade = iniciarAcessibilidade();
+// Um link antigo (#/trilha, #/p/<id>...) vira o endereço novo antes de qualquer tela ler a rota.
+iniciarNavegacao();
 if (HOMOLOGACAO) $('faixa-homologacao').hidden = false;
 iniciarMenu();
 iniciarFlutuantes();
@@ -113,19 +115,12 @@ function navegar() {
   desligarCenariosDaTrilha();
   // A landing vem pré-renderizada no HTML; daqui em diante quem mostra/esconde as telas é o JS.
   document.documentElement.classList.remove('rota-interna');
-  const rota = lerRota(location.hash);
+  const rota = lerRota(location);
   if (rota.tela === 'item' && telaDoItem.abrir(rota.id, rota.arquivos)) {
     mostrarTela(telaItem);
     layout.aplicar();
     marcarMenu(rota.id === 'livre' ? 'livre' : '');
-    const item = buscarItem(rota.id);
-    const modulo = modulos.find((m) => m.id === item?.modulo);
-    definirPagina({
-      titulo: `${$('item-titulo').textContent} · ${NOME}`,
-      descricao: rota.id === 'livre'
-        ? 'Playground livre de Kubernetes: escreva YAML e rode kubectl apply, get, describe e delete direto no navegador, sem cluster real.'
-        : `${item?.tipo === 'licao' ? 'Lição' : 'Exercício'} de ${modulo?.titulo ?? 'Kubernetes'}: ${item?.titulo}. Escreva o manifesto, rode o apply e veja os testes na hora.`,
-    });
+    definirPagina(paginaDe(rota));
     return;
   }
   // Fora do exercício: o terminal para de animar e o status volta ao padrão.
@@ -136,7 +131,7 @@ function navegar() {
     renderNaoEncontrada(telaNaoEncontrada, { motivo: rota.tela === 'item' ? 'item' : rota.motivo });
     mostrarTela(telaNaoEncontrada);
     marcarMenu('');
-    definirPagina({ titulo: `Página não encontrada · ${NOME}`, descricao: `Este endereço não existe no ${NOME}.` });
+    definirPagina(paginaDe({ tela: 'nao-encontrada' }));
     telaNaoEncontrada.scrollTop = 0;
     return;
   }
@@ -144,7 +139,7 @@ function navegar() {
     renderLanding(telaLanding);
     mostrarTela(telaLanding);
     marcarMenu('');
-    definirPagina(PRINCIPAL);
+    definirPagina(paginaDe(rota));
     telaLanding.scrollTop = 0;
     return;
   }
@@ -152,10 +147,7 @@ function navegar() {
     renderValidador(telaValidador, rota.codigo, { aoRestaurar: atualizarProgressoTopo });
     mostrarTela(telaValidador);
     marcarMenu('validar');
-    definirPagina({
-      titulo: `Validar certificado · ${NOME}`,
-      descricao: `Confira se um certificado ou badge do ${NOME}, emitido pela Sertão será cloud, é autêntico.`,
-    });
+    definirPagina(paginaDe(rota));
     telaValidador.scrollTop = 0;
     return;
   }
@@ -163,10 +155,7 @@ function navegar() {
     renderDeclaracaoAcessibilidade(telaAcessibilidade);
     mostrarTela(telaAcessibilidade);
     marcarMenu('');
-    definirPagina({
-      titulo: `Acessibilidade · ${NOME}`,
-      descricao: `Como o ${NOME} atende pessoas cegas, surdas, mudas e neurodivergentes: leitor de tela, teclado, Libras (VLibras) e perfis prontos.`,
-    });
+    definirPagina(paginaDe(rota));
     telaAcessibilidade.scrollTop = 0;
     return;
   }
@@ -175,17 +164,14 @@ function navegar() {
     mostrarTela(telaInstrutor);
     renderInstrutor(telaInstrutor, { ancora: rota.ancora });
     marcarMenu('instrutor');
-    definirPagina({
-      titulo: `${rota.ancora === 'apoie' ? 'Apoie o projeto' : 'Quem é o instrutor?'} · ${NOME}`,
-      descricao: 'Cláudio Filipe Lima Rapôso: arquiteto de soluções, Microsoft MVP, Docker Captain e professor. Apoie o projeto com um PIX de qualquer valor.',
-    });
+    definirPagina(paginaDe(rota));
     return;
   }
   if (rota.tela === 'novidades') {
     renderNovidades(telaNovidades);
     mostrarTela(telaNovidades);
     marcarMenu('');
-    definirPagina({ titulo: `Novidades (v${VERSAO}) · ${NOME}`, descricao: `Todas as alterações do ${NOME}, versão por versão.` });
+    definirPagina(paginaDe(rota));
     telaNovidades.scrollTop = 0;
     return;
   }
@@ -195,9 +181,7 @@ function navegar() {
     (licenca ? renderLicenca : renderTermos)(tela);
     mostrarTela(tela);
     marcarMenu('');
-    definirPagina(licenca
-      ? { titulo: `Licença · ${NOME}`, descricao: `O ${NOME} é software livre (AGPL-3.0) com conteúdo aberto (CC BY-SA 4.0).` }
-      : { titulo: `Termos de uso · ${NOME}`, descricao: `Termos de uso do ${NOME}, da Sertão será cloud.` });
+    definirPagina(paginaDe(rota));
     tela.scrollTop = 0;
     return;
   }
@@ -205,7 +189,7 @@ function navegar() {
     renderPrivacidade(telaPrivacidade, { definirStatus });
     mostrarTela(telaPrivacidade);
     marcarMenu('privacidade');
-    definirPagina({ titulo: `Privacidade e cookies · ${NOME}`, descricao: `Sem cookies e sem rastreamento: como o ${NOME} trata seus dados e atende à LGPD.` });
+    definirPagina(paginaDe(rota));
     telaPrivacidade.scrollTop = 0;
     return;
   }
@@ -213,14 +197,14 @@ function navegar() {
     const cert = renderCertificado(telaCertificado, rota.codigo, { definirStatus });
     mostrarTela(telaCertificado);
     marcarMenu('');
-    definirPagina({ titulo: cert ? `Certificado de ${cert.nome} · Sertão será cloud` : `Certificado · ${NOME}` });
+    definirPagina(cert ? { titulo: `Certificado de ${cert.nome} · Sertão será cloud` } : paginaDe(rota));
     telaCertificado.scrollTop = 0;
     return;
   }
   mostrarTela(telaInicio);
   renderInicio(telaInicio);
   marcarMenu('inicio');
-  definirPagina({ titulo: `Trilha · ${NOME}`, descricao: 'A trilha de Kubernetes: fundamentos, pods, services, deployments e projetos, com módulos que desbloqueiam aos 70%, XP, níveis e certificados.' });
+  definirPagina(paginaDe({ tela: 'inicio' }));
 }
 
 // Atalhos fora do editor (dentro dele, o próprio editor trata).
@@ -244,19 +228,19 @@ document.addEventListener('keydown', (e) => {
  */
 function focarTitulo() {
   const tela = [...document.querySelectorAll('#conteudo > main')].find((m) => !m.hidden);
-  const alvo = (location.hash === '#/apoie' && $('apoio-titulo')) || tela?.querySelector('h1') || $('conteudo');
+  const alvo = (lerRota(location).ancora === 'apoie' && $('apoio-titulo')) || tela?.querySelector('h1') || $('conteudo');
   if (!alvo.hasAttribute('tabindex')) alvo.setAttribute('tabindex', '-1');
   alvo.focus({ preventScroll: alvo !== $('apoio-titulo') });
 }
 
-window.addEventListener('hashchange', () => {
-  // Âncoras da própria página (#conteudo, por exemplo) não são rotas: só rolam até lá.
-  if (!location.hash.startsWith('#/') && location.hash.length > 1 && document.getElementById(location.hash.slice(1))) return;
+// Troca de tela (clique num link do site, voltar/avançar): as âncoras da própria página
+// (#conteudo, por exemplo) não são rotas e nem chegam aqui (src/navegacao.js).
+window.addEventListener(EVENTO_ROTA, () => {
   navegar();
   focarTitulo();
 });
-// "Pular para o conteúdo" vai para o título da tela aberta sem mudar o endereço (as
-// rotas ficam no #: com o href puro, o link levava para a página inicial).
+// "Pular para o conteúdo" vai para o título da tela aberta sem mudar o endereço (com o
+// href puro, o #conteudo entraria no endereço da tela).
 document.querySelector('.pular').addEventListener('click', (e) => {
   e.preventDefault();
   focarTitulo();

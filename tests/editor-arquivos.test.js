@@ -80,7 +80,7 @@ describe('na tela do exercício', () => {
 
   it('o link compartilhado leva os arquivos e abre o exercício com eles', () => {
     const id = problemas[0].id;
-    const rota = lerRota(linkCompartilhado({ item: id, arquivos: { 'manifest.yaml': POD, 'service.yaml': SVC } }));
+    const rota = lerRota(new URL(linkCompartilhado({ item: id, arquivos: { 'manifest.yaml': POD, 'service.yaml': SVC } }), 'http://localhost'));
     expect(rota).toMatchObject({ tela: 'item', id });
     const tela = montar();
     tela.abrir(rota.id, rota.arquivos);
