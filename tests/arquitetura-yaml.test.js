@@ -4,6 +4,47 @@ import { grafoDoYaml } from '../src/k8s/grafo.js';
 import { renderArquiteturaRecursos } from '../src/ui/arquitetura-recursos.js';
 
 describe('arquitetura a partir dos manifestos', () => {
+  it('desenha portas do serviço, destino nomeado e contêiner sem inventar CIDR', () => {
+    const g = grafoDoYaml(`kind: Service
+metadata: { name: web }
+spec:
+  ports:
+    - { port: 80, targetPort: http, nodePort: 30080, protocol: TCP }
+---
+kind: Pod
+metadata: { name: web }
+spec:
+  containers:
+    - name: web
+      ports: [{ containerPort: 8080, protocol: TCP }]
+      env: [{ name: SEGREDO, value: NAO_EXIBIR }]`);
+    const el = document.createElement('div');
+    el.innerHTML = renderArquiteturaRecursos(g);
+    expect(el.querySelector('svg').textContent).toContain('Porta do serviço (TCP): 80');
+    expect(el.querySelector('svg').textContent).toContain('Porta de destino: http');
+    expect(el.querySelector('svg').textContent).toContain('Porta do nó: 30080');
+    expect(el.querySelector('.arq-lista').textContent).toContain('Porta do contêiner web (TCP): 8080');
+    expect(el.textContent).not.toContain('NAO_EXIBIR');
+    expect(el.querySelector('svg').textContent).not.toContain('Rede (CIDR)');
+  });
+
+  it('mostra CIDR, máscara e portas de NetworkPolicy sem usar status como fonte', () => {
+    const g = grafoDoYaml(`kind: NetworkPolicy
+metadata: { name: entrada }
+spec:
+  ingress:
+    - from: [{ ipBlock: { cidr: 10.0.0.0/16, except: [10.0.1.0/24] } }]
+      ports: [{ port: 80, endPort: 90, protocol: TCP }]
+status: { segredo: NAO_EXIBIR }`);
+    const detalhes = g.nos[0].detalhes;
+    expect(detalhes).toContainEqual({ rotulo: 'Entrada · Máscara', valor: '255.255.0.0' });
+    expect(detalhes).toContainEqual({ rotulo: 'Entrada · Rede (CIDR)', valor: '10.0.0.0/16' });
+    expect(detalhes).toContainEqual({ rotulo: 'Entrada · Exceto CIDR', valor: '10.0.1.0/24' });
+    expect(detalhes).toContainEqual({ rotulo: 'Entrada · Porta (TCP)', valor: '80' });
+    expect(detalhes).toContainEqual({ rotulo: 'Entrada · Porta final', valor: '90' });
+    expect(JSON.stringify(detalhes)).not.toContain('NAO_EXIBIR');
+  });
+
   it('mostra Pod, Service e relação de selector sem inventar AWS ou Azure', () => {
     const codigo = `apiVersion: v1
 kind: Pod
