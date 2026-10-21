@@ -8,6 +8,7 @@ import { criarTelaItem, codigoInicial } from '../src/ui/item.js';
 import { problemas, LIVRE } from '../src/conteudo/trilha.js';
 import { statusDe } from '../src/progresso.js';
 import { interpretar, completarKubectl, tipoPorNome, kindsDoYaml, explicarKind } from '../src/k8s/comandos.js';
+import { obterEstado } from '../src/k8s/simulador.js';
 
 const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
 const corpo = html.slice(html.indexOf('>', html.indexOf('<body')) + 1, html.lastIndexOf('</body>')).replace(/<script[\s\S]*?<\/script>/g, '');
@@ -111,6 +112,56 @@ describe('terminal na tela do exercício', () => {
     expect(saida()).toContain('error:');
     expect(statusDe(PRIMEIRO.id)).toBeUndefined();
   });
+
+  it('Apply inválido preserva cluster e Estado mantém o delta ao reabrir', async () => {
+    const tela = montar();
+    tela.abrir('livre');
+    await ate(noPrompt('livre'));
+    digitar('kubectl apply -f .');
+    await ate(() => saida().includes('pod/nginx-demo created'));
+    await ate(noPrompt('livre'));
+    const antes = obterEstado();
+    document.querySelector('[data-saida="estado"]').click();
+    const painel = document.getElementById('saida-estado');
+    const delta = painel.innerHTML;
+    expect(delta).toContain('nginx-demo');
+    document.querySelector('[data-saida="terminal"]').click();
+    document.querySelector('[data-saida="estado"]').click();
+    expect(painel.innerHTML).toBe(delta);
+    tela.editor().setValue('kind: Pod\nmetadata:\n  name: erro\n');
+    digitar('kubectl apply -f .');
+    await ate(() => saida().includes('error:'));
+    expect(obterEstado()).toEqual(antes);
+    document.querySelector('[data-saida="estado"]').click();
+    expect(painel.innerHTML).toBe(delta);
+  });
+
+  it('delete -f remove Pod e respeita o arquivo selecionado', async () => {
+    const tela = montar();
+    tela.abrir('livre');
+    await ate(noPrompt('livre'));
+    tela.editor().setValue({ 'manifest.yaml': LIVRE.inicial, 'outro.yaml': LIVRE.inicial.replaceAll('nginx-demo', 'outro') });
+    digitar('kubectl apply -f .');
+    await ate(() => saida().includes('pod/outro created'));
+    await ate(noPrompt('livre'));
+    digitar('kubectl delete -f outro.yaml');
+    await ate(() => saida().includes('pod "outro" deleted'));
+    expect(obterEstado().pods.map((p) => p.nome)).toEqual(['nginx-demo']);
+  });
+
+  it('edição invalida o placar atual sem revogar a conquista histórica', async () => {
+    const tela = montar();
+    tela.abrir(PRIMEIRO.id);
+    tela.editor().setValue(PRIMEIRO.solucao);
+    document.getElementById('btn-enviar').click();
+    await ate(() => statusDe(PRIMEIRO.id) === 'resolvido');
+    const view = tela.editor().view;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '# ainda editando' } });
+    expect(statusDe(PRIMEIRO.id)).toBe('resolvido');
+    expect(document.getElementById('saida-testes').textContent).not.toContain('Aceito');
+    expect(document.getElementById('resumo-testes').textContent).toBe('');
+    expect(falas.at(-1)).toContain('Código alterado');
+  });
 });
 
 describe('comandos do kubectl (src/k8s/comandos.js)', () => {
@@ -131,8 +182,8 @@ describe('comandos do kubectl (src/k8s/comandos.js)', () => {
   });
 
   it('ações para a tela, erros e ajuda', () => {
-    expect(interpretar('kubectl apply -f manifest.yaml', vazio).acao).toBe('apply');
-    expect(interpretar('k diff -f manifest.yaml', vazio).acao).toBe('diff');
+    expect(interpretar('kubectl apply -f manifest.yaml', vazio, { 'manifest.yaml': '' }).acao).toBe('apply');
+    expect(interpretar('k diff -f manifest.yaml', vazio, { 'manifest.yaml': '' }).acao).toBe('diff');
     expect(interpretar('kubectl apply', vazio).linhas[0].classe).toBe('erro');
     expect(interpretar('kubectl delete svc a b', vazio).acao.apagar.map((a) => a.nome)).toEqual(['a', 'b']);
     expect(texto(interpretar('kubectl frobnicate', vazio))).toContain('unknown command "frobnicate"');
