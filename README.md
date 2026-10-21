@@ -68,9 +68,13 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
   cada exercício resolvido (casas, filhos e filhotes, calculados do progresso, sem nada a mais no navegador). Os
   temas: porto de contêineres (Fundamentos), cidade-cluster (Avançados), nuvens ao entardecer (AWS), céu de nuvens
   azuis (Azure), cidade à noite (Microsserviços), arquipélago multicloud e o canteiro de obras do Terraform na
-  comparação. Os personagens andam de tile em tile sem pisar na água nem no caminho (10 por tela de altura, 4 no
-  celular) e o mapa só é refeito quando a largura muda (`src/ui/cenarios/`, o mesmo motor dos sites irmãos). É só
-  decoração: o leitor de tela não lê, e os personagens param com "reduzir movimento" e no alto contraste.
+  comparação. Com placa de vídeo, o cenário é desenhado com PixiJS (WebGL), carregado só na trilha; sem ela, em
+  canvas 2D. Os moradores vão até destinos (casa, perto do passo atual, passos concluídos) sem pisar na água nem no
+  caminho, se cumprimentam, conversam, sentam, entram em casa, comemoram quando um exercício é resolvido, e os
+  filhotes seguem os pais (10 por tela de altura, 4 no celular; `src/ui/cenarios/vida.js`). Clicar num personagem
+  mostra a definição de um conceito para revisar (`src/conteudo/falas-da-vila.js`), sem cobrir os ícones dos passos.
+  O desenho é decorativo (o leitor de tela não lê): o botão "Conhecer a vila" de cada módulo traz as definições
+  em texto, e "Pausar animação do cenário" para tudo. Com "reduzir movimento", alto contraste ou pausa, nada se move.
 - Ao concluir 100% de um módulo, o 🏆 libera o **certificado do módulo**; com todos, o 🎓 libera o
   **certificado final**. Os certificados são emitidos pela **Sertão será cloud** e assinados por
   **Cláudio Raposo**, com **badge digital no estilo Credly** e botões para **publicar no LinkedIn** e
