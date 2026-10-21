@@ -1,6 +1,6 @@
 // Certificados: um por módulo e um de conclusão total, emitidos pela Sertão será cloud.
 // Adaptado do terraform-playground para Kubernetes.
-import { paraBase64Url, deBase64Url } from './compartilhar.js';
+import { paraBase64Url, deBase64Url, rota } from './compartilhar.js';
 import { hmacSha256 } from './sha256.js';
 import { assinar, verificar, CHAVE_PUBLICA } from './ed25519.js';
 import { textoHoras } from './cargaHoraria.js';
@@ -138,7 +138,8 @@ export function decodificarCertificado(codigo) {
   }
 }
 
-export const linkCertificado = (cert) => `#/certificado/${codificarCertificado(cert)}`;
+/** Link do certificado dentro do site. Os links já impressos (SITE#/certificado/...) continuam valendo. */
+export const linkCertificado = (cert) => `${rota('certificado')}#${codificarCertificado(cert)}`;
 
 export const linkPublico = (cert, site = SITE) => `${site}badge/${cert.modulo}/?c=${codificarCertificado(cert)}`;
 
@@ -168,7 +169,8 @@ export const linkLinkedInPublicar = (cert, url = linkPublico(cert)) =>
 
 export function extrairCodigo(texto) {
   const t = String(texto ?? '').trim();
-  const doHash = t.match(/#\/(?:certificado|validar)\/([A-Za-z0-9_-]+)/);
+  // Link antigo (…#/certificado/<código>) ou novo (…/certificado/#<código>).
+  const doHash = t.match(/#\/(?:certificado|validar)\/([A-Za-z0-9_-]+)/) ?? t.match(/\/(?:certificado|validar)\/#([A-Za-z0-9_-]+)/);
   if (doHash) return doHash[1];
   const doBadge = t.match(/[?&]c=([A-Za-z0-9_-]+)/);
   if (doBadge) return doBadge[1];
