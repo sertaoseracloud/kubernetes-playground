@@ -252,6 +252,8 @@ Kubernetes e mantém a explicação de funcionamento do simulador. Não executa
 Apply nem presume que o cluster seja EKS ou AKS. Setas indicam dependências,
 não tráfego de rede. Há alternativa textual, rolagem por teclado e indicação
 explícita de erros. Veja [uso, limites e manutenção](docs/arquitetura-ilustrativa.md).
+Namespaces declarados viram caixas com seus recursos dentro. Recursos de
+escopo do cluster permanecem fora e selectors não atravessam namespaces.
 
 ## Licença
 

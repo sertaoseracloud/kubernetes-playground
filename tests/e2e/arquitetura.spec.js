@@ -3,9 +3,15 @@ import AxeBuilder from '@axe-core/playwright';
 import { abrir, medirEstouro, PRIMEIRO, TEMAS } from './apoio.js';
 
 const YAML = `apiVersion: v1
+kind: Namespace
+metadata:
+  name: loja
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: web
+  namespace: loja
   labels:
     app: web
 spec:
@@ -17,6 +23,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: entrada
+  namespace: loja
 spec:
   selector:
     app: web
@@ -40,6 +47,8 @@ test('arquitetura mostra relações do YAML e mantém explicação do simulador'
   await expect(painel.locator('image[href$="k8s-svc.svg"]')).toBeVisible();
   await expect(painel.locator('.arq-ligacao')).toHaveCount(1);
   await expect(painel.locator('.arq-area')).toHaveCount(2);
+  await expect(painel.locator('.arq-contencao')).toHaveCount(1);
+  await expect(painel.locator('.arq-lista')).toContainText('Pod/loja/web está em Namespace/loja');
   await expect(painel.locator('.arq-plataforma-nome')).toHaveText('Kubernetes');
   await expect(painel).toContainText('Como o simulador funciona');
   await painel.screenshot({ path: testInfo.outputPath('arquitetura-kubernetes.png') });

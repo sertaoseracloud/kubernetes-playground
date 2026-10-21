@@ -16,6 +16,10 @@ const GRUPO = {
 export const grupoDoKind = (kind) => GRUPO[kind] ?? 'outro';
 
 const lista = (v) => (Array.isArray(v) ? v : []);
+const ESCOPO_CLUSTER = new Set(['Namespace', 'Node', 'PersistentVolume', 'StorageClass', 'ClusterRole', 'ClusterRoleBinding', 'IngressClass', 'CustomResourceDefinition', 'ClusterIssuer']);
+const namespaceDe = (doc) => ESCOPO_CLUSTER.has(doc.kind) ? '' : doc.metadata?.namespace || 'default';
+const idDoRecurso = (kind, nome, namespace) => `${kind}/${namespace && namespace !== 'default' ? `${namespace}/` : ''}${nome}`;
+const idDoDocumento = (doc) => idDoRecurso(doc.kind, doc.metadata.name, namespaceDe(doc));
 
 /** O "molde" de Pod de um recurso (o próprio Pod, o template de um Deployment, de um CronJob...). */
 function moldeDePod(doc) {
@@ -71,12 +75,14 @@ export function grafoDoYaml(texto) {
   } catch (e) {
     return { erro: `O YAML não pôde ser lido: ${e.reason ?? e.message}` };
   }
-  const nos = docs.map((d) => ({ id: `${d.kind}/${d.metadata.name}`, rotulo: `${d.kind}/${d.metadata.name}`, kind: d.kind, grupo: grupoDoKind(d.kind) }));
+  const nos = docs.map((d) => ({ id: idDoDocumento(d), rotulo: idDoDocumento(d), kind: d.kind, grupo: grupoDoKind(d.kind), namespace: namespaceDe(d) }));
   const existe = new Set(nos.map((n) => n.id));
   const arestas = [];
   const avisos = [];
-  const ligar = (de, kind, nome, motivo) => {
-    const para = `${kind}/${nome}`;
+  const contencoes = [];
+  const porId = new Map(nos.map((n) => [n.id, n]));
+  const ligar = (de, kind, nome, motivo, namespace = porId.get(de)?.namespace) => {
+    const para = idDoRecurso(kind, nome, ESCOPO_CLUSTER.has(kind) ? '' : namespace);
     if (de === para) return;
     if (!existe.has(para)) {
       avisos.push(`${de} usa ${para} (${motivo}), que não está neste YAML.`);
@@ -84,16 +90,20 @@ export function grafoDoYaml(texto) {
     }
     if (!arestas.some((a) => a.de === de && a.para === para)) arestas.push({ de, para, motivo });
   };
-  const comMolde = docs.map((d) => ({ id: `${d.kind}/${d.metadata.name}`, molde: moldeDePod(d) })).filter((x) => x.molde);
+  const comMolde = docs.map((d) => ({ id: idDoDocumento(d), nome: d.metadata.name, kind: d.kind, namespace: namespaceDe(d), molde: moldeDePod(d) })).filter((x) => x.molde);
   const porSelector = (de, selector, motivo, rotulo) => {
-    const alvos = comMolde.filter((x) => x.id !== de && seleciona(selector, x.molde.labels));
-    for (const a of alvos) ligar(de, ...a.id.split('/'), motivo);
+    const alvos = comMolde.filter((x) => x.id !== de && x.namespace === porId.get(de)?.namespace && seleciona(selector, x.molde.labels));
+    for (const a of alvos) ligar(de, a.kind, a.nome, motivo);
     const pares = Object.entries(selector?.matchLabels ?? selector ?? {}).filter(([, v]) => typeof v === 'string');
     if (!alvos.length && pares.length) avisos.push(`${de} não ${rotulo} nenhum Pod deste YAML (${pares.map(([k, v]) => `${k}=${v}`).join(', ')}).`);
   };
 
   for (const d of docs) {
-    const id = `${d.kind}/${d.metadata.name}`;
+    const id = idDoDocumento(d);
+    const namespace = namespaceDe(d);
+    if (namespace && existe.has(`Namespace/${namespace}`)) {
+      contencoes.push({ filho: id, pai: `Namespace/${namespace}`, motivo: d.metadata.namespace ? 'metadata.namespace' : 'namespace default (implícito)' });
+    }
     const molde = moldeDePod(d);
     if (molde) for (const [kind, nome, motivo] of referenciasDoPod(molde.spec)) ligar(id, kind, nome, motivo);
     const spec = d.spec ?? {};
@@ -125,7 +135,7 @@ export function grafoDoYaml(texto) {
       case 'RoleBinding':
       case 'ClusterRoleBinding':
         if (d.roleRef?.kind && d.roleRef?.name) ligar(id, d.roleRef.kind, d.roleRef.name, 'roleRef');
-        for (const s of lista(d.subjects)) if (s?.kind === 'ServiceAccount' && s.name) ligar(id, 'ServiceAccount', s.name, 'subjects');
+        for (const s of lista(d.subjects)) if (s?.kind === 'ServiceAccount' && s.name) ligar(id, 'ServiceAccount', s.name, 'subjects', s.namespace ?? namespace);
         break;
       case 'PersistentVolumeClaim':
         if (spec.storageClassName) ligar(id, 'StorageClass', spec.storageClassName, 'storageClassName');
@@ -135,5 +145,5 @@ export function grafoDoYaml(texto) {
   }
   // Referências a recursos do próprio cluster (StorageClass padrão, ServiceAccount default...) não são erro.
   const ignorar = /(StorageClass|ServiceAccount)\/(default|gp2|gp3|standard|managed-csi|managed-premium|azurefile-csi|efs-sc)\b/;
-  return { nos, arestas, avisos: avisos.filter((a) => !ignorar.test(a)) };
+  return { nos, arestas, contencoes, avisos: avisos.filter((a) => !ignorar.test(a)) };
 }
