@@ -31,6 +31,7 @@ async function editar(page, codigo) {
 }
 
 test('arquitetura mostra relações do YAML e mantém explicação do simulador', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 2400 });
   await abrir(page, `p/${PRIMEIRO.id}/`);
   await editar(page, YAML);
   await page.locator('[data-saida="arquitetura"]').click();
@@ -38,6 +39,8 @@ test('arquitetura mostra relações do YAML e mantém explicação do simulador'
   await expect(painel.locator('image[href$="k8s-pod.svg"]')).toBeVisible();
   await expect(painel.locator('image[href$="k8s-svc.svg"]')).toBeVisible();
   await expect(painel.locator('.arq-ligacao')).toHaveCount(1);
+  await expect(painel.locator('.arq-area')).toHaveCount(2);
+  await expect(painel.locator('.arq-plataforma-nome')).toHaveText('Kubernetes');
   await expect(painel).toContainText('Como o simulador funciona');
   await painel.screenshot({ path: testInfo.outputPath('arquitetura-kubernetes.png') });
   for (const imagem of await painel.locator('image').all()) {

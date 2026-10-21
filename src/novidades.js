@@ -10,6 +10,16 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.11.1',
+    data: '2026-10-21',
+    titulo: 'Arquitetura ilustrada e resultados mais confiáveis',
+    resumo: 'Veja os recursos do YAML em áreas agrupadas, com ícones Kubernetes. O terminal e o editor agora explicam melhor erros e protegem seu trabalho.',
+    grupos: [
+      { titulo: 'Arquitetura', itens: ['Ícones oficiais em destaque, nomes abaixo e conexões em ângulo reto, com lista equivalente em texto.', 'O desenho acompanha o editor e mantém a explicação do simulador, sem presumir um cluster AWS ou Azure.'] },
+      { titulo: 'Terminal e editor', itens: ['Apply inválido preserva o cluster; opções e nomes de arquivo inválidos não são executados.', 'Excluir um Pod por arquivo funciona, erros indicam a origem e consultar Estado não apaga o último destaque.', 'Rascunhos protegidos nas transições, aviso de armazenamento indisponível e resultados antigos identificados após edição.'] },
+    ],
+  },
+  {
     versao: '0.11.0',
     data: '2026-10-21',
     titulo: 'Cada lição tem o seu endereço',
