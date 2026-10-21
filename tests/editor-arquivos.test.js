@@ -57,6 +57,23 @@ describe('abas do editor', () => {
     document.querySelector('#abas [aria-label="Excluir service.yaml"]').click();
     expect(Object.keys(ed.arquivos)).toEqual(['manifest.yaml']);
     expect(document.querySelector('#abas [aria-label="Excluir manifest.yaml"]')).toBeNull();
+    expect(document.activeElement).toBe(ed.view.contentDOM);
+    expect(ed.view.contentDOM.getAttribute('aria-label')).toContain('manifest.yaml');
+    ed.destroy();
+  });
+
+  it('modo e rótulo acompanham a aba e preservam a seleção', () => {
+    const ed = novo();
+    ed.carregar({ 'manifest.yaml': POD, 'notas.md': '# notas', 'dados.json': '{}' });
+    ed.view.dispatch({ selection: { anchor: 3 } });
+    ed.abrir('notas.md');
+    expect(ed.view.contentDOM.getAttribute('aria-label')).toContain('notas.md — Markdown');
+    ed.abrir('dados.json');
+    expect(ed.view.contentDOM.getAttribute('aria-label')).toContain('dados.json — texto simples');
+    ed.abrir('manifest.yaml');
+    expect(ed.view.state.selection.main.anchor).toBe(3);
+    expect(ed.view.contentDOM.getAttribute('aria-label')).toContain('YAML');
+    ed.destroy();
   });
 });
 

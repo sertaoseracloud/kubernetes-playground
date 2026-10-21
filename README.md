@@ -15,6 +15,22 @@ comparação feature a feature fica em [`docs/paridade-terraform.md`](docs/parid
 
 ## O que tem
 
+### Edição, rascunhos e segurança da simulação
+
+O rascunho pendente é gravado antes de trocar de exercício ou sair da página;
+restaurar o original ou usar a solução cancela a gravação anterior. Falha de quota
+ou bloqueio do armazenamento mostra um aviso persistente sem apagar o editor.
+O rótulo acessível identifica o arquivo ativo, com modos YAML, Markdown ou texto
+simples (JSON e anotações). Excluir uma aba devolve o foco ao editor.
+
+Os botões Apply/Diff usam todos os manifestos (`-f .`). No terminal, `-f arquivo`
+ou `-f diretório` seleciona somente os manifestos indicados. Argumentos ausentes,
+caminhos inexistentes e opções ainda não suportadas (inclusive `--dry-run`) geram
+erro sem modificar o cluster. Apply inválido não aplica parcialmente nem limpa o
+estado anterior; os testes dos exercícios usam um cluster separado. Diagnósticos
+de sintaxe preservam arquivo e linha originais. O último delta permanece ao
+reabrir Estado; editar invalida o placar atual sem revogar conquistas históricas.
+
 - **Landing page** (`/`): apresenta o projeto, a trilha, os certificados e os recursos de
   acessibilidade. Os números (exercícios, módulos, projetos) vêm do próprio conteúdo. A trilha fica
   em `/trilha/`, e quem já começou vê "▶ Continuar" no topo.
@@ -229,6 +245,14 @@ Secrets do GitHub Actions (Settings > Secrets > Actions), gerados aleatoriamente
 `CERTIFICADO_SEGREDO` (site principal) e `CERTIFICADO_SEGREDO_HOMOLOGACAO` (homologação). Opcional:
 `FEATURE_PR_TOKEN`, com escrita em Contents e Pull requests, para o PR criado pelo workflow já disparar os checks.
 
+## Arquitetura ilustrativa
+
+A aba **Arquitetura** desenha os recursos do YAML atual com ícones oficiais
+Kubernetes e mantém a explicação de funcionamento do simulador. Não executa
+Apply nem presume que o cluster seja EKS ou AKS. Setas indicam dependências,
+não tráfego de rede. Há alternativa textual, rolagem por teclado e indicação
+explícita de erros. Veja [uso, limites e manutenção](docs/arquitetura-ilustrativa.md).
+
 ## Licença
 
 O DivergeKubernetes é **software livre com copyleft**:
@@ -241,5 +265,8 @@ O DivergeKubernetes é **software livre com copyleft**:
 
 **Marcas**: Kubernetes é marca registrada da The Linux Foundation; AWS é marca da Amazon; Azure é marca da
 Microsoft. Este projeto é independente, não usa código do Kubernetes e não é afiliado nem endossado por elas.
+
+Os ícones de arquitetura têm [termos e atribuições próprios](public/icones-arquitetura/ATRIBUICAO.txt);
+não são relicenciados pela licença do código.
 
 Copyright (C) 2026 Sertão será cloud.
