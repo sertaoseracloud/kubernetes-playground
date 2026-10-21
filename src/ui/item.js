@@ -16,11 +16,15 @@ import { solucaoLiberada, minutosQueFaltam, criarCronometro } from './solucao.js
 import { LIMITE_DESBLOQUEIO } from '../gamificacao.js';
 import { $, esc } from './util.js';
 import { interpretar, completarKubectl, kindsDoYaml, explicarKind } from '../k8s/comandos.js';
-import { aplicarYaml, verificarRegra, descreverRegra, resetarEstado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado, API_VERSIONS } from '../k8s/simulador.js';
+import { aplicarYaml, verificarRegra, descreverRegra, avaliarIsolado, carregarEstado, removerRecurso, obterEstado, compararEstados, detectarDrift, simularApply, definirDiffUsado, API_VERSIONS } from '../k8s/simulador.js';
+import { criarGravadorRascunho } from '../rascunho.js';
+import { iniciarAvisoArmazenamento } from './aviso-armazenamento.js';
 import { renderEstado } from './estado.js';
 import { renderDrift } from './drift.js';
 import { renderDiff } from './diff.js';
 import { renderArquitetura } from './arquitetura.js';
+import { renderArquiteturaRecursos } from './arquitetura-recursos.js';
+import { grafoDoYaml } from '../k8s/grafo.js';
 import { desenharGrafo } from './grafo.js';
 import { termosDoTexto, termosVistosAntes } from '../conteudo/glossario.js';
 
@@ -81,13 +85,15 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     grafo: $('saida-grafo'),
   };
 
-  const estado = { item: null, ocupado: false };
+  const estado = { item: null, ocupado: false, revisao: 0 };
 
-  /** Cluster limpo para o apply, com os recursos que o exercício já traz (`existentes`). */
-  function prepararCluster(chave) {
-    resetarEstado(chave);
-    if (estado.item?.existentes) aplicarYaml(estado.item.existentes, chave);
-  }
+  iniciarAvisoArmazenamento($('editor'));
+  const rascunhos = criarGravadorRascunho((id, arquivos) => gravarRascunho(id, formaDeGuardar(arquivos)));
+  window.addEventListener('pagehide', () => rascunhos.descarregar());
+  window.addEventListener('hashchange', () => rascunhos.descarregar());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') rascunhos.descarregar();
+  });
 
   // Terminal interativo: o prompt lê comandos kubectl (src/k8s/comandos.js) até o exercício mudar.
   const terminal = criarTerminal(el.terminal, {
@@ -112,14 +118,15 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
 
   /** Roda uma linha digitada no prompt. */
   async function rodarLinha(texto) {
-    const { linhas, acao } = interpretar(texto, obterEstado(), editorInstance.arquivos);
+    const { linhas, acao, arquivos } = interpretar(texto, obterEstado(), editorInstance.arquivos);
     if (linhas.length) terminal.mostrar(linhas, { animar: false, pasta: pasta() });
     if (acao === 'clear') terminal.limpar();
-    else if (acao === 'apply') await executarApply({ digitado: true, falar: true });
-    else if (acao === 'diff') executarDiff({ digitado: true });
+    else if (acao === 'apply') await executarApply({ digitado: true, falar: true, arquivos });
+    else if (acao === 'diff') executarDiff({ digitado: true, arquivos });
     else if (acao === 'drift') btnDrift?.click();
-    else if (acao === 'delete-arquivo') apagarDoArquivo();
+    else if (acao === 'delete-arquivo') apagarDoArquivo(arquivos);
     else if (acao?.apagar) {
+      estadoAnterior = obterEstado();
       for (const { kind, nome, prefixo, tipo } of acao.apagar) {
         if (removerRecurso(kind, nome, estado.item?.id)) escreverLinha(`${prefixo} "${nome}" deleted`, 'sucesso');
         else escreverLinha(`Error from server (NotFound): ${tipo} "${nome}" not found`, 'erro');
@@ -143,12 +150,13 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     }
   }
 
-  function apagarDoArquivo() {
-    const r = simularApply(obterCodigo());
+  function apagarDoArquivo(arquivos) {
+    const r = simularApply(arquivos);
     if (!r.ok) {
       escreverLinha(`error: ${r.mensagem}`, 'erro');
       return;
     }
+    estadoAnterior = obterEstado();
     for (const rec of r.recursos ?? []) {
       const kind = rec.kind ?? rec.recurso?.kind;
       if (kind && removerRecurso(kind, rec.nome, estado.item?.id)) escreverLinha(`${kind.toLowerCase()} "${rec.nome}" deleted`, 'sucesso');
@@ -158,26 +166,32 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   el.pular.onclick = () => terminal.pular();
 
   // Editor CodeMirror (YAML), com abas de arquivos: o apply junta todos os manifestos.
-  let salvarTimer;
   const editorInstance = new EditorArquivos({
     abas: $('abas-arquivos'),
     editor: $('editor'),
     aoExecutar: () => executarApply({ falar: true }),
     aoEnviar: () => enviar(),
     aoMudar: (arquivos) => {
-      clearTimeout(salvarTimer);
       const item = estado.item;
       if (item) {
-        salvarTimer = setTimeout(() => {
-          gravarRascunho(item.id, formaDeGuardar(arquivos));
-          if (!el.grafo.hidden) desenharGrafo(el.grafo, obterCodigo()); // o grafo acompanha o que você escreve
-        }, 300);
+        estado.revisao++;
+        rascunhos.agendar(item.id, arquivos);
+        if (!el.grafo.hidden) desenharGrafo(el.grafo, obterCodigo());
+        marcarResultadoDesatualizado();
+        atualizarArquitetura();
       }
     },
   });
 
   function obterCodigo() {
     return editorInstance.getValue();
+  }
+
+  function marcarResultadoDesatualizado() {
+    definirStatus('Código alterado — execute novamente');
+    if (estado.item?.tipo !== 'exercicio') return;
+    renderTestesPendentes();
+    definirResumo('código alterado · execute novamente');
   }
 
   /** Um texto (um arquivo só) ou um objeto { arquivo: conteúdo }. */
@@ -239,17 +253,27 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     if (nome === 'estado') atualizarPainelEstado();
     if (nome === 'grafo') desenharGrafo(el.grafo, obterCodigo());
     if (nome === 'arquitetura') {
-      renderArquitetura().then((html) => { el.saidaArquitetura.innerHTML = html; });
+      atualizarArquitetura();
     }
   }
   document.querySelectorAll('[data-saida]').forEach((b) => { b.onclick = () => mostrarSaida(b.dataset.saida); });
+
+  let versaoArquitetura = 0;
+  function atualizarArquitetura() {
+    if (!el.saidaArquitetura || el.saidaArquitetura.hidden) return;
+    const versao = ++versaoArquitetura;
+    el.saidaArquitetura.innerHTML = renderArquiteturaRecursos(grafoDoYaml(obterCodigo()));
+    renderArquitetura().then((html) => {
+      if (versao !== versaoArquitetura) return;
+      el.saidaArquitetura.insertAdjacentHTML('beforeend', `<details><summary>Como o simulador funciona</summary>${html}</details>`);
+    });
+  }
 
   function atualizarPainelEstado() {
     if (!el.saidaEstado) return;
     const atual = obterEstado();
     const diff = estadoAnterior ? compararEstados(estadoAnterior, atual) : null;
     el.saidaEstado.innerHTML = renderEstado(atual, diff);
-    estadoAnterior = structuredClone(atual);
   }
 
   // ---------- descrição ----------
@@ -377,7 +401,10 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
         <button class="btn btn-roxo" id="btn-usar-solucao">Copiar para o editor</button>`;
       $('btn-usar-solucao').onclick = () => {
         if (!confirm('Substituir o seu código pela solução?')) return;
+        rascunhos.cancelar(item.id);
         definirCodigo(item.solucao);
+        marcarResultadoDesatualizado();
+        atualizarArquitetura();
         gravarRascunho(item.id, item.solucao);
       };
     };
@@ -410,9 +437,8 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   function abrir(id, compartilhado) {
     const item = buscarItem(id);
     if (!item) return false;
+    rascunhos.descarregar();
     estado.item = item;
-
-    clearTimeout(salvarTimer);
     // Link compartilhado (/s/#...) traz os arquivos de quem compartilhou; senão, o rascunho salvo.
     definirCodigo(normalizarArquivos(compartilhado) ?? normalizarArquivos(lerRascunho(id)) ?? codigoInicial(item));
 
@@ -435,6 +461,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     terminal.cancelarLeitura();
     terminal.limpar();
     carregarEstado(item.id);
+    if (item.existentes && !Object.keys(obterEstado().manifestos).length) aplicarYaml(item.existentes, item.id);
     estadoAnterior = null;
     escreverLinha('# kubectl configurado no cluster simulado (namespace default). Digite help para ver os comandos.', 'info');
     laco(shell.vez);
@@ -486,10 +513,13 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   }
 
   async function validarYAML(codigo, testes) {
+    const item = estado.item;
     await esperar();
-    const chaveExercicio = estado.item?.id;
-    if (chaveExercicio) prepararCluster(chaveExercicio);
-    const applyResult = aplicarYaml(codigo, chaveExercicio);
+    return avaliarIsolado(() => validarNoCluster(codigo, testes), item?.existentes);
+  }
+
+  function validarNoCluster(codigo, testes) {
+    const applyResult = aplicarYaml(codigo);
     if (!applyResult.ok) {
       // Formata erros de validação com destaque para campo faltante e sugestão
       const linhas = (applyResult.mensagem || '').split('\n').filter(Boolean);
@@ -591,48 +621,60 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
 
   // ▶ Apply: aplica o YAML no cluster simulado, mostra a saída do kubectl e roda os casos
   // visíveis (sem marcar como resolvido; quem marca é o ⬆ Enviar, com todos os casos).
-  async function executarApply({ digitado = false, falar = false } = {}) {
+  async function executarApply({ digitado = false, falar = false, arquivos = { ...editorInstance.arquivos } } = {}) {
     if (estado.ocupado || !estado.item) return;
+    estado.ocupado = true;
     // Pelo botão ou pelo atalho, o resultado é falado em resumo: o terminal fica mudo enquanto isso.
-    if (!falar || digitado) return rodarApply({ digitado, falar });
-    terminal.silenciar(60_000);
+    if (falar && !digitado) terminal.silenciar(60_000);
     try {
-      return await rodarApply({ digitado, falar });
+      return await rodarApply({ digitado, falar, arquivos });
     } finally {
-      terminal.silenciar(800);
+      estado.ocupado = false;
+      if (falar && !digitado) terminal.silenciar(800);
     }
   }
 
-  async function rodarApply({ digitado, falar }) {
-    const codigo = obterCodigo();
-    if (!codigo.trim()) {
+  async function rodarApply({ digitado, falar, arquivos }) {
+    const codigo = arquivos;
+    if (!Object.values(codigo).some((texto) => texto.trim())) {
       escreverLinha('error: nenhum manifesto YAML fornecido', 'erro');
       definirStatus('Erro: YAML vazio', { falar: falar && 'O editor está vazio: escreva o manifesto YAML primeiro.' });
       return;
     }
-    if (!digitado) escreverLinha('$ kubectl apply -f manifest.yaml', 'comando');
+    if (!digitado) escreverLinha('$ kubectl apply -f .', 'comando');
+    const item = estado.item;
+    const revisao = estado.revisao;
     await esperar();
+    if (estado.item !== item) return;
     const chave = estado.item.id;
-    prepararCluster(chave);
+    const anterior = obterEstado();
     const resultado = aplicarYaml(codigo, chave);
     const linhas = (resultado.mensagem || '').split('\n').filter(Boolean);
     if (!resultado.ok) {
       for (const linha of linhas) escreverLinha(`error: ${linha}`, 'erro');
+      if (estado.revisao !== revisao) return marcarResultadoDesatualizado();
       definirStatus('Erro ao aplicar o YAML', { falar: falar && `Erro ao aplicar o YAML: ${linhas.join('. ')}` });
       if (estado.item.tipo === 'exercicio') {
-        renderTestes(await validarYAML(codigo, (estado.item.testes || []).filter((t) => !t.oculto)), false);
+        const testados = await validarYAML(codigo, (item.testes || []).filter((t) => !t.oculto));
+        if (estado.item !== item) return;
+        if (estado.revisao !== revisao) return marcarResultadoDesatualizado();
+        renderTestes(testados, false);
         abrirAbaTestes();
       }
       return;
     }
     for (const linha of linhas) escreverLinha(linha, 'sucesso');
+    estadoAnterior = anterior;
     atualizarPainelEstado();
+    if (estado.revisao !== revisao) return marcarResultadoDesatualizado();
     const visiveis = estado.item.tipo === 'exercicio' ? (estado.item.testes || []).filter((t) => !t.oculto) : [];
     if (!visiveis.length) {
       definirStatus(`Apply: ${linhas.length} recurso(s) aplicado(s)`, { falar: falar && `Apply concluído: ${linhas.join('. ')}` });
       return;
     }
     const testados = await validarYAML(codigo, visiveis);
+    if (estado.item !== item) return;
+    if (estado.revisao !== revisao) return marcarResultadoDesatualizado();
     const passaram = testados.relatorio.filter((r) => r.ok).length;
     escreverLinha(`${testados.aprovado ? '✅' : '❌'} ${passaram}/${visiveis.length} casos visíveis passaram`, testados.aprovado ? 'sucesso' : 'aviso');
     renderTestes(testados, false);
@@ -646,19 +688,23 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   async function enviar() {
     if (!estado.item || estado.item.tipo !== 'exercicio' || estado.ocupado) return;
     estado.ocupado = true;
+    const item = estado.item;
+    const revisao = estado.revisao;
     el.enviar.disabled = true;
     el.testes.innerHTML = '<p class="veredito-sub">Rodando todos os casos de teste…</p>';
     mostrarDesc('testes');
     definirResumo('rodando…');
     definirStatus('Enviando…');
     try {
-      const codigo = obterCodigo();
+      const codigo = { ...editorInstance.arquivos };
       const resultado = await validarYAML(codigo, estado.item.testes);
       const { aprovado } = resultado;
-      marcar(estado.item.id, aprovado ? 'resolvido' : 'tentado');
+      marcar(item.id, aprovado ? 'resolvido' : 'tentado');
+      if (estado.item !== item) return;
       renderCabecalho();
       atualizarSolucao();
       aoMudarProgresso();
+      if (estado.revisao !== revisao) return marcarResultadoDesatualizado();
       renderTestes(resultado, true);
       let conquista = '';
       const jornada = jornadaAtual();
@@ -703,8 +749,8 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
       el.saidaEstado.innerHTML = renderDrift(relatorio);
       const btnCorrigir = $('btn-drift-corrigir');
       if (btnCorrigir) {
-        btnCorrigir.onclick = () => {
-          executarApply();
+        btnCorrigir.onclick = async () => {
+          await executarApply();
           atualizarPainelEstado();
         };
       }
@@ -715,10 +761,10 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   // ---------- diff (plan) ----------
   let diffUsadoNesteExercicio = false;
 
-  function executarDiff({ digitado = false } = {}) {
-    if (!digitado) escreverLinha('$ kubectl diff -f manifest.yaml', 'comando');
-    const yamlTexto = obterCodigo();
-    if (!yamlTexto.trim()) {
+  function executarDiff({ digitado = false, arquivos = { ...editorInstance.arquivos } } = {}) {
+    if (!digitado) escreverLinha('$ kubectl diff -f .', 'comando');
+    const yamlTexto = arquivos;
+    if (!Object.values(yamlTexto).some((texto) => texto.trim())) {
       escreverLinha('diff: editor vazio — escreva um manifesto YAML primeiro.', 'aviso');
       return;
     }
@@ -753,8 +799,10 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   el.enviar.onclick = () => enviar();
   el.restaurar.onclick = () => {
     if (!confirm('Voltar ao código original? Suas alterações serão perdidas.')) return;
+    rascunhos.cancelar(estado.item.id);
     apagarRascunho(estado.item.id);
     definirCodigo(codigoInicial(estado.item));
+    atualizarArquitetura();
     executarApply();
   };
   el.compartilhar.onclick = async () => {
@@ -773,7 +821,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
   return {
     abrir,
     redesenharDescricao: () => estado.item && renderDescricao(),
-    sair: () => { terminal.pular(); cronometro.parar(); },
+    sair: () => { rascunhos.descarregar(); terminal.pular(); cronometro.parar(); },
     terminal,
     diffFoiUsado,
     /** O editor aberto (os testes usam para escrever o código). */

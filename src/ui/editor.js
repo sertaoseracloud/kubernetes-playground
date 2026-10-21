@@ -9,7 +9,9 @@ import { EditorView, basicSetup } from 'codemirror';
 import { EditorState, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { yaml } from '@codemirror/lang-yaml';
+import { markdown } from '@codemirror/lang-markdown';
 import { temaEditor } from './tema-editor.js';
+import { anunciar } from './anuncios.js';
 
 export const ARQUIVO_PRINCIPAL = 'manifest.yaml';
 // Pastas são permitidas (base/deployment.yaml), sem subir de nível (..).
@@ -45,7 +47,6 @@ export class EditorArquivos {
     this.estados = new Map();
     this.extensoes = [
       basicSetup,
-      yaml(),
       temaEditor,
       EditorView.lineWrapping,
       EditorState.tabSize.of(2),
@@ -53,7 +54,6 @@ export class EditorArquivos {
         { key: 'Mod-Enter', run: () => { aoExecutar(); return true; } },
         { key: 'Mod-Shift-Enter', run: () => { aoEnviar(); return true; } },
       ])),
-      EditorView.contentAttributes.of({ 'aria-label': 'Editor de código YAML (Kubernetes)', tabindex: '0', 'aria-describedby': 'ajuda-editor' }),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) {
           this.arquivos[this.atual] = u.state.doc.toString();
@@ -104,7 +104,14 @@ export class EditorArquivos {
   }
 
   #estadoDe(nome) {
-    return EditorState.create({ doc: this.arquivos[nome] ?? '', extensions: this.extensoes });
+    const modo = /\.ya?ml$/.test(nome) ? 'YAML (Kubernetes)' : /\.md$/.test(nome) ? 'Markdown' : 'texto simples';
+    return EditorState.create({ doc: this.arquivos[nome] ?? '', extensions: [
+      ...this.extensoes,
+      ...(/\.ya?ml$/.test(nome) ? [yaml()] : /\.md$/.test(nome) ? [markdown()] : []),
+      EditorView.contentAttributes.of({
+        tabindex: '0', 'aria-label': `Editor de ${nome} — ${modo}`, 'aria-describedby': 'ajuda-editor',
+      }),
+    ] });
   }
 
   #renderAbas() {
@@ -152,6 +159,8 @@ export class EditorArquivos {
       this.view.setState(this.estados.get(this.atual) ?? this.#estadoDe(this.atual));
     }
     this.#renderAbas();
+    this.view.focus();
+    anunciar(`Arquivo ${nome} excluído. Editor de ${this.atual} ativo.`);
   }
 
   #novo() {

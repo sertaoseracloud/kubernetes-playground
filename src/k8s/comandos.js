@@ -309,6 +309,29 @@ export function explicarKind(kind) {
   return EXPLICACOES[tipo] ?? EXPLICACOES_POR_KIND[kind] ?? null;
 }
 
+function selecionarArquivos(args, arquivos, acao) {
+  let caminho;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '-f' || arg === '--filename') {
+      if (caminho !== undefined) return { linhas: [linha('error: informe apenas um -f por comando.', 'erro')] };
+      caminho = args[++i];
+      if (!caminho || caminho.startsWith('-')) return { linhas: [linha('error: -f precisa do nome de um arquivo ou diretório.', 'erro')] };
+    } else if (arg.startsWith('--filename=')) {
+      if (caminho !== undefined) return { linhas: [linha('error: informe apenas um -f por comando.', 'erro')] };
+      caminho = arg.slice('--filename='.length);
+    } else {
+      return { linhas: [linha(`error: argumento não suportado no simulador: ${arg}. Nenhuma alteração foi aplicada.`, 'erro')] };
+    }
+  }
+  if (!caminho) return { linhas: [linha('error: must specify one of -f and -k', 'erro'), linha('# Use: kubectl apply -f . (todos os manifestos) ou -f manifest.yaml', 'comentario')] };
+  const normalizado = caminho.replace(/^\.\//, '').replace(/\/$/, '');
+  const selecionados = Object.fromEntries(Object.entries(arquivos).filter(([nome]) =>
+    /\.(ya?ml|json)$/.test(nome) && (caminho === '.' || nome === normalizado || nome.startsWith(`${normalizado}/`))));
+  if (!Object.keys(selecionados).length) return { linhas: [linha(`error: ${caminho}: arquivo ou diretório sem manifestos no editor.`, 'erro')] };
+  return { linhas: [], acao, arquivos: selecionados };
+}
+
 /**
  * Interpreta uma linha do terminal. Devolve `{ linhas }` para mostrar e, quando o comando
  * precisa da tela do exercício, `acao`: 'apply' | 'diff' | 'drift' | 'clear' |
@@ -334,15 +357,14 @@ export function interpretar(texto, estado, arquivos = {}) {
     switch (sub) {
       case 'apply':
       case 'create':
-        if (!comArquivo) return { linhas: [linha('error: must specify one of -f and -k', 'erro'), linha('# Use: kubectl apply -f manifest.yaml (o arquivo é o YAML do editor)', 'comentario')] };
-        return { linhas: [], acao: 'apply' };
+        return selecionarArquivos(args, arquivos, 'apply');
       case 'diff':
-        if (!comArquivo) return { linhas: [linha('error: must specify one of -f and -k', 'erro')] };
-        return { linhas: [], acao: 'diff' };
+        return selecionarArquivos(args, arquivos, 'diff');
       case 'get': return { linhas: get(args, estado) };
       case 'describe': return { linhas: describe(args, estado) };
       case 'delete': {
-        if (comArquivo) return { linhas: [], acao: 'delete-arquivo' };
+        if (comArquivo) return selecionarArquivos(args, arquivos, 'delete-arquivo');
+        if (args.some((a) => a.startsWith('-'))) return { linhas: [linha('error: opção de delete não suportada. Nenhum recurso removido.', 'erro')] };
         const [alvo, ...nomes] = args.filter((a) => !a.startsWith('-'));
         const tipo = tipoPorNome(alvo);
         if (!tipo || tipo === 'nodes') return { linhas: [linha(alvo ? `error: the server doesn't have a resource type "${alvo}"` : 'error: You must provide one or more resources by argument or filename.', 'erro')] };

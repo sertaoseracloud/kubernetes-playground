@@ -347,6 +347,27 @@ export function obterEstado() {
   return structuredClone(estado);
 }
 
+/** Avaliação síncrona em um cluster separado, sem gravar nem alterar o cluster do aluno. */
+export function avaliarIsolado(avaliar, existentes) {
+  const anterior = estado;
+  estado = ESTADO_PADRAO();
+  try {
+    if (existentes) aplicarYaml(existentes);
+    return avaliar();
+  } finally {
+    estado = anterior;
+  }
+}
+
+/** Analisa cada arquivo separadamente para preservar nome, linha e coluna dos erros. */
+function lerManifestos(entrada) {
+  const arquivos = typeof entrada === 'string' ? { 'manifest.yaml': entrada } : entrada ?? {};
+  return Object.entries(arquivos)
+    .filter(([nome]) => /\.(ya?ml|json)$/.test(nome))
+    .flatMap(([arquivo, texto]) => yaml.loadAll(texto, undefined, { filename: arquivo })
+      .filter(Boolean).map((doc) => ({ doc, arquivo })));
+}
+
 /**
  * Compara dois estados do cluster e retorna diferenças para highlight de diff.
  * @param {object} anterior - Estado antes do apply.
@@ -444,23 +465,24 @@ export function removerRecurso(kind, nome, chaveExercicio) {
  * @returns {{ok: boolean, recursos: object[], diff: {criar: object[], atualizar: object[], destruir: object[]}, mensagem: string}}
  */
 /** Kind de um item do diff: o próprio (recursos genéricos) ou derivado do nome da lista. */
-const kindDoItem = (item) => (item.recurso ?? item.atual)?.kind ?? item.tipo.replace(/s$/, '').replace(/ie$/, 'y').replace(/e$/, '');
+const kindDoItem = (item) => (item.recurso ?? item.atual)?.kind
+  ?? Object.keys(LISTA_DO_KIND).find((kind) => LISTA_DO_KIND[kind] === item.tipo) ?? item.tipo;
 
 export function simularApply(yamlTexto) {
   try {
-    const documentos = yaml.loadAll(yamlTexto).filter(Boolean);
+    const documentos = lerManifestos(yamlTexto);
     if (documentos.length === 0) {
       return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: 'Nenhum documento YAML encontrado.' };
     }
 
     // Valida todos os documentos primeiro
-    for (const doc of documentos) {
+    for (const { doc, arquivo } of documentos) {
       if (!doc?.kind || !doc?.metadata?.name) {
-        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.' };
+        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: `Manifesto inválido em ${arquivo}: kind e metadata.name são obrigatórios.` };
       }
       const erros = validarCamposObrigatorios(doc);
       if (erros.length > 0) {
-        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: erros.join('\n') };
+        return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: `${arquivo}: ${erros.join('\n')}` };
       }
     }
 
@@ -470,12 +492,12 @@ export function simularApply(yamlTexto) {
 
     // Aplica cada recurso no estado projetado (sem tocar no global)
     const recursosProjetados = [];
-    for (const doc of documentos) {
+    for (const { doc } of documentos) {
       const resultado = aplicarRecursoEm(doc, estadoProjetado);
       if (!resultado.ok) {
         return { ok: false, recursos: [], diff: { criar: [], atualizar: [], destruir: [] }, mensagem: resultado.mensagem };
       }
-      recursosProjetados.push(...resultado.recursos);
+      recursosProjetados.push(...resultado.recursos.map((recurso) => ({ ...recurso, kind: doc.kind })));
     }
 
     // Compara estados usando compararEstados
@@ -649,8 +671,8 @@ function aplicarRecursoEm(recurso, alvo) {
   }
 }
 
-/** Valida e aplica um recurso no cluster (estado global). */
-function aplicarRecurso(recurso) {
+/** Valida e aplica um recurso no estado indicado. */
+function aplicarRecurso(recurso, alvo) {
   if (!recurso?.kind || !recurso?.metadata?.name) {
     return { ok: false, mensagem: 'Manifesto inválido: kind e metadata.name são obrigatórios.', recursos: [] };
   }
@@ -658,7 +680,7 @@ function aplicarRecurso(recurso) {
   if (errosValidacao.length > 0) {
     return { ok: false, mensagem: errosValidacao.join('\n'), recursos: [] };
   }
-  return aplicarRecursoEm(recurso, estado);
+  return aplicarRecursoEm(recurso, alvo);
 }
 
 /** Formata detalhes de um recurso para exibição no diff. */
@@ -710,20 +732,21 @@ function formatarValorDiff(valor) {
 
 export function aplicarYaml(yamlTexto, chaveExercicio) {
   try {
-    const documentos = yaml.loadAll(yamlTexto).filter(Boolean);
+    const documentos = lerManifestos(yamlTexto);
     if (documentos.length === 0) {
       return { ok: false, mensagem: 'Nenhum documento YAML encontrado.', recursos: [] };
     }
-    const resultados = [];
-    for (const doc of documentos) {
-      const r = aplicarRecurso(doc);
-      resultados.push(r);
-    }
-    if (chaveExercicio) gravarEstado(chaveExercicio, estado);
+    const projetado = structuredClone(estado);
+    const resultados = documentos.map(({ doc, arquivo }) => {
+      const resultado = aplicarRecurso(doc, projetado);
+      return resultado.ok ? resultado : { ...resultado, mensagem: `${arquivo}: ${resultado.mensagem}` };
+    });
     const falhas = resultados.filter((r) => !r.ok);
     if (falhas.length > 0) {
-      return { ok: false, mensagem: falhas.map((f) => f.mensagem).join('; '), recursos: resultados.flatMap((r) => r.recursos) };
+      return { ok: false, mensagem: falhas.map((f) => f.mensagem).join('; '), recursos: [] };
     }
+    estado = projetado;
+    if (chaveExercicio) gravarEstado(chaveExercicio, estado);
     return { ok: true, mensagem: resultados.map((r) => r.mensagem).join('\n'), recursos: resultados.flatMap((r) => r.recursos) };
   } catch (erro) {
     return { ok: false, mensagem: `Erro ao processar YAML: ${erro.message}`, recursos: [] };
