@@ -3,6 +3,7 @@
 // dois jeitos: pelo nome (configMapRef, secretName, serviceAccountName, scaleTargetRef...) e
 // pelos rótulos (o selector do Service escolhe os Pods com aqueles labels). Função pura.
 import * as yaml from 'js-yaml';
+import { detalhesCidr } from '../rede-arquitetura.js';
 
 /** Grupo de cada kind (dá a cor e a ordem na coluna). */
 const GRUPO = {
@@ -26,6 +27,59 @@ function moldeDePod(doc) {
   if (doc.kind === 'Pod') return { labels: doc.metadata?.labels ?? {}, spec: doc.spec ?? {} };
   const template = doc.kind === 'CronJob' ? doc.spec?.jobTemplate?.spec?.template : doc.spec?.template;
   return template ? { labels: template.metadata?.labels ?? {}, spec: template.spec ?? {} } : null;
+}
+
+function detalhesDeRede(doc) {
+  const detalhes = [];
+  const adicionar = (rotulo, valor) => {
+    if (typeof valor === 'string' || typeof valor === 'number') detalhes.push({ rotulo, valor: String(valor) });
+  };
+  const spec = doc.spec ?? {};
+  if (namespaceDe(doc)) adicionar('Namespace', namespaceDe(doc));
+  if (doc.kind === 'Service') {
+    adicionar('Tipo de serviço', spec.type);
+    adicionar('IP do serviço', spec.clusterIP);
+    for (const ip of lista(spec.externalIPs)) adicionar('IP externo', ip);
+    for (const p of lista(spec.ports)) {
+      adicionar(`Porta do serviço${p?.protocol ? ` (${p.protocol})` : ''}`, p?.port);
+      adicionar('Porta de destino', p?.targetPort);
+      adicionar('Porta do nó', p?.nodePort);
+    }
+  }
+  for (const c of lista(moldeDePod(doc)?.spec.containers)) {
+    for (const p of lista(c?.ports)) {
+      adicionar(`Porta do contêiner ${c.name ?? ''}${p?.protocol ? ` (${p.protocol})` : ''}`, p?.containerPort);
+      adicionar('Porta do host', p?.hostPort);
+      adicionar('IP do host', p?.hostIP);
+    }
+  }
+  if (doc.kind === 'Ingress') {
+    for (const r of lista(spec.rules)) {
+      adicionar('Host', r?.host);
+      for (const p of lista(r?.http?.paths)) {
+        adicionar('Caminho HTTP', p?.path);
+        adicionar('Porta do backend', p?.backend?.service?.port?.number ?? p?.backend?.service?.port?.name);
+      }
+    }
+    adicionar('Porta do backend padrão', spec.defaultBackend?.service?.port?.number ?? spec.defaultBackend?.service?.port?.name);
+  }
+  if (doc.kind === 'NetworkPolicy') {
+    for (const [campo, nome] of [['ingress', 'Entrada'], ['egress', 'Saída']]) {
+      for (const regra of lista(spec[campo])) {
+        for (const p of lista(regra?.ports)) {
+          adicionar(`${nome} · Porta${p?.protocol ? ` (${p.protocol})` : ''}`, p?.port);
+          adicionar(`${nome} · Porta final`, p?.endPort);
+        }
+        for (const par of lista(regra?.[campo === 'ingress' ? 'from' : 'to'])) {
+          if (typeof par?.ipBlock?.cidr === 'string') {
+            detalhes.push(...detalhesCidr(par.ipBlock.cidr).map((d) => ({ ...d, rotulo: `${nome} · ${d.rotulo}` })));
+          }
+          for (const cidr of lista(par?.ipBlock?.except)) adicionar(`${nome} · Exceto CIDR`, cidr);
+        }
+      }
+    }
+  }
+  return detalhes;
 }
 
 /** O selector (matchLabels ou o mapa simples do Service) aceita estes labels? Selector vazio não escolhe nada aqui. */
@@ -75,7 +129,10 @@ export function grafoDoYaml(texto) {
   } catch (e) {
     return { erro: `O YAML não pôde ser lido: ${e.reason ?? e.message}` };
   }
-  const nos = docs.map((d) => ({ id: idDoDocumento(d), rotulo: idDoDocumento(d), kind: d.kind, grupo: grupoDoKind(d.kind), namespace: namespaceDe(d) }));
+  const nos = docs.map((d) => ({
+    id: idDoDocumento(d), rotulo: idDoDocumento(d), kind: d.kind, grupo: grupoDoKind(d.kind),
+    namespace: namespaceDe(d), detalhes: detalhesDeRede(d),
+  }));
   const existe = new Set(nos.map((n) => n.id));
   const arestas = [];
   const avisos = [];
