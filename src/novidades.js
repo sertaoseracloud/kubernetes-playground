@@ -10,6 +10,16 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.11.2',
+    data: '2026-10-21',
+    titulo: 'Portas e redes no desenho',
+    resumo: 'Portas de serviço, destino e contêiner aparecem no desenho. Os créditos das imagens ficam na licença, sem ocupar os recursos.',
+    grupos: [
+      { titulo: 'Arquitetura', itens: ['O desenho mostra namespace, portas e IPs declarados, além de hosts e caminhos de Ingress.', 'NetworkPolicy pode mostrar CIDR, máscara IPv4, exceções e portas, sem presumir conectividade.', 'Os cartões crescem com os detalhes e a lista em texto preserva as informações completas.'] },
+      { titulo: 'Licenças', itens: ['A página Licença reúne autoria, fontes e termos das imagens AWS, Azure e Kubernetes.'] },
+    ],
+  },
+  {
     versao: '0.11.1',
     data: '2026-10-21',
     titulo: 'Arquitetura ilustrada e resultados mais confiáveis',

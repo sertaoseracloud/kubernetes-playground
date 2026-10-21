@@ -9,7 +9,7 @@
 // código do Kubernetes: o simulador (src/k8s/) foi escrito do zero e só
 // imita o comportamento e as mensagens da ferramenta.
 
-export const ATUALIZADA_EM = '2026-10-20';
+export const ATUALIZADA_EM = '2026-10-21';
 export const TITULAR = 'Sertão será cloud';
 export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playground';
 

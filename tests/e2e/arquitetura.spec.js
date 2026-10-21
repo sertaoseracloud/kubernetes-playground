@@ -18,6 +18,9 @@ spec:
   containers:
     - name: web
       image: nginx:alpine
+      ports:
+        - containerPort: 8080
+          protocol: TCP
 ---
 apiVersion: v1
 kind: Service
@@ -29,6 +32,8 @@ spec:
     app: web
   ports:
     - port: 80
+      targetPort: 8080
+      protocol: TCP
 `;
 
 async function editar(page, codigo) {
@@ -48,6 +53,10 @@ test('arquitetura mostra relações do YAML e mantém explicação do simulador'
   await expect(painel.locator('.arq-ligacao')).toHaveCount(1);
   await expect(painel.locator('.arq-area')).toHaveCount(2);
   await expect(painel.locator('.arq-contencao')).toHaveCount(1);
+  await expect(painel.locator('svg')).toContainText('Porta do serviço (TCP): 80');
+  await expect(painel.locator('svg')).toContainText('Porta de destino: 8080');
+  await expect(painel.locator('.arq-lista')).toContainText('Porta do contêiner web (TCP): 8080');
+  await expect(painel.locator('svg')).not.toContainText('Ícone oficial');
   await expect(painel.locator('.arq-lista')).toContainText('Pod/loja/web está em Namespace/loja');
   await expect(painel.locator('.arq-plataforma-nome')).toHaveText('Kubernetes');
   await expect(painel).toContainText('Como o simulador funciona');
