@@ -1,9 +1,14 @@
 {
   "ci": {
     "collect": {
-      "staticDistDir": "./dist",
+      "startServerCommand": "npx astro preview --port 4321",
+      "startServerReadyPattern": "localhost:4321",
       "numberOfRuns": 3,
-      "url": ["http://localhost/", "http://localhost/#/trilha"]
+      "url": [
+        "http://localhost:4321/kubernetes-playground/",
+        "http://localhost:4321/kubernetes-playground/trilha/",
+        "http://localhost:4321/kubernetes-playground/p/pods-restart-policy/"
+      ]
     },
     "assert": {
       "assertions": {

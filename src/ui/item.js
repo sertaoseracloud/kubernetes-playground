@@ -3,7 +3,7 @@
 // O simulador de kubectl é mínimo por enquanto; os testes validam o YAML diretamente.
 import { minutosDoItem } from '../cargaHoraria.js';
 import { buscarItem, itens, modulos, vizinhos, DIFICULDADES } from '../conteudo/trilha.js';
-import { linkItem, linkCompartilhado } from '../compartilhar.js';
+import { linkItem, linkCompartilhado, rota } from '../compartilhar.js';
 import { statusDe, marcar, lerRascunho, gravarRascunho, apagarRascunho, lerHistorico, gravarHistorico } from '../progresso.js';
 import { EditorArquivos, normalizarArquivos, formaDeGuardar } from './editor.js';
 import { iniciarLeitura } from './acessibilidade.js';
@@ -413,7 +413,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     estado.item = item;
 
     clearTimeout(salvarTimer);
-    // Link compartilhado (#/s/...) traz os arquivos de quem compartilhou; senão, o rascunho salvo.
+    // Link compartilhado (/s/#...) traz os arquivos de quem compartilhou; senão, o rascunho salvo.
     definirCodigo(normalizarArquivos(compartilhado) ?? normalizarArquivos(lerRascunho(id)) ?? codigoInicial(item));
 
     renderCabecalho();
@@ -672,7 +672,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
         el.testes.insertAdjacentHTML('afterbegin', `
           <div class="comemoracao">🏆 Você concluiu o módulo <b>${esc(modulo.titulo)}</b>!
             ${aviso}
-            <a class="btn btn-roxo btn-pequeno" href="#/trilha">Ver no caminho</a></div>`);
+            <a class="btn btn-roxo btn-pequeno" href="${rota('trilha')}">Ver no caminho</a></div>`);
       }
       definirStatus(aprovado ? 'Aceito! 🎉' : semPressao() ? 'Ainda não passou: veja o que falta' : 'Resposta errada', {
         falar: aprovado ? `Parabéns! Exercício resolvido.${conquista}`
@@ -758,7 +758,7 @@ export function criarTelaItem({ layout, definirStatus, aoMudarProgresso }) {
     executarApply();
   };
   el.compartilhar.onclick = async () => {
-    const link = `${location.origin}${location.pathname}${linkCompartilhado({ item: estado.item.id, arquivos: { ...editorInstance.arquivos } })}`;
+    const link = `${location.origin}${linkCompartilhado({ item: estado.item.id, arquivos: { ...editorInstance.arquivos } })}`;
     try {
       await navigator.clipboard.writeText(link);
       definirStatus('🔗 Link copiado!');

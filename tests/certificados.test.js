@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CERTIFICADOS, EMISSOR, codificarCertificado, decodificarCertificado, idCertificado, hashCertificado,
   ORDEM, anteriores, montarCadeia,
-  linkLinkedInPerfil, linkLinkedInPublicar, linkPublico, textoPublicacao, SITE,
+  linkLinkedInPerfil, linkLinkedInPublicar, linkPublico, textoPublicacao, SITE, linkCertificado,
 } from '../src/certificados.js';
 import { modulos } from '../src/conteudo/trilha.js';
 import { lerRota, paraBase64Url, deBase64Url } from '../src/compartilhar.js';
@@ -35,7 +35,8 @@ describe('certificados', () => {
     const elos = montarCadeia(CERT);
     expect(cert).toMatchObject({ nome: CERT.nome, modulo: 'aws', data: CERT.data, selo: 'confere', hash: elos[2].hash });
     expect(cert.cadeia.map((e) => e.modulo)).toEqual(['fundamentos', 'avancados']);
-    expect(lerRota(`#/certificado/${codigo}`)).toEqual({ tela: 'certificado', codigo });
+    expect(lerRota({ pathname: '/certificado/', hash: `#${codigo}` })).toEqual({ tela: 'certificado', codigo });
+    expect(lerRota(new URL(linkCertificado({ nome: 'Ana', modulo: 'fundamentos', data: '2026-10-01' }), 'http://localhost')).tela).toBe('certificado');
   });
 
   it('id estável no formato SSC-AAAA-XXXX-XXXX, tirado do selo', () => {
