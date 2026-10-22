@@ -10,6 +10,15 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.11.3',
+    data: '2026-10-22',
+    titulo: 'Mais verde na vila',
+    resumo: 'A cidade-cluster ganhou árvores em pixel art do pacote Tiny Town, de Kenney.',
+    grupos: [
+      { titulo: 'Cenários', itens: ['A vegetação nova fica na cidade-cluster, mantendo os objetos e personagens de cada tema.', 'A origem e a licença CC0 dos sprites estão registradas na página Licença.'] },
+    ],
+  },
+  {
     versao: '0.11.2',
     data: '2026-10-21',
     titulo: 'Portas e redes no desenho',
