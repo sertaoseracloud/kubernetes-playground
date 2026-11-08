@@ -41,4 +41,6 @@ export const TERCEIROS = [
   { nome: 'Triangulação do PixiJS (earcut)', pacotes: ['earcut'], licenca: 'ISC' },
   { nome: 'Cache do PixiJS (tiny-lru)', pacotes: ['tiny-lru'], licenca: 'BSD-3-Clause' },
   { nome: 'Cores do tema Dracula', pacotes: [], licenca: 'MIT' },
+  // Código próprio da Sertão será cloud, compartilhado entre os playgrounds.
+  { nome: 'Design system dos playgrounds (@sertaoseracloud/playground-ui)', pacotes: ['@sertaoseracloud/playground-ui'], licenca: 'AGPL-3.0-or-later' },
 ];
