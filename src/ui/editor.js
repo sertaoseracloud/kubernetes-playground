@@ -62,6 +62,15 @@ export class EditorArquivos {
       }),
     ];
     this.view = new EditorView({ parent: editor });
+    // O Enter adiado pelo CodeMirror no Android perde os modificadores do teclado físico.
+    this.view.contentDOM.addEventListener('keydown', (evento) => {
+      if (evento.key !== 'Enter' || evento.isComposing || evento.altKey
+        || !(evento.ctrlKey || evento.metaKey)) return;
+      evento.preventDefault();
+      evento.stopImmediatePropagation();
+      if (evento.shiftKey) aoEnviar();
+      else aoExecutar();
+    }, { capture: true });
   }
 
   /** Primeiro arquivo (em geral, manifest.yaml). */

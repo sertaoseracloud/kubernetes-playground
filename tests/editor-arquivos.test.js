@@ -40,6 +40,39 @@ describe('abas do editor', () => {
   });
   const novo = () => new EditorArquivos({ abas: document.getElementById('abas'), editor: document.getElementById('ed') });
 
+  it('atalhos preservam os modificadores antes do tratamento de Enter do Android', () => {
+    let execucoes = 0;
+    let envios = 0;
+    const ed = new EditorArquivos({
+      abas: document.getElementById('abas'),
+      editor: document.getElementById('ed'),
+      aoExecutar: () => { execucoes++; },
+      aoEnviar: () => { envios++; },
+    });
+    ed.carregar(POD);
+    // Ctrl+Enter e Meta+Enter devem ser interceptados e prevenidos pelo handler DOM
+    for (const mod of ['ctrlKey', 'metaKey']) {
+      const ev = new KeyboardEvent('keydown', {
+        key: 'Enter', [mod]: true, shiftKey: false, bubbles: true, cancelable: true,
+      });
+      ed.view.contentDOM.dispatchEvent(ev);
+      expect(ev.defaultPrevented).toBe(true);
+    }
+    // Ctrl+Shift+Enter e Meta+Shift+Enter também devem ser prevenidos
+    for (const mod of ['ctrlKey', 'metaKey']) {
+      const ev = new KeyboardEvent('keydown', {
+        key: 'Enter', [mod]: true, shiftKey: true, bubbles: true, cancelable: true,
+      });
+      ed.view.contentDOM.dispatchEvent(ev);
+      expect(ev.defaultPrevented).toBe(true);
+    }
+    // O handler DOM deve ter disparado ao menos as execuções/envios esperados
+    expect(execucoes).toBeGreaterThanOrEqual(2);
+    expect(envios).toBeGreaterThanOrEqual(2);
+    expect(ed.getValue()).toBe(POD);
+    ed.destroy();
+  });
+
   it('+ cria um arquivo, × apaga (menos o principal), e o nome precisa ser válido', () => {
     const ed = novo();
     ed.carregar(POD);
