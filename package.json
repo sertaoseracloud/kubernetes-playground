@@ -1,10 +1,10 @@
 {
   "name": "kubernetes-playground",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "description": "DivergeKubernetes: Kubernetes no navegador, com acessibilidade para pessoas cegas, surdas e neurodivergentes",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/conferir-segredo.mjs",
+    "build": "astro build && node scripts/conferir-segredo.mjs && node scripts/orcamento-js.mjs",
     "preview": "astro preview",
     "test": "vitest run",
     "test:cobertura": "vitest run --coverage",
@@ -16,10 +16,15 @@
     "comuns:copiar": "node scripts/comuns.mjs copiar",
     "comuns:comparar": "node scripts/comuns.mjs comparar",
     "conferir-build": "node scripts/conferir-build.mjs",
-    "check": "astro check"
+    "check": "astro check",
+    "tipos": "tsc -p tsconfig.tipos.json",
+    "test:contrato": "vitest run tests/contrato",
+    "test:componentes": "vitest run --config vitest.componentes.config.ts",
+    "orcamento-js": "node scripts/orcamento-js.mjs"
   },
   "type": "module",
   "dependencies": {
+    "@astrojs/react": "7.1.4",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/lang-yaml": "^6.1.3",
     "@codemirror/language": "^6.13.1",
@@ -34,7 +39,10 @@
     "codemirror": "^6.0.2",
     "js-yaml": "^5.5.0",
     "pixi.js": "8.22.0",
-    "qrcode-generator": "2.0.4"
+    "qrcode-generator": "2.0.4",
+    "react": "19.3.1",
+    "react-aria-components": "1.22.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
@@ -42,15 +50,20 @@
     "@eslint/js": "10.0.1",
     "@playwright/test": "^1.64.1",
     "@resvg/resvg-js": "^2.6.2",
-    "@vitest/coverage-v8": "^5.0.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitest/browser-playwright": "5.1.0",
+    "@vitest/coverage-v8": "5.1.0",
     "astro": "7.3.5",
     "axe-core": "4.14.0",
     "eslint": "10.13.0",
     "globals": "^17.13.0",
     "happy-dom": "^21.0.3",
     "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
     "vite": "^8.3.1",
-    "vitest": "^5.0.5"
+    "vitest": "5.1.0",
+    "vitest-browser-react": "2.3.0"
   },
   "private": true,
   "license": "AGPL-3.0-or-later"
