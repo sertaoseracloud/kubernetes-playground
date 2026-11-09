@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
 import { createHash } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { chavePublicaDe } from './src/ed25519.js';
@@ -57,7 +58,8 @@ export default defineConfig({
   trailingSlash: 'always',
   build: { format: 'directory', assets: 'assets', inlineStylesheets: 'never' },
   devToolbar: { enabled: false },
-  integrations: [publicarChave],
+  // React só nas ilhas com comportamento (ADR 0003); o resto da página é HTML estático.
+  integrations: [publicarChave, react()],
   vite: {
     plugins: [pluginHistorico()],
     define: {

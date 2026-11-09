@@ -17,11 +17,12 @@ export default defineConfig({
   test: {
     testTimeout: 60000,
     hookTimeout: 120000,
-    exclude: ['**/node_modules/**', 'tests/e2e/**'], // os E2E rodam no Playwright
+    exclude: ['**/node_modules/**', 'tests/e2e/**', 'tests/componentes/**'], // os E2E rodam no Playwright; os de componente, no vitest.componentes.config.ts
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.js'],
-      exclude: ['src/conteudo/**'],
+      include: ['src/**/*.js', 'src/**/*.ts'],
+      // Os hooks e os componentes (.tsx) são medidos nos testes de componente, no navegador.
+      exclude: ['src/conteudo/**', 'src/**/*.d.ts', 'src/exercicio/use*.ts'],
       reporter: ['text-summary', 'json-summary', 'html'],
       // Com as rotas reais (Astro), a cobertura medida em 2026-10-21 é 80/73/82/82 (antes, 75/67/78/78
       // em 2026-10-19). Os limites sobem com folga de um ponto, como no DivergeTerraform. Só podem subir.

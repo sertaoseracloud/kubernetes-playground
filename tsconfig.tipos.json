@@ -1,0 +1,34 @@
+{
+  "//": "npm run tipos: o código novo em TypeScript, estrito. Mesmas opções do config/tsconfig.base.json do @sertaoseracloud/playground-ui 0.2.0 (passa a estendê-lo quando o pacote subir de versão aqui). O JS antigo entra só pelo que é importado, sem checagem (checkJs desligado).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["vite/client", "@vitest/browser-playwright"]
+  },
+  "include": [
+    "src/env.d.ts",
+    "src/**/*.d.ts",
+    "src/exercicio/**/*",
+    "src/react/**/*",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "vitest.componentes.config.ts"
+  ]
+}

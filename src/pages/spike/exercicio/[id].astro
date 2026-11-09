@@ -1,0 +1,69 @@
+---
+// Spike da fase 1 do plano de migração (ADR 0003): a tela do exercício em Astro + React + TS,
+// lado a lado com a tela de sempre (/p/<id>/), para medir JavaScript, Lighthouse e paridade.
+// Poucos exercícios, fora do sitemap, com canonical para a página de sempre.
+import '@fontsource/fira-code/latin-400.css';
+import '@fontsource/fira-code/latin-600.css';
+import '@fontsource/atkinson-hyperlegible/latin-400.css';
+import '@fontsource/atkinson-hyperlegible/latin-700.css';
+import '@sertaoseracloud/playground-ui/tokens.css';
+import '../../../estilo.css';
+import '../../../acessibilidade-ux.css';
+import { TelaExercicio } from '../../../exercicio/TelaExercicio.tsx';
+import { paraIlha, type ItemDoConteudo } from '../../../exercicio/dados.ts';
+import { buscarItem, vizinhos, DIFICULDADES } from '../../../conteudo/trilha.js';
+import { linkItem } from '../../../compartilhar.js';
+import { descreverRegra } from '../../../k8s/simulador.js';
+import { SITE } from '../../../certificados.js';
+
+export function getStaticPaths() {
+  // Os exercícios do spike: o do Lighthouse (.lighthouserc.json) e dois de outros tipos de regra.
+  const exercicios = ['pods-restart-policy', 'pods-campos-obrigatorios', 'pods-health-check'];
+  return exercicios.filter((id) => buscarItem(id)?.tipo === 'exercicio').map((id) => ({ params: { id } }));
+}
+
+const { id } = Astro.params as { id: string };
+const item = buscarItem(id) as ItemDoConteudo & { resumo?: string; dificuldade?: keyof typeof DIFICULDADES };
+const { proximo } = vizinhos(id) as { proximo?: { id: string; titulo: string } | null };
+const exercicio = paraIlha(item, proximo ? { href: linkItem(proximo.id), titulo: proximo.titulo } : undefined);
+const canonical = `${SITE}${linkItem(id).replace(import.meta.env.BASE_URL, '')}`;
+const descricao = `Exercício de Kubernetes: ${item.titulo}. Escreva o YAML e confira no cluster simulado.`;
+const conferir = (item.testes ?? []).filter((t) => !t.oculto).flatMap((t) => t.regras.map((r) => descreverRegra(r))).filter(Boolean);
+---
+<!doctype html>
+<html lang="pt-BR" class="a11y-pre">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{item.titulo} · DivergeKubernetes</title>
+<meta name="description" content={descricao}>
+<link rel="canonical" href={canonical}>
+{__HOMOLOGACAO__ && <meta name="robots" content="noindex">}
+<link rel="icon" href={`${import.meta.env.BASE_URL}favicon.svg`} type="image/svg+xml">
+<script>
+  // Tema, tamanho de texto e as outras opções do painel, antes de pintar (as mesmas chaves).
+  import { normalizarPreferencias, preferenciasDoSistema, aplicarPreferencias } from '../../../ui/preferencias.js';
+  import { lerPreferencia } from '../../../progresso.js';
+  const salvas = lerPreferencia('acessibilidade');
+  const prefs = normalizarPreferencias(salvas);
+  aplicarPreferencias(salvas ? prefs : preferenciasDoSistema(prefs));
+</script>
+</head>
+<body>
+<a class="pular" href="#tela-exercicio">Pular para o exercício</a>
+<main id="tela-exercicio">
+  <TelaExercicio client:load exercicio={exercicio}>
+    <div slot="enunciado">
+      <p class="licao-chip">{item.dificuldade ? DIFICULDADES[item.dificuldade] : 'Exercício'} · <a href={linkItem(id)}>abrir na tela de sempre</a></p>
+      <ol class="roteiro" aria-label="Como resolver">
+        <li>Leia o que fazer</li><li>Escreva o YAML</li><li>▶ Apply</li><li>Confira os ✅</li><li>⬆ Enviar</li>
+      </ol>
+      <section class="secao secao-fazer"><h2>🎯 O que fazer</h2><Fragment set:html={item.resumo ?? ''} /></section>
+      {conferir.length > 0 && (
+        <section class="secao secao-conferir"><h2>✅ Como saber que deu certo</h2><ul>{conferir.map((r) => <li>{r}</li>)}</ul></section>
+      )}
+    </div>
+  </TelaExercicio>
+</main>
+</body>
+</html>
