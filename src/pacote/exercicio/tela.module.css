@@ -1,0 +1,29 @@
+/* Grade da tela do exercício da ilha. Só tokens do pacote (ADR 0002, regra 6). No celular,
+   uma coluna; a partir de 60rem, descrição à esquerda e código em cima do terminal à direita. */
+.tela {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.area {
+  flex: 1;
+  display: grid;
+  gap: var(--espaco-1-5);
+  padding: var(--espaco-2);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "descricao" "codigo" "terminal";
+}
+
+.descricao { grid-area: descricao; }
+.codigo { grid-area: codigo; min-height: 18rem; }
+.terminal { grid-area: terminal; min-height: 12rem; }
+
+@media (min-width: 60rem) {
+  .area {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas: "descricao codigo" "descricao terminal";
+    height: calc(100dvh - var(--espaco-16));
+  }
+}

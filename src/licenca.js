@@ -41,6 +41,9 @@ export const TERCEIROS = [
   { nome: 'Triangulação do PixiJS (earcut)', pacotes: ['earcut'], licenca: 'ISC' },
   { nome: 'Cache do PixiJS (tiny-lru)', pacotes: ['tiny-lru'], licenca: 'BSD-3-Clause' },
   { nome: 'Cores do tema Dracula', pacotes: [], licenca: 'MIT' },
+  // Só na página do exercício em React (spike da migração, /spike/exercicio/), com as dependências que entram junto.
+  { nome: 'Interface em componentes (React)', pacotes: ['react', 'react-dom', 'scheduler', 'use-sync-external-store', 'client-only', '@astrojs/react'], licenca: 'MIT' },
+  { nome: 'Componentes acessíveis (React Aria Components, da Adobe)', pacotes: ['react-aria-components', 'react-aria', 'react-stately', '@react-types/shared', '@internationalized/date', '@internationalized/string', '@swc/helpers'], licenca: 'Apache-2.0' },
   // Código próprio da Sertão será cloud, compartilhado entre os playgrounds.
   { nome: 'Design system dos playgrounds (@sertaoseracloud/playground-ui)', pacotes: ['@sertaoseracloud/playground-ui'], licenca: 'AGPL-3.0-or-later' },
 ];
