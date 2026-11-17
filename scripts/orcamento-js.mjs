@@ -10,7 +10,8 @@ import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 const dist = process.argv[2] ?? 'dist';
-const BASE = '/kubernetes-playground/';
+// O mesmo base do astro.config.mjs: a homologação fica em /kubernetes-playground/homologacao/.
+const BASE = process.env.HOMOLOGACAO === '1' ? '/kubernetes-playground/homologacao/' : '/kubernetes-playground/';
 const PAGINAS = {
   landing: 'index.html',
   trilha: 'trilha/index.html',
@@ -81,6 +82,12 @@ function principal() {
   }
   const antes = medidas.exercicio;
   const spike = medidas['exercicio (React, spike)'];
+  // Sem nenhum arquivo, a medida está errada (base trocado, HTML sem <script>): melhor parar do que comparar zero.
+  const vazias = Object.entries(medidas).filter(([, m]) => m.arquivos === 0).map(([nome]) => nome);
+  if (vazias.length) {
+    console.error(`orcamento-js: nenhum arquivo JavaScript achado em ${vazias.join(', ')} (base ${BASE}).`);
+    process.exit(1);
+  }
   if (antes && spike) {
     const razao = spike.gzip / antes.gzip;
     console.log(`  spike / tela de sempre (gzip): ${(razao * 100).toFixed(0)}% (limite ${(FOLGA_DO_SPIKE * 100).toFixed(0)}%)`);
