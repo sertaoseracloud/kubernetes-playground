@@ -1,22 +1,21 @@
 // O que a ilha do exercício recebe do build (props serializáveis e mínimas: ADR 0002, regra 5).
 // Nunca vai a solução: o enunciado vai como HTML estático (slot), fora do JavaScript.
-import type { TesteK8s } from './motor-k8s.ts';
-
-export interface VizinhoDaTrilha {
-  readonly href: string;
-  readonly titulo: string;
-}
+import type { CasoDeTeste } from '../pacote/motor/tipos.ts';
+import type { VizinhoDaTrilha } from '../pacote/exercicio/PainelTestes.tsx';
+import { ARQUIVO_PRINCIPAL } from './armazenamento-local.ts';
 
 export interface ExercicioDaIlha {
   readonly id: string;
   readonly titulo: string;
-  readonly inicial: string;
-  readonly testes: readonly TesteK8s[];
-  readonly existentes?: string;
+  readonly principal: string;
+  readonly arquivos: Readonly<Record<string, string>>;
+  readonly testes: readonly CasoDeTeste[];
+  /** item.existentes: o cluster já tem esses recursos antes do aluno começar. */
+  readonly inicial?: string;
   readonly proximo?: VizinhoDaTrilha;
 }
 
-/** O item do conteúdo (em JS, ainda sem tipos) como o conteúdo o descreve hoje. */
+/** O item do conteúdo (em JS, ainda sem tipos), como o conteúdo o descreve hoje. */
 export interface ItemDoConteudo {
   readonly id: string;
   readonly titulo: string;
@@ -24,7 +23,7 @@ export interface ItemDoConteudo {
   readonly inicial?: string;
   readonly existentes?: string;
   readonly solucao?: string;
-  readonly testes?: readonly TesteK8s[];
+  readonly testes?: readonly CasoDeTeste[];
 }
 
 /** O exercício começa com um esqueleto, nunca com a resposta (o mesmo de item.js). */
@@ -35,14 +34,15 @@ export function paraIlha(item: ItemDoConteudo, proximo?: VizinhoDaTrilha): Exerc
   return {
     id: item.id,
     titulo: item.titulo,
-    inicial: item.inicial ?? ESQUELETO,
+    principal: ARQUIVO_PRINCIPAL,
+    arquivos: { [ARQUIVO_PRINCIPAL]: item.inicial ?? ESQUELETO },
     testes: (item.testes ?? []).map((t) => ({
-      regras: t.regras,
+      regras: t.regras ?? [],
       ...(t.descricao === undefined ? {} : { descricao: t.descricao }),
       ...(t.oculto === undefined ? {} : { oculto: t.oculto }),
       ...(t.dica === undefined ? {} : { dica: t.dica }),
     })),
-    ...(item.existentes === undefined ? {} : { existentes: item.existentes }),
+    ...(item.existentes === undefined ? {} : { inicial: item.existentes }),
     ...(proximo === undefined ? {} : { proximo }),
   };
 }

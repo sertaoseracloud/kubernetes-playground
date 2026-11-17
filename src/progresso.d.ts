@@ -1,5 +1,6 @@
-// Tipos da parte do progresso que o código em TypeScript usa (src/exercicio/repositorio.ts).
-// O módulo continua em JS; as chaves do localStorage não mudam (ADR 0002, regra 7).
+// Tipos da parte do progresso que o código em TypeScript usa (os adaptadores de
+// src/exercicio-k8s/ e a página do spike). O módulo continua em JS; as chaves do localStorage
+// não mudam (ADR 0002, regra 7).
 
 export type StatusDoItem = 'resolvido' | 'tentado';
 
@@ -10,3 +11,5 @@ export function gravarRascunho(id: string, arquivos: string | Readonly<Record<st
 export function apagarRascunho(id: string): void;
 export function lerEstado(chave: string): unknown;
 export function gravarEstado(chave: string, estado: unknown): void;
+export function apagarEstado(chave: string): void;
+export function lerPreferencia(chave: string, padrao?: unknown): unknown;

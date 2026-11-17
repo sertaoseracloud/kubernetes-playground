@@ -9,8 +9,8 @@ import '@fontsource/atkinson-hyperlegible/latin-700.css';
 import '@sertaoseracloud/playground-ui/tokens.css';
 import '../../../estilo.css';
 import '../../../acessibilidade-ux.css';
-import { TelaExercicio } from '../../../exercicio/TelaExercicio.tsx';
-import { paraIlha, type ItemDoConteudo } from '../../../exercicio/dados.ts';
+import { IlhaExercicioK8s } from '../../../exercicio-k8s/IlhaExercicioK8s.tsx';
+import { paraIlha, type ItemDoConteudo } from '../../../exercicio-k8s/dados.ts';
 import { buscarItem, vizinhos, DIFICULDADES } from '../../../conteudo/trilha.js';
 import { linkItem } from '../../../compartilhar.js';
 import { descreverRegra } from '../../../k8s/simulador.js';
@@ -28,7 +28,7 @@ const { proximo } = vizinhos(id) as { proximo?: { id: string; titulo: string } |
 const exercicio = paraIlha(item, proximo ? { href: linkItem(proximo.id), titulo: proximo.titulo } : undefined);
 const canonical = `${SITE}${linkItem(id).replace(import.meta.env.BASE_URL, '')}`;
 const descricao = `Exercício de Kubernetes: ${item.titulo}. Escreva o YAML e confira no cluster simulado.`;
-const conferir = (item.testes ?? []).filter((t) => !t.oculto).flatMap((t) => t.regras.map((r) => descreverRegra(r))).filter(Boolean);
+const conferir = (item.testes ?? []).filter((t) => !t.oculto).flatMap((t) => (t.regras ?? []).map((r) => descreverRegra(r as Parameters<typeof descreverRegra>[0]))).filter(Boolean);
 ---
 <!doctype html>
 <html lang="pt-BR" class="a11y-pre">
@@ -52,7 +52,7 @@ const conferir = (item.testes ?? []).filter((t) => !t.oculto).flatMap((t) => t.r
 <body>
 <a class="pular" href="#tela-exercicio">Pular para o exercício</a>
 <main id="tela-exercicio">
-  <TelaExercicio client:load exercicio={exercicio}>
+  <IlhaExercicioK8s client:load exercicio={exercicio}>
     <div slot="enunciado">
       <p class="licao-chip">{item.dificuldade ? DIFICULDADES[item.dificuldade] : 'Exercício'} · <a href={linkItem(id)}>abrir na tela de sempre</a></p>
       <ol class="roteiro" aria-label="Como resolver">
@@ -63,7 +63,7 @@ const conferir = (item.testes ?? []).filter((t) => !t.oculto).flatMap((t) => t.r
         <section class="secao secao-conferir"><h2>✅ Como saber que deu certo</h2><ul>{conferir.map((r) => <li>{r}</li>)}</ul></section>
       )}
     </div>
-  </TelaExercicio>
+  </IlhaExercicioK8s>
 </main>
 </body>
 </html>

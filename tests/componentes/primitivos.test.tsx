@@ -5,9 +5,9 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { Abas } from '../../src/react/Abas.tsx';
-import { Botao } from '../../src/react/Botao.tsx';
-import { Confirmacao } from '../../src/react/Dialogo.tsx';
+import { Abas } from '../../src/pacote/react/Abas.tsx';
+import { Botao } from '../../src/pacote/react/Botao.tsx';
+import { Confirmacao } from '../../src/pacote/react/Dialogo.tsx';
 import { semViolacoes } from './apoio.ts';
 
 describe('Botao', () => {

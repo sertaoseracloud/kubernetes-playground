@@ -1,6 +1,6 @@
 // Botão do design system (DS3). Escrito à mão: um <button> nativo já tem o teclado e a
 // semântica certos. Usa as classes do estilo.css (btn, btn-roxo...) para ficar igual ao site.
-// Vai para @sertaoseracloud/playground-ui/react na fase 2.
+// Vai para @sertaoseracloud/playground-ui/react na fase 2 (src/pacote/ inteiro vai para o pacote).
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 export type VarianteDoBotao = 'roxo' | 'verde' | 'fantasma';

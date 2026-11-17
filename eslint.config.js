@@ -44,6 +44,13 @@ export default [
     },
   },
   {
+    // src/pacote/ vai para o @sertaoseracloud/playground-ui (fase 3): não importa nada do repositório.
+    files: ['src/pacote/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [{ regex: '^\\.\\./\\.\\./(?!pacote/)', message: 'src/pacote/ não importa do repositório: o que for específico entra por props, slots ou pelo contrato Motor.' }] }],
+    },
+  },
+  {
     // Os .d.ts descrevem módulos em JS; os testes montam árvores grandes de JSX.
     files: ['**/*.d.ts', 'tests/**/*.ts', 'tests/**/*.tsx'],
     rules: { 'max-lines-per-function': 'off' },

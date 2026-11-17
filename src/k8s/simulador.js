@@ -332,6 +332,20 @@ const ESTADO_PADRAO = () => ({ pods: [], services: [], deployments: [], configma
 
 let estado = ESTADO_PADRAO();
 
+/** Um cluster vazio. */
+export const estadoVazio = () => ESTADO_PADRAO();
+
+/**
+ * Troca o cluster global pelo dado (ou por um vazio) e devolve o anterior. É o que o adaptador do
+ * contrato Motor (src/k8s/motor-k8s.ts) usa para ter um cluster por contexto ('aluno', 'testes')
+ * enquanto o estado global não sai daqui (fase −1, item 4: criarCluster()).
+ */
+export function trocarEstado(novo) {
+  const anterior = estado;
+  estado = novo ? { ...ESTADO_PADRAO(), ...novo } : ESTADO_PADRAO();
+  return anterior;
+}
+
 export function resetarEstado(chaveExercicio) {
   estado = ESTADO_PADRAO();
   if (chaveExercicio) gravarEstado(chaveExercicio, estado);

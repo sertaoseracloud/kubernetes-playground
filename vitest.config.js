@@ -22,7 +22,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.js', 'src/**/*.ts'],
       // Os hooks e os componentes (.tsx) são medidos nos testes de componente, no navegador.
-      exclude: ['src/conteudo/**', 'src/**/*.d.ts', 'src/exercicio/use*.ts'],
+      exclude: ['src/conteudo/**', 'src/**/*.d.ts', 'src/pacote/exercicio/use*.ts'],
       reporter: ['text-summary', 'json-summary', 'html'],
       // Com as rotas reais (Astro), a cobertura medida em 2026-10-21 é 80/73/82/82 (antes, 75/67/78/78
       // em 2026-10-19). Os limites sobem com folga de um ponto, como no DivergeTerraform. Só podem subir.

@@ -1,17 +1,16 @@
-// Adaptador do CodeMirror em hook (plano, seção 6): o único lugar da tela com acesso imperativo
-// ao DOM. O componente só passa o texto inicial e recebe as mudanças.
+// Adaptador do CodeMirror em hook (plano, seção 6): o único lugar da ilha com acesso imperativo
+// ao DOM. A linguagem e o tema chegam do repositório (extensões), para a ilha servir aos cinco.
 import { useEffect, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
-import { EditorState, Prec } from '@codemirror/state';
+import { EditorState, Prec, type Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
-import { yaml } from '@codemirror/lang-yaml';
-import { temaEditor } from '../ui/tema-editor.js';
 
 export interface OpcoesDoEditor {
   readonly texto: string;
   /** Muda quando o texto é trocado de fora (restaurar): o editor recarrega. */
   readonly versao: number;
   readonly rotulo: string;
+  readonly extensoes: readonly Extension[];
   readonly aoMudar: (texto: string) => void;
   readonly aoExecutar: () => void;
   readonly aoEnviar: () => void;
@@ -33,8 +32,7 @@ export function useEditor(opcoes: OpcoesDoEditor) {
         doc: atuais.current.texto,
         extensions: [
           basicSetup,
-          temaEditor,
-          yaml(),
+          ...atuais.current.extensoes,
           EditorView.lineWrapping,
           EditorState.tabSize.of(2),
           EditorView.contentAttributes.of({ 'aria-label': atuais.current.rotulo }),
@@ -55,13 +53,13 @@ export function useEditor(opcoes: OpcoesDoEditor) {
     };
   }, []);
 
-  // Texto trocado de fora (restaurar o código original).
+  // Texto trocado de fora (restaurar o código original). Só a versão dispara: o texto muda a
+  // cada tecla e não deve recarregar o editor.
   useEffect(() => {
     const view = vista.current;
     if (!view || opcoes.versao === 0) return;
     const atual = view.state.doc.toString();
-    if (atual !== opcoes.texto) view.dispatch({ changes: { from: 0, to: atual.length, insert: opcoes.texto } });
-    // Só a versão dispara: o texto muda a cada tecla e não deve recarregar o editor.
+    if (atual !== atuais.current.texto) view.dispatch({ changes: { from: 0, to: atual.length, insert: atuais.current.texto } });
   }, [opcoes.versao]);
 
   return elemento;

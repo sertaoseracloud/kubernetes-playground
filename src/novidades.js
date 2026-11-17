@@ -10,6 +10,15 @@ export const REPOSITORIO = 'https://github.com/sertaoseracloud/kubernetes-playgr
 /** Releases, da mais nova para a mais antiga. Escritas para quem usa o site, sem jargão. */
 export const RELEASES = [
   {
+    versao: '0.11.4',
+    data: '2026-11-17',
+    titulo: 'Um teste da tela do exercício nova',
+    resumo: 'Três exercícios ganharam uma versão de teste da tela, feita com componentes, ao lado da tela de sempre.',
+    grupos: [
+      { titulo: 'Exercícios', itens: ['A tela de teste fica em /spike/exercicio/ e serve para medir peso, velocidade e acessibilidade antes de trocar a tela de verdade.', 'Rascunho e progresso são os mesmos: o que você faz numa tela aparece na outra.'] },
+    ],
+  },
+  {
     versao: '0.11.3',
     data: '2026-10-22',
     titulo: 'Mais verde na vila',

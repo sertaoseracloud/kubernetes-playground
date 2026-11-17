@@ -21,7 +21,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      include: ['src/exercicio/**/*.{ts,tsx}', 'src/react/**/*.tsx'],
+      include: ['src/pacote/**/*.{ts,tsx}', 'src/exercicio-k8s/**/*.tsx'],
       reporter: ['text-summary', 'json-summary'],
     },
   },
